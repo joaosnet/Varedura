@@ -16,6 +16,7 @@ from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, 
 from rich.table import Table
 from rich.panel import Panel
 from rich.live import Live
+import ctypes
 
 class WSLDockerCleaner:
     def __init__(self):
@@ -52,22 +53,60 @@ class WSLDockerCleaner:
 
     def is_docker_running(self):
         """Verifica se o Docker está rodando"""
+        # Verifica se o processo do Docker Desktop está rodando
+        result = self.run_command('tasklist /FI "IMAGENAME eq Docker Desktop.exe" 2>NUL | find /I "Docker Desktop.exe" >NUL', capture_output=True)
+        if result and result.returncode != 0:
+            return False
+        
+        # Verifica se o Docker daemon está respondendo
         result = self.run_command("docker ps", capture_output=True)
         return result and result.returncode == 0
 
     def is_admin(self):
         """Verifica se o script está rodando como administrador"""
         try:
-            import ctypes
             return ctypes.windll.shell32.IsUserAnAdmin()
         except Exception:
             return False
+    
+    def run_as_admin(self):
+        """Reinicia o script com privilégios de administrador"""
+        try:
+            # Obtém o caminho do Python atual
+            python_exe = sys.executable
+            script_path = os.path.abspath(__file__)
+            
+            # Parâmetros para o ShellExecute
+            params = f'"{script_path}"'
+            
+            self.console.print("\n[yellow]Este script requer privilégios de administrador.[/yellow]")
+            self.console.print("[yellow]Solicitando elevação de privilégios...[/yellow]\n")
+            
+            # Executa o script como administrador
+            ctypes.windll.shell32.ShellExecuteW(
+                None, 
+                "runas", 
+                python_exe, 
+                params, 
+                None, 
+                1  # SW_SHOW
+            )
+            
+            # Encerra o script atual
+            sys.exit(0)
+            
+        except Exception as e:
+            self.console.print(f"[bold red]Erro ao solicitar privilégios de administrador: {str(e)}[/bold red]")
+            self.console.print("[bold red]Execute o script manualmente como administrador.[/bold red]")
+            sys.exit(1)
 
     def get_docker_vhdx_size(self):
         """Obtém o tamanho atual dos arquivos VHDX do Docker"""
         vhdx_paths = [
             os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx"),
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\distro\ext4.vhdx")
+            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\distro\ext4.vhdx"),
+            os.path.expandvars(r"%USERPROFILE%\AppData\Local\Docker\wsl\data\ext4.vhdx"),
+            os.path.expandvars(r"%USERPROFILE%\AppData\Local\Docker\wsl\distro\ext4.vhdx")
         ]
 
         total_size = 0
@@ -88,19 +127,47 @@ class WSLDockerCleaner:
         if not self.is_docker_running():
             self.log("Docker não está rodando. Iniciando Docker Desktop...", "WARNING")
             # Tenta iniciar o Docker Desktop
-            subprocess.Popen([r"C:\Program Files\Docker\Docker\Docker Desktop.exe"])
-            time.sleep(30)  # Aguarda inicialização
-
-            if not self.is_docker_running():
-                self.log("Não foi possível iniciar o Docker. Pulando limpeza Docker.", "ERROR")
+            try:
+                docker_path = r"C:\Program Files\Docker\Docker\Docker Desktop.exe"
+                if not os.path.exists(docker_path):
+                    self.log(f"Docker Desktop não encontrado em: {docker_path}", "ERROR")
+                    self.log("Pulando limpeza do Docker. Execute o Docker Desktop manualmente e tente novamente.", "WARNING")
+                    return False
+                
+                subprocess.Popen([docker_path], shell=True)
+                self.log("Aguardando Docker Desktop inicializar (60 segundos)...")
+                
+                # Aguarda até 60 segundos verificando a cada 5 segundos
+                max_wait = 60
+                wait_interval = 5
+                for i in range(0, max_wait, wait_interval):
+                    time.sleep(wait_interval)
+                    if self.is_docker_running():
+                        self.log(f"Docker iniciado com sucesso após {i + wait_interval} segundos")
+                        time.sleep(5)  # Aguarda mais um pouco para estabilizar
+                        break
+                    self.log(f"Aguardando... ({i + wait_interval}/{max_wait}s)")
+                else:
+                    self.log("Timeout ao iniciar Docker. Pulando limpeza Docker.", "ERROR")
+                    return False
+            except Exception as e:
+                self.log(f"Erro ao iniciar Docker: {str(e)}", "ERROR")
                 return False
 
         self.log("=== INICIANDO LIMPEZA DO DOCKER ===")
 
         # 1. Parar todos os containers
         self.log("Parando todos os containers...")
-        # Sintaxe compatível com cmd.exe
-        self.run_command('FOR /F "tokens=*" %i IN (\'docker ps -q\') DO docker stop %i', capture_output=False)
+        # Usar PowerShell para parar containers
+        containers_result = self.run_command("docker ps -q", capture_output=True)
+        if containers_result and containers_result.stdout.strip():
+            container_ids = containers_result.stdout.strip().split('\n')
+            for container_id in container_ids:
+                if container_id.strip():
+                    self.run_command(f"docker stop {container_id.strip()}", capture_output=True)
+                    self.log(f"Container {container_id.strip()} parado")
+        else:
+            self.log("Nenhum container em execução")
 
         # 2. Remover containers parados
         self.log("Removendo containers parados...")
@@ -142,14 +209,30 @@ class WSLDockerCleaner:
 
         # Parar Docker Desktop
         self.log("Parando Docker Desktop...")
-        self.run_command('taskkill /F /IM "Docker Desktop.exe" 2>NUL', capture_output=False)
-        self.run_command('taskkill /F /IM "Docker.exe" 2>NUL', capture_output=False)
+        # Listar todos os processos relacionados ao Docker
+        docker_processes = [
+            "Docker Desktop.exe",
+            "Docker.exe",
+            "com.docker.backend.exe",
+            "com.docker.proxy.exe",
+            "dockerd.exe",
+            "vpnkit.exe"
+        ]
+        
+        for process in docker_processes:
+            result = self.run_command(f'taskkill /F /IM "{process}"', capture_output=True)
+            if result and result.returncode == 0:
+                self.log(f"Processo {process} finalizado")
 
         time.sleep(5)
 
         # Parar WSL
         self.log("Parando WSL...")
-        self.run_command("wsl --shutdown")
+        result = self.run_command("wsl --shutdown", capture_output=True)
+        if result:
+            self.log("WSL desligado com sucesso")
+        else:
+            self.log("Erro ao desligar WSL", "ERROR")
 
         time.sleep(10)  # Aguarda WSL parar completamente
         return True
@@ -245,10 +328,20 @@ swapFile=%TEMP%\\wsl-swap.vhdx
             if os.path.exists(temp_path):
                 self.log(f"Limpando: {temp_path}")
                 try:
-                    # Remover arquivos .log e .tmp do Docker
-                    for pattern in ["*.log", "*.tmp", "*docker*"]:
-                        cmd = f'forfiles /p "{temp_path}" /m {pattern} /c "cmd /c del @path" 2>NUL'
-                        self.run_command(cmd, capture_output=True)
+                    # Remover arquivos .log e .tmp do Docker usando Python
+                    import glob
+                    patterns = ["*.log", "*.tmp", "*docker*.log", "*docker*.tmp"]
+                    files_deleted = 0
+                    for pattern in patterns:
+                        search_pattern = os.path.join(temp_path, pattern)
+                        for file_path in glob.glob(search_pattern):
+                            try:
+                                os.remove(file_path)
+                                files_deleted += 1
+                            except Exception:
+                                pass  # Ignorar arquivos em uso
+                    if files_deleted > 0:
+                        self.log(f"{files_deleted} arquivo(s) temporário(s) removido(s) de {temp_path}")
                 except Exception as e:
                     self.log(f"Erro limpando {temp_path}: {str(e)}", "ERROR")
 
@@ -424,6 +517,11 @@ def main():
 
     # Criar instância do limpador
     cleaner = WSLDockerCleaner()
+    
+    # Verificar se está rodando como administrador
+    if not cleaner.is_admin():
+        cleaner.run_as_admin()
+        return
 
     # Exibir informações iniciais
     cleaner.display_initial_info()
