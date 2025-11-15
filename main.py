@@ -20,6 +20,8 @@ from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Button, Static, Input, Label, RichLog, Checkbox, LoadingIndicator
 from textual.screen import Screen
+from textual import work
+from textual.worker import Worker, WorkerState
 from typing import Callable
 from rich.console import Console as RichConsole
 from rich.progress import Progress as RichProgress, BarColumn, TextColumn, TaskProgressColumn
@@ -519,8 +521,7 @@ class CommandRunnerApp(App[None]):
         def flush(self) -> None:
             return None
 
-    from textual import work
-    from textual.worker import Worker, WorkerState
+    # NOTE: `work`, `Worker` and `WorkerState` are imported at module level.
 
     @work(thread=True)
     def _run_quick_in_process(self) -> None:
@@ -582,6 +583,15 @@ class CommandRunnerApp(App[None]):
             cleaner = WSLDockerCleaner()
             self.call_from_thread(lambda: self.start_progress("Compactando VHDX", 100))
             self.call_from_thread(lambda: self.update_progress(30))
+            # If we are not running as admin, ask the user whether to elevate (or use admin helper)
+            if not cleaner.is_admin():
+                # Schedule a UI prompt to confirm elevation and run admin helper
+                self.call_from_thread(lambda: __import__("asyncio").create_task(self._ask_elevate_and_relaunch("Compactar VHDX")))
+                self.call_from_thread(lambda: self.write_ui_log("Compactação VHDX requer privilégios de administrador. Solicitando elevação..."))
+                # stop worker path — do not attempt to compact without admin
+                self.call_from_thread(lambda: self.finish_progress())
+                return
+
             res = cleaner.compact_vhdx_files()
             self.call_from_thread(lambda: self.update_progress(90))
             self.call_from_thread(lambda: self.write_ui_log(f"Compact VHDX finished: {res}"))
@@ -710,6 +720,13 @@ class CommandRunnerApp(App[None]):
             cleaner.console = console
             self.call_from_thread(lambda: self.start_progress("Full Cleanup", 100))
             self.call_from_thread(lambda: self.update_progress(10))
+            # If running as non-admin and the user might need admin-only steps, prompt to elevate
+            if not cleaner.is_admin():
+                # Prompt the user to re-run the app elevated before attempting a full cleanup
+                self.call_from_thread(lambda: __import__("asyncio").create_task(self._ask_elevate_and_relaunch("Full Cleanup")))
+                self.call_from_thread(lambda: self.write_ui_log("Limpeza completa pode exigir privilégios de administrador. Solicitando elevação..."))
+                self.call_from_thread(lambda: self.finish_progress())
+                return
             # The cleaner will write to its console; we can't capture step-level progress
             # without modifying the core. We approximate with a few steps here.
             res = cleaner.run_full_cleanup_with_progress()
@@ -861,7 +878,7 @@ class CommandRunnerApp(App[None]):
         except Exception:
             self._active_workers = 0
 
-        def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
+        def on_worker_state_changed(self, event) -> None:
             """Track worker states to show a spinner and log errors.
 
             This method increments a counter for RUNNING workers and decrements when they
@@ -911,6 +928,47 @@ class CommandRunnerApp(App[None]):
             except Exception:
                 # Avoid crashing the app event handler; this is noisy but safe
                 pass
+
+    async def _ask_elevate_and_relaunch(self, operation_name: str) -> None:
+        """Show confirmation modal asking the user whether to relaunch the app with admin rights.
+
+        This coroutine should be scheduled on the app's main loop via call_from_thread
+        when invoked from a worker thread.
+        """
+        try:
+            message = f"A operação '{operation_name}' requer privilégios de administrador. Deseja reiniciar o aplicativo como administrador?"
+            confirm = ConfirmScreen(message)
+            await self.push_screen(confirm)
+            if not confirm.result:
+                self.write_ui_log(f"{operation_name} cancelada pelo usuário (não concedeu admin).")
+                return
+            # Launch elevated process and exit this app instance.
+            # If operation is a specific admin task, attempt to run the `cli.admin_tasks` helper elevated
+            try:
+                # Map operation to helper task name if present
+                op_map = {
+                    "Compactar VHDX": "compact_vhdx",
+                    "Full Cleanup": ""  # empty means re-launch whole app as admin
+                }
+                helper_task = op_map.get(operation_name, "")
+                if helper_task:
+                    # Run the admin helper with ShellExecute runas
+                    python_exe = sys.executable
+                    params = f'-m cli.admin_tasks {helper_task}'
+                    import ctypes
+                    ctypes.windll.shell32.ShellExecuteW(None, "runas", python_exe, params, None, 1)
+                    self.write_ui_log(f"Administrador solicitado: rodando helper {helper_task}")
+                    # If helper is invoked, exit current app to avoid duplicate operations
+                    self.exit()
+                else:
+                    # Perform full relaunch as admin if op_map doesn't list a helper
+                    from docker_cleaner.core import WSLDockerCleaner
+                    cleaner = WSLDockerCleaner()
+                    cleaner.run_as_admin()
+            except Exception as e:
+                self.write_ui_log(f"Erro ao solicitar elevação: {e}")
+        except Exception as e:
+            self.write_ui_log(f"Erro ao solicitar confirmação de elevação: {e}")
 
 
 if __name__ == "__main__":

@@ -27,15 +27,12 @@ Como usar (exemplos):
 				- Prune builder cache (docker builder prune -af)
 				- Prune system (docker system prune -af --volumes)
 				- Configurar sparse (WSL)
-				- Compactar VHDX (admin)
-				- Limpar arquivos temporários
-				- Presets: "Quick" (containers/images/volumes) e "Full" (todas as opções)
 				- Botões de ação no modal: "Executar", "Salvar" (persiste preferência) e "Sair" (fecha o app)
 				- As preferências salvas vão para: `~/.docker_clennear_prefs.json` (JSON com booleanos por checkbox id)
 				- Parar Docker e WSL
 				- Configurar sparse (WSL)
-				- Compactar VHDX (admin)
-				- Limpar arquivos temporários
+				- Add the new admin helper for tasks that require elevation
+				- Admin helper: `python -m cli.admin_tasks compact_vhdx` (or `configure_sparse`) can be used to run admin-only tasks without relaunching the full UI. The UI may use UAC to launch this helper when required.
 
 		Observações:
 		- As operações são granulares: selecione individualmente os prunes e as ações que você deseja executar.
