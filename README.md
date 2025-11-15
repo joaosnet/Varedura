@@ -17,16 +17,33 @@ Como usar (exemplos):
 
 	Também é possível iniciar uma interface TUI que unifica as ferramentas do projeto:
 
-	- `python main.py` — abre uma interface Textual com opções para:
-		- Quick Cleanup
-		- Full Cleanup
-		- Rodar o Models Generator (informe o caminho do arquivo)
+		- `python main.py` — abre uma interface Textual com uma única ação de limpeza ("Limpeza Docker") que abre um modal
+			com opções selecionáveis para executar as ações desejadas. As opções incluem:
+				- Parar Docker e WSL
+				- Prune containers (docker container prune -f)
+				- Prune images (docker image prune -af)
+				- Prune volumes (docker volume prune -f)
+				- Prune networks (docker network prune -f)
+				- Prune builder cache (docker builder prune -af)
+				- Prune system (docker system prune -af --volumes)
+				- Configurar sparse (WSL)
+				- Compactar VHDX (admin)
+				- Limpar arquivos temporários
+				- Presets: "Quick" (containers/images/volumes) e "Full" (todas as opções)
+				- Botões de ação no modal: "Executar", "Salvar" (persiste preferência) e "Sair" (fecha o app)
+				- As preferências salvas vão para: `~/.docker_clennear_prefs.json` (JSON com booleanos por checkbox id)
+				- Parar Docker e WSL
+				- Configurar sparse (WSL)
+				- Compactar VHDX (admin)
+				- Limpar arquivos temporários
 
 		Observações:
-		- Quick Cleanup (Subprocess): roda `quick_wsl_cleanup.py` como subprocesso e captura stdout/stderr.
-		- Quick Cleanup (In-Process): roda `cli.quick_cleanup.quick_cleanup(console=...)` dentro do processo atual, integrando a saída ao painel de logs.
-		- Full Cleanup (Subprocess): roda `wsl_docker_cleaner.py` como subprocesso e captura stdout/stderr.
-		- Full Cleanup (Elevado): inicia um novo processo Python elevado (UAC) para executar a limpeza com privilégios de administrador.
+		- As operações são granulares: selecione individualmente os prunes e as ações que você deseja executar.
+		- `quick_wsl_cleanup.py` e `wsl_docker_cleaner.py` ainda existem como helpers CLI, mas a UI agora foca em ações granulares para maior controle.
+		- Parar Docker e WSL: executa `taskkill`/`wsl --shutdown` para finalizar serviços antes de limpar.
+		- Configurar sparse (WSL): escreve um `.wslconfig` e aplica opção `--set-sparse` em distribuições de docker.
+		- Compactar VHDX: chama `Optimize-VHD` via PowerShell (requer privilégios administrativos).
+		- Limpar arquivos temporários: remove arquivos temporários e logs do Docker no sistema.
 
 	As saídas dos scripts aparecem no painel de logs da interface. Lembre-se: as operações de limpeza são destrutivas e exigem confirmação do usuário.
 
