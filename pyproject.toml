@@ -1,0 +1,11 @@
+[project]
+name = "docker-clennear"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12.4"
+dependencies = [
+    "pytest>=9.0.1",
+    "rich>=14.2.0",
+    "textual>=6.6.0",
+]

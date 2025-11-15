@@ -1,23 +1,18 @@
-
-"""
-Script Rápido para Limpeza WSL Docker
-Versão simplificada do limpador WSL Docker
-"""
-
-import subprocess
-import os
-import time
+"""Entrypoint CLI para executar a limpeza rápida do WSL Docker."""
 from rich.console import Console
+from typing import Optional
 from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn
 from rich.panel import Panel
 from rich.live import Live
+import subprocess
+import os
+import time
+
 
 def run_cmd(console, cmd, desc=""):
-    """Executa comando e exibe resultado"""
     if desc:
         console.print(f"\n[bold blue][INFO][/bold blue] {desc}")
     console.print(f"[yellow]Executando:[/yellow] {cmd}")
-
     try:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=180)
         if result.stdout:
@@ -32,11 +27,15 @@ def run_cmd(console, cmd, desc=""):
         console.print(f"[red]Erro:[/red] {str(e)}")
         return False
 
-def quick_cleanup():
-    """Limpeza rápida do WSL Docker"""
-    console = Console()
-    
-    # Criar diferentes barras de progresso para diferentes estágios
+
+def quick_cleanup(console: Optional[Console] = None):
+    """Perform a quick cleanup. If a `console` is provided, use it for output.
+
+    This allows the function to be called from an external UI by passing a
+    `rich.console.Console(file=...)` writing to a capture target.
+    """
+    if console is None:
+        console = Console()
     overall_progress = Progress(
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
@@ -44,32 +43,18 @@ def quick_cleanup():
         TimeRemainingColumn(),
         console=console
     )
-    
-    current_task_progress = Progress(
-        TextColumn("{task.description}"),
-        console=console
-    )
-    
-    # Agrupar as barras de progresso
+    current_task_progress = Progress(TextColumn("{task.description}"), console=console)
     from rich.console import Group
-    progress_group = Group(
-        Panel(Group(current_task_progress)),
-        overall_progress
-    )
-    
-    # Adicionar tarefa geral
+    progress_group = Group(Panel(Group(current_task_progress)), overall_progress)
     overall_task = overall_progress.add_task("[cyan]Executando limpeza rápida...", total=100)
-    
     with Live(progress_group, refresh_per_second=10, console=console):
         try:
-            # 1. Limpeza básica do Docker (40%)
             current_task = current_task_progress.add_task("Limpando sistema Docker...")
             overall_progress.update(overall_task, description="[cyan]Limpando sistema Docker...")
             run_cmd(console, "docker system prune -af --volumes", "Limpando sistema Docker (agressivo)")
             current_task_progress.remove_task(current_task)
             overall_progress.update(overall_task, advance=40)
 
-            # 2. Parar Docker e WSL (30%)
             current_task = current_task_progress.add_task("Parando Docker e WSL...")
             overall_progress.update(overall_task, description="[cyan]Parando Docker e WSL...")
             run_cmd(console, 'taskkill /F /IM "Docker Desktop.exe" /T 2>NUL', "Parando Docker Desktop")
@@ -79,14 +64,12 @@ def quick_cleanup():
             current_task_progress.remove_task(current_task)
             overall_progress.update(overall_task, advance=30)
 
-            # 3. Compactar VHDX principal (30%)
             current_task = current_task_progress.add_task("Compactando arquivo VHDX...")
             overall_progress.update(overall_task, description="[cyan]Compactando arquivo VHDX...")
             vhdx_path = os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx")
             if os.path.exists(vhdx_path):
                 size_before = os.path.getsize(vhdx_path) / (1024**3)
                 console.print(f"\n[bold]Tamanho antes:[/bold] {size_before:.2f} GB")
-
                 ps_cmd = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
                 if run_cmd(console, f'powershell -Command "{ps_cmd}"', "Compactando arquivo VHDX"):
                     time.sleep(5)
@@ -99,17 +82,14 @@ def quick_cleanup():
                 console.print(f"[yellow]Arquivo VHDX não encontrado: {vhdx_path}[/yellow]")
             current_task_progress.remove_task(current_task)
             overall_progress.update(overall_task, advance=30)
-            
             overall_progress.update(overall_task, description="[green]Limpeza concluída!")
-
         except Exception as e:
             console.print(f"[red]Erro durante a limpeza: {str(e)}[/red]")
             return False
-
     console.print("\n[bold green]== LIMPEZA CONCLUÍDA ==[/bold green]")
     console.print("[bold]Reinicie o Docker Desktop para usar normalmente.[/bold]")
-    
     return True
+
 
 if __name__ == "__main__":
     console = Console()
