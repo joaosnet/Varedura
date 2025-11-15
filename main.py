@@ -27,7 +27,6 @@ from rich.console import Console as RichConsole
 from rich.progress import Progress as RichProgress, BarColumn, TextColumn, TaskProgressColumn
 from cli.richlog import DailyLogWriter
 import logging
-import asyncio
 import sys
 
 
@@ -355,7 +354,7 @@ class CommandRunnerApp(App[None]):
             if not path:
                 self.write_ui_log("Por favor informe um caminho de arquivo válido para gerar modelos.")
                 return
-            await self.run_python_script(["models_generator.py", path], "Models Generator")
+            await self.run_python_script(["-m", "lmarena.generator", path], "Models Generator")
 
         if button_id == "open_logs":
             logs_dir = Path("logs")
@@ -385,22 +384,32 @@ class CommandRunnerApp(App[None]):
             return
 
     def write_ui_log(self, message: str) -> None:
-        # Public method: write to UI and persist to daily log file.
-        # Prefer using the daily writer (which will call the UI callback) to avoid duplicates.
-        if hasattr(self, "daily_writer") and self.daily_writer:
-            try:
+        """Write message to UI log and persist to daily log file."""
+        # Write to both UI widget and file
+        try:
+            # Write to file via daily writer
+            if hasattr(self, "daily_writer") and self.daily_writer:
                 self.daily_writer.write(message)
-                return
+            # Also write directly to UI widget for immediate feedback
+            self.call_from_thread(self.write_ui_log_widget, message)
+        except Exception:
+            # Fallback: write only to the UI widget
+            try:
+                self.call_from_thread(self.write_ui_log_widget, message)
             except Exception:
-                # Fallback to UI-only write
                 pass
-        # No daily writer available: write only to the UI widget
-        self.write_ui_log_widget(message)
 
     def write_ui_log_widget(self, message: str) -> None:
-        """Directly write to the UI widget (no file persistence)."""
-        logger = self.query_one(RichLog)
-        logger.write(message)
+        """Directly write to the UI widget (no file persistence).
+        
+        This method is thread-safe and should be called from any context.
+        """
+        try:
+            logger = self.query_one(RichLog)
+            logger.write(message)
+        except Exception:
+            # Widget not yet available or query failed
+            pass
 
     # -- Progress helpers (simple determinate progress rendered via Rich in a Static widget) --
     def start_progress(self, title: str, total: int = 100) -> None:
@@ -493,33 +502,22 @@ class CommandRunnerApp(App[None]):
         def __init__(self, app: "CommandRunnerApp", prefix: str = "") -> None:
             self.app = app
             self.prefix = prefix
-            # Attach a daily file writer that also writes to the UI
-            # Compose a UI writer callback that simply writes to the Log widget
-            def ui_write(text: str) -> None:
-                # schedule call to the app to avoid thread-safety issues
-                self.app.call_from_thread(lambda: self.app.write_ui_log(f"{self.prefix}{text}"))
-
-            # Use the app's daily_writer if available; otherwise create own
-            self._daily_writer = None
 
         def write(self, text: str) -> None:
-            # Ensure writing to the widget occurs on the app thread
-            # Stream to UI and file writer
-            # Console(file=writer) can supply partial lines; handle those
+            """Write text to UI log, with prefix."""
+            if not text:
+                return
             try:
-                # Prefer app-level writer to avoid multiple file instances
-                writer = getattr(self.app, "daily_writer", None) or self._daily_writer
-                if writer:
-                    writer.write(f"{self.prefix}{text}")
-                else:
-                    # Fallback: write only to the UI
-                    self.app.call_from_thread(lambda: self.app.write_ui_log_widget(f"{self.prefix}{text}"))
+                # Safely schedule the write on the app thread
+                prefixed_text = f"{self.prefix}{text}" if self.prefix else text
+                self.app.call_from_thread(lambda: self.app.write_ui_log(prefixed_text))
             except Exception:
-                # On error still attempt to write to the UI
-                self.app.call_from_thread(lambda: self.app.write_ui_log(f"{self.prefix}{text}"))
+                # Silently ignore errors writing to the log
+                pass
 
         def flush(self) -> None:
-            return None
+            """Flush the writer (no-op for console streaming)."""
+            pass
 
     # NOTE: `work`, `Worker` and `WorkerState` are imported at module level.
 
@@ -738,18 +736,23 @@ class CommandRunnerApp(App[None]):
 
     async def run_python_script(self, args: List[str], title: str) -> None:
         """Execute um script Python em subprocesso e mostre a saída no Log widget."""
-        # Resolve path relative to repo root
-        script = args[0]
-        script_path = Path(script)
-        if not script_path.exists():
-            # try relative to repo
-            repo_root = Path(__file__).parent
-            script_path = repo_root / script
-        if not script_path.exists():
-            self.write_ui_log(f"Script não encontrado: {args[0]}")
-            return
+        # If first arg is "-m", treat as module invocation
+        if args[0] == "-m":
+            # python -m module_name [args...]
+            cmd = [sys.executable] + args
+        else:
+            # Otherwise try to find script file
+            script = args[0]
+            script_path = Path(script)
+            if not script_path.exists():
+                # try relative to repo
+                repo_root = Path(__file__).parent
+                script_path = repo_root / script
+            if not script_path.exists():
+                self.write_ui_log(f"Script não encontrado: {args[0]}")
+                return
+            cmd = [sys.executable, str(script_path)] + args[1:]
 
-        cmd = [sys.executable, str(script_path)] + args[1:]
         self.write_ui_log(f"Executando: {' '.join(cmd)}")
 
         try:
@@ -763,19 +766,24 @@ class CommandRunnerApp(App[None]):
             return
 
         async def stream_reader(stream, name: str):
+            """Read from a stream and write each line to the UI."""
             while True:
                 line = await stream.readline()
                 if not line:
                     break
                 text = line.decode("utf-8", errors="replace").rstrip("\n")
-                self.write_ui_log(f"[{title}] {text}")
+                if text:
+                    self.write_ui_log(f"[{title}] {text}")
 
-        # Start readers
-        tasks = [asyncio.create_task(stream_reader(process.stdout, "stdout")), asyncio.create_task(stream_reader(process.stderr, "stderr"))]
+        # Start readers as tasks
+        stdout_task = asyncio.create_task(stream_reader(process.stdout, "stdout"))
+        stderr_task = asyncio.create_task(stream_reader(process.stderr, "stderr"))
 
-        # Wait for process to finish and readers to complete
+        # Wait for process to finish
         await process.wait()
-        await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Wait for readers to complete as well
+        await asyncio.gather(stdout_task, stderr_task, return_exceptions=True)
 
         rc = process.returncode
         self.write_ui_log(f"[{title}] Processo finalizado com código {rc}")
@@ -873,61 +881,58 @@ class CommandRunnerApp(App[None]):
             pass
 
         # Track number of active workers; used to show/hide a spinner indicator
+        self._active_workers = 0
+
+    def on_worker_state_changed(self, event) -> None:
+        """Track worker states to show a spinner and log errors.
+
+        This method increments a counter for RUNNING workers and decrements when they
+        complete or error. When there are any active workers, it shows a spinner in
+        the UI; otherwise it hides it.
+        """
         try:
-            self._active_workers = 0
-        except Exception:
-            self._active_workers = 0
-
-        def on_worker_state_changed(self, event) -> None:
-            """Track worker states to show a spinner and log errors.
-
-            This method increments a counter for RUNNING workers and decrements when they
-            complete or error. When there are any active workers, it shows a spinner in
-            the UI; otherwise it hides it.
-            """
+            # Identify worker (use its name if provided)
+            worker_name = getattr(event.worker, "name", None) or repr(event.worker)
+            logging.getLogger().info("Worker state changed: %s -> %s", worker_name, event.state)
+            # show spinner when worker is running
             try:
-                # Identify worker (use its name if provided)
-                worker_name = getattr(event.worker, "name", None) or repr(event.worker)
-                logging.getLogger().info("Worker state changed: %s -> %s", worker_name, event.state)
-                # show spinner when worker is running
-                try:
-                    if event.state == WorkerState.RUNNING:
-                        self._active_workers += 1
-                        spinner = self.query_one("#spinner", LoadingIndicator)
-                        if spinner and "hidden" in spinner.classes:
-                            spinner.remove_class("hidden")
-                    else:
-                        # treat non-running as completed/errored → decrement
-                        self._active_workers = max(0, getattr(self, "_active_workers", 0) - 1)
-                        if getattr(self, "_active_workers", 0) == 0:
-                            try:
-                                spinner = self.query_one("#spinner", LoadingIndicator)
-                                if spinner and "hidden" not in spinner.classes:
-                                    spinner.add_class("hidden")
-                            except Exception:
-                                pass
-                except Exception:
-                    pass
-                # If an error state, try to log the exception details (best-effort)
-                if event.state == WorkerState.ERROR:
-                    try:
-                        worker_obj = None
-                        if hasattr(self.workers, "_workers"):
-                            for w in self.workers._workers:
-                                if w is event.worker:
-                                    worker_obj = w
-                                    break
-                        if worker_obj:
-                            err = getattr(worker_obj, "_error", None) or getattr(worker_obj, "error", None)
-                            if err:
-                                logging.getLogger().exception("Worker %s errored with exception", worker_name, exc_info=(type(err), err, getattr(err, "__traceback__", None)))
-                            else:
-                                logging.getLogger().error("Worker %s errored (no error object available)", worker_name)
-                    except Exception:
-                        logging.getLogger().exception("Failed to extract worker error for %s", worker_name)
+                if event.state == WorkerState.RUNNING:
+                    self._active_workers += 1
+                    spinner = self.query_one("#spinner", LoadingIndicator)
+                    if spinner and "hidden" in spinner.classes:
+                        spinner.remove_class("hidden")
+                else:
+                    # treat non-running as completed/errored → decrement
+                    self._active_workers = max(0, getattr(self, "_active_workers", 0) - 1)
+                    if getattr(self, "_active_workers", 0) == 0:
+                        try:
+                            spinner = self.query_one("#spinner", LoadingIndicator)
+                            if spinner and "hidden" not in spinner.classes:
+                                spinner.add_class("hidden")
+                        except Exception:
+                            pass
             except Exception:
-                # Avoid crashing the app event handler; this is noisy but safe
                 pass
+            # If an error state, try to log the exception details (best-effort)
+            if event.state == WorkerState.ERROR:
+                try:
+                    worker_obj = None
+                    if hasattr(self.workers, "_workers"):
+                        for w in self.workers._workers:
+                            if w is event.worker:
+                                worker_obj = w
+                                break
+                    if worker_obj:
+                        err = getattr(worker_obj, "_error", None) or getattr(worker_obj, "error", None)
+                        if err:
+                            logging.getLogger().exception("Worker %s errored with exception", worker_name, exc_info=(type(err), err, getattr(err, "__traceback__", None)))
+                        else:
+                            logging.getLogger().error("Worker %s errored (no error object available)", worker_name)
+                except Exception:
+                    logging.getLogger().exception("Failed to extract worker error for %s", worker_name)
+        except Exception:
+            # Avoid crashing the app event handler; this is noisy but safe
+            pass
 
     async def _ask_elevate_and_relaunch(self, operation_name: str) -> None:
         """Show confirmation modal asking the user whether to relaunch the app with admin rights.
