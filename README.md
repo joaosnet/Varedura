@@ -30,6 +30,14 @@ Como usar (exemplos):
 
 	As saídas dos scripts aparecem no painel de logs da interface. Lembre-se: as operações de limpeza são destrutivas e exigem confirmação do usuário.
 
+	Logs
+	----
+	O TUI grava logs localmente em `logs/YYYY-MM-DD.log`. Use o botão "Abrir pasta de logs" na interface para abrir a pasta `logs` no explorador/gestor de arquivos. Logs com formatação rich são mostrados na UI com `RichLog`, e preservados em arquivo no formato texto com timestamps.
+
+	Captura de erros e tracebacks
+	----------------------------
+	O aplicativo redireciona `stderr` e configura o logger do Python para que exceções não tratadas, `tracebacks` e erros de workers (thread/async) sejam capturados no arquivo de log diário. Isso inclui erros levantados por background workers e mensagens impressas para `stderr`.
+
 Estrutura de pastas (modular):
 
 - `docker_cleaner/`: lógica de limpeza e utilitários

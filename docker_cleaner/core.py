@@ -6,6 +6,7 @@ import os
 import sys
 import time
 from datetime import datetime
+import logging
 from rich.console import Console
 from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, TaskProgressColumn
 from rich.table import Table
@@ -19,12 +20,23 @@ class WSLDockerCleaner:
         self.log_messages = []
         self.total_space_saved = 0
         self.console = Console()
+        self.logger = logging.getLogger(__name__)
 
     def log(self, message, level="INFO"):
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_msg = f"[{timestamp}] [{level}] {message}"
         self.console.print(f"[bold]{timestamp}[/bold] [{level}] {message}")
         self.log_messages.append(log_msg)
+        # Also log via standard logging so the UI logger captures it
+        try:
+            if level.upper() == "ERROR":
+                self.logger.error(message)
+            elif level.upper() == "WARNING":
+                self.logger.warning(message)
+            else:
+                self.logger.info(message)
+        except Exception:
+            pass
 
     def run_command(self, command, capture_output=True, shell=True):
         """Executa um comando e retorna o resultado"""
