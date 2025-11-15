@@ -133,7 +133,6 @@ class CleanupOptionsScreen(Screen):
             opts = {chk.id: chk.value for chk in self.query(Checkbox)}
             # Persist to user home
             try:
-                from pathlib import Path
                 import json
                 config_path = Path.home() / ".docker_clennear_prefs.json"
                 with open(config_path, "w", encoding="utf-8") as f:
@@ -288,7 +287,6 @@ class CommandRunnerApp(App[None]):
                 "opt_cleanup_temp": True,
             }
             try:
-                from pathlib import Path
                 import json
                 config_path = Path.home() / ".docker_clennear_prefs.json"
                 if config_path.exists():
