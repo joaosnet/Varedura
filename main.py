@@ -243,6 +243,16 @@ class CommandRunnerApp(App[None]):
         with Horizontal():
             with Vertical(id="sidebar"):
                 yield Static("[bold]Ações Disponíveis[/bold]", id="menu_title")
+                
+                # Indicador de privilégios de admin
+                try:
+                    import ctypes
+                    is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+                    admin_status = "[green]✓ Admin[/green]" if is_admin else "[yellow]⚠ Sem Admin[/yellow]"
+                    yield Static(f"Status: {admin_status}", id="admin_status")
+                except Exception:
+                    pass
+                
                 yield Button("Limpeza Docker", id="docker_cleanup")
                 yield Button("Opções de Limpeza", id="docker_options")
                 yield Button("LMArena: Gerar Models", id="models_generator")
@@ -651,12 +661,7 @@ class CommandRunnerApp(App[None]):
             self.start_progress("Compactando VHDX", 100)
             self.update_progress(10)
             
-            if not cleaner.is_admin():
-                self.write_ui_log("Compactação VHDX requer privilégios de administrador. Solicitando elevação...\n")
-                await self._ask_elevate_and_relaunch("Compactar VHDX")
-                self.finish_progress()
-                return
-            
+            # Executar compactação com streaming
             await cleaner.compact_vhdx_files_async(stream_callback=self.write_ui_log)
             
             self.update_progress(100)
@@ -789,31 +794,51 @@ class CommandRunnerApp(App[None]):
             self.write_ui_log(f"Prune system error: {e}\n")
             self.finish_progress()
 
-    @work(thread=True)
-    def _run_full_cleanup(self) -> None:
+    @work(exclusive=True)
+    async def _run_full_cleanup(self) -> None:
+        """Executa limpeza completa do Docker e WSL com streaming em tempo real."""
         try:
             from docker_cleaner.core import WSLDockerCleaner
-            writer = self._LogWriter(self, prefix="[Full-Cleanup] ")
             cleaner = WSLDockerCleaner()
-            console = RichConsole(file=writer)
-            cleaner.console = console
-            self.call_from_thread(lambda: self.start_progress("Full Cleanup", 100))
-            self.call_from_thread(lambda: self.update_progress(10))
-            # If running as non-admin and the user might need admin-only steps, prompt to elevate
-            if not cleaner.is_admin():
-                # Prompt the user to re-run the app elevated before attempting a full cleanup
-                self.call_from_thread(lambda: __import__("asyncio").create_task(self._ask_elevate_and_relaunch("Full Cleanup")))
-                self.call_from_thread(lambda: self.write_ui_log("Limpeza completa pode exigir privilégios de administrador. Solicitando elevação..."))
-                self.call_from_thread(lambda: self.finish_progress())
-                return
-            # The cleaner will write to its console; we can't capture step-level progress
-            # without modifying the core. We approximate with a few steps here.
-            res = cleaner.run_full_cleanup_with_progress()
-            self.call_from_thread(lambda: self.update_progress(90))
-            self.call_from_thread(lambda: self.write_ui_log(f"Full cleanup finished: {res}"))
-            self.call_from_thread(lambda: self.finish_progress())
+            
+            self.start_progress("Full Cleanup", 100)
+            self.update_progress(5)
+            
+            # Executar cada etapa com streaming
+            self.write_ui_log("=== INICIANDO LIMPEZA COMPLETA ===\n")
+            
+            # 1. Limpeza Docker
+            self.update_progress(10)
+            self.write_ui_log("Etapa 1/5: Limpeza do Docker...\n")
+            await cleaner.docker_cleanup_async(stream_callback=self.write_ui_log)
+            
+            # 2. Parar Docker/WSL
+            self.update_progress(30)
+            self.write_ui_log("Etapa 2/5: Parando Docker e WSL...\n")
+            await cleaner.stop_docker_wsl_async(stream_callback=self.write_ui_log)
+            
+            # 3. Configurar sparse
+            self.update_progress(50)
+            self.write_ui_log("Etapa 3/5: Configurando modo sparse...\n")
+            await cleaner.configure_wsl_sparse_async(stream_callback=self.write_ui_log)
+            
+            # 4. Compactar VHDX
+            self.update_progress(70)
+            self.write_ui_log("Etapa 4/5: Compactando arquivos VHDX...\n")
+            await cleaner.compact_vhdx_files_async(stream_callback=self.write_ui_log)
+            
+            # 5. Limpeza de temp files (síncrona)
+            self.update_progress(90)
+            self.write_ui_log("Etapa 5/5: Limpando arquivos temporários...\n")
+            cleaner.cleanup_temp_files()
+            
+            self.update_progress(100)
+            self.write_ui_log("=== LIMPEZA COMPLETA FINALIZADA ===\n")
+            self.write_ui_log(f"Espaço total economizado: {cleaner.total_space_saved:.2f} GB\n")
+            self.finish_progress()
         except Exception as e:
-            self.call_from_thread(lambda: self.write_ui_log(f"Full cleanup error: {e}"))
+            self.write_ui_log(f"Full cleanup error: {e}\n")
+            self.finish_progress()
 
     async def run_python_script(self, args: List[str], title: str) -> None:
         """Execute um script Python em subprocesso e mostre a saída no Log widget."""
@@ -968,6 +993,17 @@ class CommandRunnerApp(App[None]):
 
         # Track number of active workers; used to show/hide a spinner indicator
         self._active_workers = 0
+        
+        # Log de inicialização com status de admin
+        try:
+            import ctypes
+            is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+            admin_msg = "com privilégios de administrador" if is_admin else "SEM privilégios de administrador"
+            self.write_ui_log(f"=== Docker-Clennear Iniciado {admin_msg} ===\n")
+            if not is_admin:
+                self.write_ui_log("⚠ AVISO: Algumas operações podem falhar sem privilégios de administrador.\n")
+        except Exception:
+            self.write_ui_log("=== Docker-Clennear Iniciado ===\n")
 
     def on_worker_state_changed(self, event) -> None:
         """Track worker states to show a spinner and log errors.
@@ -1063,5 +1099,42 @@ class CommandRunnerApp(App[None]):
 
 
 if __name__ == "__main__":
+    import ctypes
+    import sys
+    
+    # Verificar se está rodando como administrador (apenas Windows)
+    def is_admin():
+        """Verifica se o script está rodando como administrador."""
+        try:
+            return ctypes.windll.shell32.IsUserAnAdmin()
+        except Exception:
+            return False
+    
+    # Se não estiver como admin, solicitar elevação automaticamente
+    if sys.platform.startswith('win') and not is_admin():
+        try:
+            # Reiniciar o script com privilégios de administrador
+            python_exe = sys.executable
+            script_path = os.path.abspath(__file__)
+            
+            # Usar ShellExecute com "runas" para solicitar UAC
+            ctypes.windll.shell32.ShellExecuteW(
+                None,
+                "runas",
+                python_exe,
+                f'"{script_path}"',
+                None,
+                1  # SW_SHOW
+            )
+            
+            # Sair da instância não-elevada
+            sys.exit(0)
+        except Exception as e:
+            # Se falhar, continuar sem admin (usuário pode ter cancelado UAC)
+            print(f"Aviso: Não foi possível elevar privilégios: {e}")
+            print("Algumas operações podem falhar sem privilégios de administrador.")
+            print("Continuando sem elevação...\n")
+    
+    # Executar o app
     app = CommandRunnerApp()
     app.run()

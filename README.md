@@ -1,63 +1,119 @@
 # Docker Clennear
 Ferramentas para limpeza e compactação de WSL/Docker (Windows) e utilitários para LMArena models
 
-Como usar (exemplos):
+## 🚀 Início Rápido
 
-- Executar limpador principal (com UI):
-	- `python wsl_docker_cleaner.py` (compat wrapper que chama `docker_cleaner.core`)
-	- ou `python -m cli.main_cleaner`
-- Executar limpeza rápida:
-	- `python quick_wsl_cleanup.py`
-	- ou `python -m cli.quick_cleanup`
-- Gerar modelos a partir de dump LMArena:
-	- `python models_generator.py lmarena_models.txt`
-	- ou `python -m lmarena.generator lmarena_models.txt`
+### Interface Gráfica (Recomendado)
 
-	## UI Centralizada (Textual)
+```bash
+python main.py
+```
 
-	Também é possível iniciar uma interface TUI que unifica as ferramentas do projeto:
+**⚠️ IMPORTANTE:** O aplicativo **solicita automaticamente privilégios de administrador** ao iniciar no Windows (via UAC). Isso é necessário para operações como compactação de VHDX e configuração WSL.
 
-		- `python main.py` — abre uma interface Textual com uma única ação de limpeza ("Limpeza Docker") que abre um modal
-			com opções selecionáveis para executar as ações desejadas. As opções incluem:
-				- Parar Docker e WSL
-				- Prune containers (docker container prune -f)
-				- Prune images (docker image prune -af)
-				- Prune volumes (docker volume prune -f)
-				- Prune networks (docker network prune -f)
-				- Prune builder cache (docker builder prune -af)
-				- Prune system (docker system prune -af --volumes)
-				- Configurar sparse (WSL)
-				- Botões de ação no modal: "Executar", "Salvar" (persiste preferência) e "Sair" (fecha o app)
-				- As preferências salvas vão para: `~/.docker_clennear_prefs.json` (JSON com booleanos por checkbox id)
-				- Parar Docker e WSL
-				- Configurar sparse (WSL)
-				- Add the new admin helper for tasks that require elevation
-				- Admin helper: `python -m cli.admin_tasks compact_vhdx` (or `configure_sparse`) can be used to run admin-only tasks without relaunching the full UI. The UI may use UAC to launch this helper when required.
+**Indicador visual na interface:**
+- ✅ **Status: ✓ Admin** (verde) - Privilégios elevados, todas as operações disponíveis
+- ⚠️ **Status: ⚠ Sem Admin** (amarelo) - Sem privilégios, algumas operações podem falhar
 
-		Observações:
-		- As operações são granulares: selecione individualmente os prunes e as ações que você deseja executar.
-		- `quick_wsl_cleanup.py` e `wsl_docker_cleaner.py` ainda existem como helpers CLI, mas a UI agora foca em ações granulares para maior controle.
-		- Parar Docker e WSL: executa `taskkill`/`wsl --shutdown` para finalizar serviços antes de limpar.
-		- Configurar sparse (WSL): escreve um `.wslconfig` e aplica opção `--set-sparse` em distribuições de docker.
-		- Compactar VHDX: chama `Optimize-VHD` via PowerShell (requer privilégios administrativos).
-		- Limpar arquivos temporários: remove arquivos temporários e logs do Docker no sistema.
+### CLI (Linha de Comando)
 
-	As saídas dos scripts aparecem no painel de logs da interface. Lembre-se: as operações de limpeza são destrutivas e exigem confirmação do usuário.
+- Limpeza rápida: `python -m cli.quick_cleanup`
+- Limpeza completa: `python -m cli.main_cleaner`
+- Gerar modelos LMArena: `python -m lmarena.generator lmarena_models.txt`
 
-	Logs
-	----
-	O TUI grava logs localmente em `logs/YYYY-MM-DD.log`. Use o botão "Abrir pasta de logs" na interface para abrir a pasta `logs` no explorador/gestor de arquivos. Logs com formatação rich são mostrados na UI com `RichLog`, e preservados em arquivo no formato texto com timestamps.
+## 🎨 Interface Textual (TUI)
 
-	Captura de erros e tracebacks
-	----------------------------
-	O aplicativo redireciona `stderr` e configura o logger do Python para que exceções não tratadas, `tracebacks` e erros de workers (thread/async) sejam capturados no arquivo de log diário. Isso inclui erros levantados por background workers e mensagens impressas para `stderr`.
+A interface unificada oferece:
 
-Estrutura de pastas (modular):
+### 📋 Funcionalidades
 
-- `docker_cleaner/`: lógica de limpeza e utilitários
-- `cli/`: wrappers CLI para executar as ferramentas
-- `lmarena/`: utilitários do LMArena (generators)
-- `tests/`: testes unitários (pytest)
+- **Limpeza Docker Completa** - Executa todas as etapas automaticamente com streaming em tempo real
+- **Opções de Limpeza** - Modal com seleção granular de operações:
+  - ✅ Parar Docker e WSL
+  - ✅ Prune containers (`docker container prune -f`)
+  - ✅ Prune images (`docker image prune -af`)
+  - ✅ Prune volumes (`docker volume prune -f`)
+  - ✅ Prune networks (`docker network prune -f`)
+  - ✅ Prune builder cache (`docker builder prune -af`)
+  - ✅ Prune system (`docker system prune -af --volumes`)
+  - ✅ Configurar sparse (WSL)
+  - ✅ Compactar VHDX (requer admin)
+  - ✅ Limpar arquivos temporários
+- **LMArena Generator** - Processa dumps e gera código Python com lista de modelos
+- **Logs em Tempo Real** - Veja a saída dos comandos conforme são executados
+- **Persistência de Preferências** - Salva seleções em `~/.docker_clennear_prefs.json`
 
-Riscos: Os scripts executam comandos destrutivos (`docker system prune -af --volumes`, `taskkill`, `wsl --shutdown`, `Optimize-VHD`). Sempre verifique e execute com cautela.
+### 🔥 Streaming em Tempo Real
+
+**NOVIDADE:** Todos os comandos agora exibem saída **linha por linha** em tempo real no `RichLog`:
+
+- ✅ Comandos Docker (prune, system, etc.)
+- ✅ Comandos WSL (shutdown, sparse config)
+- ✅ PowerShell (Optimize-VHD)
+- ✅ LMArena generator (parsing e processamento)
+
+Não há mais espera até o final - você vê cada passo sendo executado!
+
+## 📁 Logs
+
+- **Localização:** `logs/YYYY-MM-DD.log` (rotação diária)
+- **Formato:** Texto plano com timestamps UTF-8
+- **Conteúdo:** Comandos executados, saídas, erros e tracebacks
+- **Acesso:** Botão "Abrir pasta de logs" na interface
+
+### Captura de Erros
+
+O aplicativo captura automaticamente:
+- Exceções não tratadas (Python `excepthook`)
+- Erros de async workers (`asyncio` exception handler)
+- Erros de thread workers (`threading.excepthook`)
+- Mensagens de `stderr` (tracebacks, warnings)
+
+## 🏗️ Estrutura do Projeto
+
+```
+Docker-Clennear/
+├── docker_cleaner/      # Lógica de limpeza e utilitários
+│   ├── core.py         # WSLDockerCleaner com métodos sync e async
+│   └── __init__.py
+├── cli/                # Wrappers CLI
+│   ├── main_cleaner.py # Limpeza completa (CLI)
+│   ├── quick_cleanup.py # Limpeza rápida (CLI)
+│   ├── admin_tasks.py  # Helper para tarefas admin
+│   └── richlog.py      # DailyLogWriter para logs rotativos
+├── lmarena/            # Utilitários LMArena
+│   ├── generator.py    # Gerador de modelos
+│   └── __init__.py
+├── tests/              # Testes unitários (pytest)
+├── logs/               # Logs diários (YYYY-MM-DD.log)
+├── main.py             # Interface Textual (TUI)
+└── README.md
+```
+
+## ⚠️ Avisos de Segurança
+
+**OPERAÇÕES DESTRUTIVAS:** Os scripts executam comandos que **removem dados permanentemente**:
+
+- `docker system prune -af --volumes` - Remove todos containers, imagens, volumes e redes não utilizados
+- `taskkill /F` - Força encerramento de processos Docker
+- `wsl --shutdown` - Desliga todas as distribuições WSL
+- `Optimize-VHD` - Compacta discos virtuais (requer admin)
+
+**Recomendações:**
+1. ✅ Faça backup de dados importantes antes de executar
+2. ✅ Revise as opções selecionadas no modal antes de confirmar
+3. ✅ Execute como administrador para acesso completo às funcionalidades
+4. ✅ Monitore os logs em tempo real durante a execução
+
+## 🔧 Requisitos
+
+- **Sistema:** Windows 10/11 com WSL2
+- **Python:** 3.8+
+- **Docker Desktop:** Instalado e configurado
+- **Privilégios:** Administrador (solicitado automaticamente)
+- **Dependências:** `rich`, `textual`
+
+## 📖 Documentação Adicional
+
+- [IMPLEMENTACAO_STREAMING.md](IMPLEMENTACAO_STREAMING.md) - Detalhes técnicos do streaming em tempo real
 
