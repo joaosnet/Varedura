@@ -384,16 +384,28 @@ class CommandRunnerApp(App[None]):
             return
 
     def write_ui_log(self, message: str) -> None:
-        """Write message to UI log and persist to daily log file."""
-        # Write to both UI widget and file
+        """Write message to UI log and persist to daily log file.
+        
+        This method works from both async workers and thread workers.
+        """
+        # Write to file via daily writer
         try:
-            # Write to file via daily writer
             if hasattr(self, "daily_writer") and self.daily_writer:
                 self.daily_writer.write(message)
-            # Also write directly to UI widget for immediate feedback
-            self.call_from_thread(self.write_ui_log_widget, message)
         except Exception:
-            # Fallback: write only to the UI widget
+            pass
+        
+        # Write to UI widget - check if we're in the main thread
+        try:
+            import threading
+            if threading.current_thread() == threading.main_thread():
+                # We're in the main thread (async worker or UI context), call directly
+                self.write_ui_log_widget(message)
+            else:
+                # We're in a worker thread, use call_from_thread
+                self.call_from_thread(self.write_ui_log_widget, message)
+        except Exception:
+            # Fallback: always try call_from_thread
             try:
                 self.call_from_thread(self.write_ui_log_widget, message)
             except Exception:
@@ -415,83 +427,135 @@ class CommandRunnerApp(App[None]):
     def start_progress(self, title: str, total: int = 100) -> None:
         """Start or reset the progress widget.
 
-        This method schedules UI updates via Textual's thread-safe 'call_from_thread' when
-        invoked from worker threads.
+        This method works from both async workers and thread workers.
         """
-        try:
-            prog_widget = self.query_one("#progress", Static)
-            # store simple attributes for tests/unit-checks
-            prog_widget.progress_title = title
-            prog_widget.progress_total = int(total)
-            prog_widget.progress_value = 0
-            # Build a simple Rich Progress renderable and update widget content
-            rp = RichProgress(TextColumn("{task.description}"), BarColumn(), TaskProgressColumn())
-            rp_task = rp.add_task(title, total=total)
-            prog_widget.update(rp)
-            # Keep the renderable on the widget so we can update
-            prog_widget._progress = rp
-            prog_widget._task_id = rp_task
-            # Show a spinner if available
+        def _do_start():
             try:
-                spinner = self.query_one("#spinner", LoadingIndicator)
-                if spinner and "hidden" in spinner.classes:
-                    spinner.remove_class("hidden")
+                prog_widget = self.query_one("#progress", Static)
+                # store simple attributes for tests/unit-checks
+                prog_widget.progress_title = title
+                prog_widget.progress_total = int(total)
+                prog_widget.progress_value = 0
+                # Build a simple Rich Progress renderable and update widget content
+                rp = RichProgress(TextColumn("{task.description}"), BarColumn(), TaskProgressColumn())
+                rp_task = rp.add_task(title, total=total)
+                prog_widget.update(rp)
+                # Keep the renderable on the widget so we can update
+                prog_widget._progress = rp
+                prog_widget._task_id = rp_task
+                # Show a spinner if available
+                try:
+                    spinner = self.query_one("#spinner", LoadingIndicator)
+                    if spinner and "hidden" in spinner.classes:
+                        spinner.remove_class("hidden")
+                except Exception:
+                    pass
             except Exception:
                 pass
+        
+        # Detect context and call appropriately
+        try:
+            import threading
+            if threading.current_thread() == threading.main_thread():
+                _do_start()
+            else:
+                self.call_from_thread(_do_start)
         except Exception:
-            pass
+            try:
+                self.call_from_thread(_do_start)
+            except Exception:
+                pass
 
     def update_progress(self, amount: int) -> None:
         """Update the current progress bar with a new absolute amount (0..total)."""
+        def _do_update():
+            try:
+                prog_widget = self.query_one("#progress", Static)
+                if not getattr(prog_widget, "_progress", None):
+                    return
+                rp = prog_widget._progress
+                tid = prog_widget._task_id
+                rp.update(tid, completed=int(amount))
+                prog_widget.update(rp)
+                prog_widget.progress_value = int(amount)
+            except Exception:
+                pass
+        
         try:
-            prog_widget = self.query_one("#progress", Static)
-            if not getattr(prog_widget, "_progress", None):
-                return
-            rp = prog_widget._progress
-            tid = prog_widget._task_id
-            rp.update(tid, completed=int(amount))
-            prog_widget.update(rp)
-            prog_widget.progress_value = int(amount)
+            import threading
+            if threading.current_thread() == threading.main_thread():
+                _do_update()
+            else:
+                self.call_from_thread(_do_update)
         except Exception:
-            pass
+            try:
+                self.call_from_thread(_do_update)
+            except Exception:
+                pass
 
     def advance_progress(self, delta: int) -> None:
         """Safely advance current progress by delta."""
+        def _do_advance():
+            try:
+                prog_widget = self.query_one("#progress", Static)
+                if not getattr(prog_widget, "_progress", None):
+                    return
+                rp = prog_widget._progress
+                tid = prog_widget._task_id
+                rp.advance(tid, delta)
+                prog_widget.update(rp)
+                prog_widget.progress_value = int(rp.tasks[0].completed)
+            except Exception:
+                pass
+        
         try:
-            prog_widget = self.query_one("#progress", Static)
-            if not getattr(prog_widget, "_progress", None):
-                return
-            rp = prog_widget._progress
-            tid = prog_widget._task_id
-            rp.advance(tid, delta)
-            prog_widget.update(rp)
-            prog_widget.progress_value = int(rp.tasks[0].completed)
+            import threading
+            if threading.current_thread() == threading.main_thread():
+                _do_advance()
+            else:
+                self.call_from_thread(_do_advance)
         except Exception:
-            pass
+            try:
+                self.call_from_thread(_do_advance)
+            except Exception:
+                pass
 
     def finish_progress(self) -> None:
         """Mark the current progress as complete and clear the widget after a delay."""
-        try:
-            prog_widget = self.query_one("#progress", Static)
-            if not getattr(prog_widget, "_progress", None):
-                return
-            rp = prog_widget._progress
-            tid = prog_widget._task_id
-            rp.update(tid, completed=rp.tasks[0].total or 100)
-            prog_widget.update(rp)
-            prog_widget.progress_value = int(rp.tasks[0].completed)
-            # Schedule a clear to run after a short delay
-            self.set_timer(1.5, lambda: prog_widget.update(""))
-            # Hide spinner
+        def _do_finish():
             try:
-                spinner = self.query_one("#spinner", LoadingIndicator)
-                if spinner and "hidden" not in spinner.classes:
-                    spinner.add_class("hidden")
+                prog_widget = self.query_one("#progress", Static)
+                if not getattr(prog_widget, "_progress", None):
+                    return
+                rp = prog_widget._progress
+                tid = prog_widget._task_id
+                rp.update(tid, completed=rp.tasks[0].total or 100)
+                prog_widget.update(rp)
+                prog_widget.progress_value = int(rp.tasks[0].completed)
+                # Schedule a clear to run after a short delay
+                self.set_timer(1.5, lambda: prog_widget.update(""))
+                # Hide spinner
+                try:
+                    spinner = self.query_one("#spinner", LoadingIndicator)
+                    if spinner and "hidden" not in spinner.classes:
+                        spinner.add_class("hidden")
+                except Exception:
+                    pass
+            except Exception:
+                # swallow any issue updating the progress UI to avoid crashing the app
+                pass
+        
+        try:
+            import threading
+            if threading.current_thread() == threading.main_thread():
+                _do_finish()
+            else:
+                self.call_from_thread(_do_finish)
+        except Exception:
+            try:
+                self.call_from_thread(_do_finish)
             except Exception:
                 pass
-        except Exception:
-            # swallow any issue updating the progress UI to avoid crashing the app
-            pass
 
     class _LogWriter:
         """File-like writer that streams data into the app's Log widget.
@@ -541,61 +605,66 @@ class CommandRunnerApp(App[None]):
         except Exception as e:
             self.call_from_thread(lambda: self.write_ui_log(f"In-process Quick Cleanup error: {e}"))
 
-    @work(thread=True)
-    def _run_stop_wsl(self) -> None:
+    @work(exclusive=True)
+    async def _run_stop_wsl(self) -> None:
         try:
             from docker_cleaner.core import WSLDockerCleaner
-            writer = self._LogWriter(self, prefix="[Stop-WSL] ")
             cleaner = WSLDockerCleaner()
-            # Replace console with our writer
-            console = RichConsole(file=writer)
-            self.call_from_thread(lambda: self.start_progress("Parando Docker e WSL", 100))
-            self.call_from_thread(lambda: self.update_progress(25))
-            res = cleaner.stop_docker_wsl()
-            self.call_from_thread(lambda: self.update_progress(90))
-            self.call_from_thread(lambda: self.write_ui_log(f"Stop WSL finished: {res}"))
-            self.call_from_thread(lambda: self.finish_progress())
+            
+            self.start_progress("Parando Docker e WSL", 100)
+            self.update_progress(10)
+            
+            # Usar versão async com callback de streaming
+            await cleaner.stop_docker_wsl_async(stream_callback=self.write_ui_log)
+            
+            self.update_progress(100)
+            self.write_ui_log("Stop WSL concluído com sucesso\n")
+            self.finish_progress()
         except Exception as e:
-            self.call_from_thread(lambda: self.write_ui_log(f"Stop WSL error: {e}"))
+            self.write_ui_log(f"Stop WSL error: {e}\n")
+            self.finish_progress()
 
-    @work(thread=True)
-    def _run_configure_sparse(self) -> None:
+    @work(exclusive=True)
+    async def _run_configure_sparse(self) -> None:
         try:
             from docker_cleaner.core import WSLDockerCleaner
-            writer = self._LogWriter(self, prefix="[Configure-Sparse] ")
             cleaner = WSLDockerCleaner()
-            self.call_from_thread(lambda: self.start_progress("Configurar sparse", 100))
-            self.call_from_thread(lambda: self.update_progress(40))
-            res = cleaner.configure_wsl_sparse()
-            self.call_from_thread(lambda: self.update_progress(90))
-            self.call_from_thread(lambda: self.write_ui_log(f"Configure sparse finished: {res}"))
-            self.call_from_thread(lambda: self.finish_progress())
+            
+            self.start_progress("Configurar sparse", 100)
+            self.update_progress(10)
+            
+            await cleaner.configure_wsl_sparse_async(stream_callback=self.write_ui_log)
+            
+            self.update_progress(100)
+            self.write_ui_log("Configure sparse concluído com sucesso\n")
+            self.finish_progress()
         except Exception as e:
-            self.call_from_thread(lambda: self.write_ui_log(f"Configure sparse error: {e}"))
+            self.write_ui_log(f"Configure sparse error: {e}\n")
+            self.finish_progress()
 
-    @work(thread=True)
-    def _run_compact_vhdx(self) -> None:
+    @work(exclusive=True)
+    async def _run_compact_vhdx(self) -> None:
         try:
             from docker_cleaner.core import WSLDockerCleaner
-            writer = self._LogWriter(self, prefix="[Compact-VHDX] ")
             cleaner = WSLDockerCleaner()
-            self.call_from_thread(lambda: self.start_progress("Compactando VHDX", 100))
-            self.call_from_thread(lambda: self.update_progress(30))
-            # If we are not running as admin, ask the user whether to elevate (or use admin helper)
+            
+            self.start_progress("Compactando VHDX", 100)
+            self.update_progress(10)
+            
             if not cleaner.is_admin():
-                # Schedule a UI prompt to confirm elevation and run admin helper
-                self.call_from_thread(lambda: __import__("asyncio").create_task(self._ask_elevate_and_relaunch("Compactar VHDX")))
-                self.call_from_thread(lambda: self.write_ui_log("Compactação VHDX requer privilégios de administrador. Solicitando elevação..."))
-                # stop worker path — do not attempt to compact without admin
-                self.call_from_thread(lambda: self.finish_progress())
+                self.write_ui_log("Compactação VHDX requer privilégios de administrador. Solicitando elevação...\n")
+                await self._ask_elevate_and_relaunch("Compactar VHDX")
+                self.finish_progress()
                 return
-
-            res = cleaner.compact_vhdx_files()
-            self.call_from_thread(lambda: self.update_progress(90))
-            self.call_from_thread(lambda: self.write_ui_log(f"Compact VHDX finished: {res}"))
-            self.call_from_thread(lambda: self.finish_progress())
+            
+            await cleaner.compact_vhdx_files_async(stream_callback=self.write_ui_log)
+            
+            self.update_progress(100)
+            self.write_ui_log("Compact VHDX concluído com sucesso\n")
+            self.finish_progress()
         except Exception as e:
-            self.call_from_thread(lambda: self.write_ui_log(f"Compact VHDX error: {e}"))
+            self.write_ui_log(f"Compact VHDX error: {e}\n")
+            self.finish_progress()
 
     @work(thread=True)
     def _run_cleanup_temp(self) -> None:
@@ -612,101 +681,113 @@ class CommandRunnerApp(App[None]):
         except Exception as e:
             self.call_from_thread(lambda: self.write_ui_log(f"Cleanup temp error: {e}"))
 
-    @work(thread=True)
-    def _run_prune_containers(self) -> None:
+    @work(exclusive=True)
+    async def _run_prune_containers(self) -> None:
         try:
-            from cli.quick_cleanup import run_cmd
-            writer = self._LogWriter(self, prefix="[Prune-Containers] ")
-            console = RichConsole(file=writer)
-            # Start progress UI
-            self.call_from_thread(lambda: self.start_progress("Prune containers", 100))
-            self.call_from_thread(lambda: self.update_progress(20))
-            run_cmd(console, "docker container prune -f", "Removendo containers parados")
-            self.call_from_thread(lambda: self.update_progress(80))
-            self.call_from_thread(lambda: self.write_ui_log("Prune containers completo"))
-            self.call_from_thread(lambda: self.finish_progress())
+            from docker_cleaner.core import WSLDockerCleaner
+            cleaner = WSLDockerCleaner()
+            
+            self.start_progress("Prune containers", 100)
+            self.update_progress(10)
+            
+            await cleaner.run_command_async("docker container prune -f", shell=True, stream_callback=self.write_ui_log)
+            
+            self.update_progress(100)
+            self.write_ui_log("Prune containers completo\n")
+            self.finish_progress()
         except Exception as e:
-            self.call_from_thread(lambda: self.write_ui_log(f"Prune containers error: {e}"))
+            self.write_ui_log(f"Prune containers error: {e}\n")
+            self.finish_progress()
 
-    @work(thread=True)
-    def _run_prune_images(self) -> None:
+    @work(exclusive=True)
+    async def _run_prune_images(self) -> None:
         try:
-            from cli.quick_cleanup import run_cmd
-            writer = self._LogWriter(self, prefix="[Prune-Images] ")
-            console = RichConsole(file=writer)
-            # Start progress UI
-            self.call_from_thread(lambda: self.start_progress("Prune images", 100))
-            self.call_from_thread(lambda: self.update_progress(20))
-            run_cmd(console, "docker image prune -af", "Removendo imagens não utilizadas")
-            self.call_from_thread(lambda: self.update_progress(80))
-            self.call_from_thread(lambda: self.write_ui_log("Prune images completo"))
-            self.call_from_thread(lambda: self.finish_progress())
+            from docker_cleaner.core import WSLDockerCleaner
+            cleaner = WSLDockerCleaner()
+            
+            self.start_progress("Prune images", 100)
+            self.update_progress(10)
+            
+            await cleaner.run_command_async("docker image prune -af", shell=True, stream_callback=self.write_ui_log)
+            
+            self.update_progress(100)
+            self.write_ui_log("Prune images completo\n")
+            self.finish_progress()
         except Exception as e:
-            self.call_from_thread(lambda: self.write_ui_log(f"Prune images error: {e}"))
+            self.write_ui_log(f"Prune images error: {e}\n")
+            self.finish_progress()
 
-    @work(thread=True)
-    def _run_prune_volumes(self) -> None:
+    @work(exclusive=True)
+    async def _run_prune_volumes(self) -> None:
         try:
-            from cli.quick_cleanup import run_cmd
-            writer = self._LogWriter(self, prefix="[Prune-Volumes] ")
-            console = RichConsole(file=writer)
-            # Start progress UI
-            self.call_from_thread(lambda: self.start_progress("Prune volumes", 100))
-            self.call_from_thread(lambda: self.update_progress(20))
-            run_cmd(console, "docker volume prune -f", "Removendo volumes não utilizados")
-            self.call_from_thread(lambda: self.update_progress(80))
-            self.call_from_thread(lambda: self.write_ui_log("Prune volumes completo"))
-            self.call_from_thread(lambda: self.finish_progress())
+            from docker_cleaner.core import WSLDockerCleaner
+            cleaner = WSLDockerCleaner()
+            
+            self.start_progress("Prune volumes", 100)
+            self.update_progress(10)
+            
+            await cleaner.run_command_async("docker volume prune -f", shell=True, stream_callback=self.write_ui_log)
+            
+            self.update_progress(100)
+            self.write_ui_log("Prune volumes completo\n")
+            self.finish_progress()
         except Exception as e:
-            self.call_from_thread(lambda: self.write_ui_log(f"Prune volumes error: {e}"))
+            self.write_ui_log(f"Prune volumes error: {e}\n")
+            self.finish_progress()
 
-    @work(thread=True)
-    def _run_prune_networks(self) -> None:
+    @work(exclusive=True)
+    async def _run_prune_networks(self) -> None:
         try:
-            from cli.quick_cleanup import run_cmd
-            writer = self._LogWriter(self, prefix="[Prune-Networks] ")
-            console = RichConsole(file=writer)
-            # Start progress UI
-            self.call_from_thread(lambda: self.start_progress("Prune networks", 100))
-            self.call_from_thread(lambda: self.update_progress(20))
-            run_cmd(console, "docker network prune -f", "Removendo redes não utilizadas")
-            self.call_from_thread(lambda: self.update_progress(80))
-            self.call_from_thread(lambda: self.write_ui_log("Prune networks completo"))
-            self.call_from_thread(lambda: self.finish_progress())
+            from docker_cleaner.core import WSLDockerCleaner
+            cleaner = WSLDockerCleaner()
+            
+            self.start_progress("Prune networks", 100)
+            self.update_progress(10)
+            
+            await cleaner.run_command_async("docker network prune -f", shell=True, stream_callback=self.write_ui_log)
+            
+            self.update_progress(100)
+            self.write_ui_log("Prune networks completo\n")
+            self.finish_progress()
         except Exception as e:
-            self.call_from_thread(lambda: self.write_ui_log(f"Prune networks error: {e}"))
+            self.write_ui_log(f"Prune networks error: {e}\n")
+            self.finish_progress()
 
-    @work(thread=True)
-    def _run_prune_builder(self) -> None:
+    @work(exclusive=True)
+    async def _run_prune_builder(self) -> None:
         try:
-            from cli.quick_cleanup import run_cmd
-            writer = self._LogWriter(self, prefix="[Prune-Builder] ")
-            console = RichConsole(file=writer)
-            # Start progress UI
-            self.call_from_thread(lambda: self.start_progress("Prune builder", 100))
-            self.call_from_thread(lambda: self.update_progress(20))
-            run_cmd(console, "docker builder prune -af", "Limpando cache de build")
-            self.call_from_thread(lambda: self.update_progress(80))
-            self.call_from_thread(lambda: self.write_ui_log("Prune builder completo"))
-            self.call_from_thread(lambda: self.finish_progress())
+            from docker_cleaner.core import WSLDockerCleaner
+            cleaner = WSLDockerCleaner()
+            
+            self.start_progress("Prune builder", 100)
+            self.update_progress(10)
+            
+            await cleaner.run_command_async("docker builder prune -af", shell=True, stream_callback=self.write_ui_log)
+            
+            self.update_progress(100)
+            self.write_ui_log("Prune builder completo\n")
+            self.finish_progress()
         except Exception as e:
-            self.call_from_thread(lambda: self.write_ui_log(f"Prune builder error: {e}"))
+            self.write_ui_log(f"Prune builder error: {e}\n")
+            self.finish_progress()
 
-    @work(thread=True)
-    def _run_prune_system(self) -> None:
+    @work(exclusive=True)
+    async def _run_prune_system(self) -> None:
         try:
-            from cli.quick_cleanup import run_cmd
-            writer = self._LogWriter(self, prefix="[Prune-System] ")
-            console = RichConsole(file=writer)
-            # Start progress UI
-            self.call_from_thread(lambda: self.start_progress("Prune system", 100))
-            self.call_from_thread(lambda: self.update_progress(10))
-            run_cmd(console, "docker system prune -af --volumes", "Limpando sistema Docker (agressivo)")
-            self.call_from_thread(lambda: self.update_progress(90))
-            self.call_from_thread(lambda: self.write_ui_log("Prune system completo"))
-            self.call_from_thread(lambda: self.finish_progress())
+            from docker_cleaner.core import WSLDockerCleaner
+            cleaner = WSLDockerCleaner()
+            
+            self.start_progress("Prune system", 100)
+            self.update_progress(10)
+            
+            await cleaner.run_command_async("docker system prune -af --volumes", shell=True, stream_callback=self.write_ui_log)
+            
+            self.update_progress(100)
+            self.write_ui_log("Prune system completo\n")
+            self.finish_progress()
         except Exception as e:
-            self.call_from_thread(lambda: self.write_ui_log(f"Prune system error: {e}"))
+            self.write_ui_log(f"Prune system error: {e}\n")
+            self.finish_progress()
 
     @work(thread=True)
     def _run_full_cleanup(self) -> None:
@@ -738,8 +819,8 @@ class CommandRunnerApp(App[None]):
         """Execute um script Python em subprocesso e mostre a saída no Log widget."""
         # If first arg is "-m", treat as module invocation
         if args[0] == "-m":
-            # python -m module_name [args...]
-            cmd = [sys.executable] + args
+            # python -u -m module_name [args...] (-u = unbuffered for real-time output)
+            cmd = [sys.executable, "-u"] + args
         else:
             # Otherwise try to find script file
             script = args[0]
@@ -751,15 +832,20 @@ class CommandRunnerApp(App[None]):
             if not script_path.exists():
                 self.write_ui_log(f"Script não encontrado: {args[0]}")
                 return
-            cmd = [sys.executable, str(script_path)] + args[1:]
+            cmd = [sys.executable, "-u", str(script_path)] + args[1:]
 
         self.write_ui_log(f"Executando: {' '.join(cmd)}")
 
         try:
+            # Set PYTHONUNBUFFERED environment variable for immediate output
+            env = os.environ.copy()
+            env['PYTHONUNBUFFERED'] = '1'
+            
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                env=env
             )
         except Exception as e:
             self.write_ui_log(f"Erro ao iniciar processo: {e}")

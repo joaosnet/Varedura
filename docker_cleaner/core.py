@@ -1,11 +1,13 @@
 """Lógica principal do limpador WSL Docker (módulo)."""
 from __future__ import annotations
 
+import asyncio
 import subprocess
 import os
 import sys
 import time
 from datetime import datetime
+from typing import Optional, Callable
 import logging
 from rich.console import Console
 from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, TaskProgressColumn
@@ -58,6 +60,102 @@ class WSLDockerCleaner:
         except Exception as e:
             self.log(f"Erro ao executar comando: {str(e)}", "ERROR")
             return None
+
+    async def run_command_async(
+        self, 
+        command: str, 
+        shell: bool = True,
+        stream_callback: Optional[Callable[[str], None]] = None
+    ) -> subprocess.CompletedProcess:
+        """Executa um comando async com streaming de saída em tempo real.
+        
+        Args:
+            command: Comando a ser executado
+            shell: Se True, executa via shell; se False, comando deve ser lista
+            stream_callback: Função chamada para cada linha de saída (stdout/stderr)
+        
+        Returns:
+            CompletedProcess com returncode, stdout e stderr
+        """
+        try:
+            if stream_callback:
+                stream_callback(f"Executando: {command}\n")
+            else:
+                self.log(f"Executando: {command}")
+            
+            # Criar subprocess baseado no tipo (shell ou exec)
+            if shell:
+                process = await asyncio.create_subprocess_shell(
+                    command,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+            else:
+                # Se não for shell, command deve ser uma lista
+                cmd_list = command if isinstance(command, list) else command.split()
+                process = await asyncio.create_subprocess_exec(
+                    *cmd_list,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+            
+            # Funções para ler streams em tempo real
+            stdout_lines = []
+            stderr_lines = []
+            
+            async def stream_reader(stream, is_stderr=False):
+                """Lê stream linha por linha e chama callback."""
+                lines_list = stderr_lines if is_stderr else stdout_lines
+                while True:
+                    line = await stream.readline()
+                    if not line:
+                        break
+                    text = line.decode("utf-8", errors="replace").rstrip("\n")
+                    lines_list.append(text)
+                    if stream_callback and text:
+                        prefix = "[stderr] " if is_stderr else ""
+                        stream_callback(f"{prefix}{text}\n")
+            
+            # Executar leitores em paralelo
+            await asyncio.gather(
+                stream_reader(process.stdout, is_stderr=False),
+                stream_reader(process.stderr, is_stderr=True),
+                return_exceptions=True
+            )
+            
+            # Aguardar término do processo
+            returncode = await process.wait()
+            
+            # Log de erros se houver
+            if returncode != 0 and stderr_lines:
+                error_msg = "\n".join(stderr_lines)
+                if stream_callback:
+                    stream_callback(f"Erro (código {returncode}): {error_msg}\n")
+                else:
+                    self.log(f"Erro: {error_msg}", "ERROR")
+            
+            # Retornar CompletedProcess compatível
+            return subprocess.CompletedProcess(
+                args=command,
+                returncode=returncode,
+                stdout="\n".join(stdout_lines),
+                stderr="\n".join(stderr_lines)
+            )
+            
+        except asyncio.TimeoutError:
+            msg = f"Timeout ao executar: {command}\n"
+            if stream_callback:
+                stream_callback(msg)
+            else:
+                self.log(f"Timeout ao executar: {command}", "ERROR")
+            return subprocess.CompletedProcess(command, -1, "", "Timeout")
+        except Exception as e:
+            msg = f"Erro ao executar comando: {str(e)}\n"
+            if stream_callback:
+                stream_callback(msg)
+            else:
+                self.log(f"Erro ao executar comando: {str(e)}", "ERROR")
+            return subprocess.CompletedProcess(command, -1, "", str(e))
 
     def is_docker_running(self):
         """Verifica se o Docker está rodando"""
@@ -301,6 +399,184 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                         self.log(f"{files_deleted} arquivo(s) temporário(s) removido(s) de {temp_path}")
                 except Exception as e:
                     self.log(f"Erro limpando {temp_path}: {str(e)}", "ERROR")
+
+    # ========== MÉTODOS ASYNC COM STREAMING ==========
+    
+    async def docker_cleanup_async(self, stream_callback: Optional[Callable[[str], None]] = None):
+        """Versão async de docker_cleanup com streaming de saída em tempo real."""
+        if stream_callback:
+            stream_callback("=== INICIANDO LIMPEZA DO DOCKER ===\n")
+        else:
+            self.log("=== INICIANDO LIMPEZA DO DOCKER ===")
+        
+        # Parar containers
+        if stream_callback:
+            stream_callback("Parando todos os containers...\n")
+        
+        containers_result = await self.run_command_async("docker ps -q", shell=True, stream_callback=stream_callback)
+        if containers_result and containers_result.stdout.strip():
+            container_ids = containers_result.stdout.strip().split('\n')
+            for container_id in container_ids:
+                if container_id.strip():
+                    await self.run_command_async(f"docker stop {container_id.strip()}", shell=True, stream_callback=stream_callback)
+        
+        # Prune containers
+        if stream_callback:
+            stream_callback("Removendo containers parados...\n")
+        await self.run_command_async("docker container prune -f", shell=True, stream_callback=stream_callback)
+        
+        # Prune images
+        if stream_callback:
+            stream_callback("Removendo imagens não utilizadas...\n")
+        await self.run_command_async("docker image prune -af", shell=True, stream_callback=stream_callback)
+        
+        # Prune volumes
+        if stream_callback:
+            stream_callback("Removendo volumes não utilizados...\n")
+        await self.run_command_async("docker volume prune -f", shell=True, stream_callback=stream_callback)
+        
+        # Prune networks
+        if stream_callback:
+            stream_callback("Removendo redes não utilizadas...\n")
+        await self.run_command_async("docker network prune -f", shell=True, stream_callback=stream_callback)
+        
+        # System prune completo
+        if stream_callback:
+            stream_callback("Executando limpeza completa do sistema Docker...\n")
+        await self.run_command_async("docker system prune -af --volumes", shell=True, stream_callback=stream_callback)
+        
+        # Build cache
+        if stream_callback:
+            stream_callback("Limpando cache de build...\n")
+        await self.run_command_async("docker builder prune -af", shell=True, stream_callback=stream_callback)
+        
+        if stream_callback:
+            stream_callback("=== LIMPEZA DO DOCKER CONCLUÍDA ===\n")
+        
+        return True
+    
+    async def stop_docker_wsl_async(self, stream_callback: Optional[Callable[[str], None]] = None):
+        """Versão async de stop_docker_wsl com streaming."""
+        if stream_callback:
+            stream_callback("=== PARANDO DOCKER E WSL ===\n")
+        else:
+            self.log("=== PARANDO DOCKER E WSL ===")
+        
+        docker_processes = [
+            "Docker Desktop.exe",
+            "Docker.exe",
+            "com.docker.backend.exe",
+            "com.docker.proxy.exe",
+            "dockerd.exe",
+            "vpnkit.exe"
+        ]
+        
+        for process in docker_processes:
+            if stream_callback:
+                stream_callback(f"Finalizando processo: {process}\n")
+            await self.run_command_async(f'taskkill /F /IM "{process}"', shell=True, stream_callback=stream_callback)
+        
+        # Aguardar processos finalizarem
+        await asyncio.sleep(5)
+        
+        if stream_callback:
+            stream_callback("Parando WSL...\n")
+        await self.run_command_async("wsl --shutdown", shell=True, stream_callback=stream_callback)
+        
+        await asyncio.sleep(10)
+        
+        if stream_callback:
+            stream_callback("=== DOCKER E WSL PARADOS ===\n")
+        
+        return True
+    
+    async def configure_wsl_sparse_async(self, stream_callback: Optional[Callable[[str], None]] = None):
+        """Versão async de configure_wsl_sparse com streaming."""
+        if stream_callback:
+            stream_callback("=== CONFIGURANDO MODO SPARSE ===\n")
+        else:
+            self.log("=== CONFIGURANDO MODO SPARSE ===")
+        
+        result = await self.run_command_async("wsl -l -v", shell=True, stream_callback=stream_callback)
+        if not result or result.returncode != 0:
+            return False
+        
+        distributions = ["docker-desktop", "docker-desktop-data"]
+        for distro in distributions:
+            if stream_callback:
+                stream_callback(f"Configurando sparse para {distro}...\n")
+            await self.run_command_async(f'wsl --manage "{distro}" --set-sparse true', shell=True, stream_callback=stream_callback)
+        
+        wslconfig_path = os.path.expanduser("~/.wslconfig")
+        wslconfig_content = """[wsl2]
+sparseVhd=true
+memory=4GB
+processors=4
+swap=2GB
+swapFile=%TEMP%\\wsl-swap.vhdx
+"""
+        try:
+            with open(wslconfig_path, 'w', encoding='utf-8') as f:
+                f.write(wslconfig_content)
+            if stream_callback:
+                stream_callback(f"Arquivo .wslconfig atualizado: {wslconfig_path}\n")
+        except Exception as e:
+            if stream_callback:
+                stream_callback(f"Erro ao criar .wslconfig: {str(e)}\n")
+        
+        return True
+    
+    async def compact_vhdx_files_async(self, stream_callback: Optional[Callable[[str], None]] = None):
+        """Versão async de compact_vhdx_files com streaming."""
+        if not self.is_admin():
+            msg = "AVISO: Execução como administrador recomendada para compactação VHDX\n"
+            if stream_callback:
+                stream_callback(msg)
+            else:
+                self.log("AVISO: Execução como administrador recomendada para compactação VHDX", "WARNING")
+            return False
+        
+        if stream_callback:
+            stream_callback("=== COMPACTANDO ARQUIVOS VHDX ===\n")
+        else:
+            self.log("=== COMPACTANDO ARQUIVOS VHDX ===")
+        
+        vhdx_paths = [
+            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\distro\ext4.vhdx")
+        ]
+        
+        success = False
+        for vhdx_path in vhdx_paths:
+            if os.path.exists(vhdx_path):
+                size_before = os.path.getsize(vhdx_path)
+                size_before_gb = size_before / (1024**3)
+                
+                if stream_callback:
+                    stream_callback(f"Compactando {vhdx_path} ({size_before_gb:.2f} GB)...\n")
+                
+                ps_command = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
+                result = await self.run_command_async(f'powershell -Command "{ps_command}"', shell=True, stream_callback=stream_callback)
+                
+                if result and result.returncode == 0:
+                    await asyncio.sleep(5)
+                    if os.path.exists(vhdx_path):
+                        size_after = os.path.getsize(vhdx_path)
+                        size_after_gb = size_after / (1024**3)
+                        space_saved = (size_before - size_after) / (1024**3)
+                        self.total_space_saved += space_saved
+                        
+                        if stream_callback:
+                            stream_callback(f"Compactação concluída: {size_after_gb:.2f} GB (economizado: {space_saved:.2f} GB)\n")
+                        success = True
+                    else:
+                        if stream_callback:
+                            stream_callback(f"Arquivo não encontrado após compactação: {vhdx_path}\n")
+                else:
+                    if stream_callback:
+                        stream_callback(f"Erro na compactação de {vhdx_path}\n")
+        
+        return success
 
     def generate_report(self):
         self.log("=== RELATÓRIO FINAL ===")

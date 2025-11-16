@@ -2,13 +2,13 @@
 from __future__ import annotations
 import json
 import re
-from typing import Any, List, Dict
-from rich import print
+import sys
+from typing import Any, List, Dict, TextIO, Optional
 
 
 class ModelsGenerator:
     @staticmethod
-    def extract_initial_models(raw_data: str) -> List[Dict[str, Any]]:
+    def extract_initial_models(raw_data: str, output_stream: Optional[TextIO] = None) -> List[Dict[str, Any]]:
         models = []
         if "initialModels" in raw_data:
             try:
@@ -44,15 +44,24 @@ class ModelsGenerator:
                             json_str_decoded = bytes(json_str, "utf-8").decode("unicode_escape")
                             models = json.loads(json_str_decoded)
                         except Exception as e:
-                            print(f"Erro ao fazer parse do JSON após unicode_escape: {e}")
+                            msg = f"Erro ao fazer parse do JSON após unicode_escape: {e}\n"
+                            if output_stream:
+                                output_stream.write(msg)
+                                output_stream.flush()
                             raise
                 else:
                     # Não conseguimos extrair; será tratado abaixo pelo parse geral
                     models = []
             except Exception as e:
-                print(f"Erro ao fazer parse do JSON: {e}")
+                msg = f"Erro ao fazer parse do JSON: {e}\n"
+                if output_stream:
+                    output_stream.write(msg)
+                    output_stream.flush()
                 if 'json_str' in locals() and json_str:
-                    print(f"String problemática (primeiros 200 chars):\n{json_str[:200]}")
+                    msg2 = f"String problemática (primeiros 200 chars):\n{json_str[:200]}\n"
+                    if output_stream:
+                        output_stream.write(msg2)
+                        output_stream.flush()
         else:
             try:
                 data = json.loads(raw_data)
@@ -61,7 +70,10 @@ class ModelsGenerator:
                 elif isinstance(data, dict) and 'initialModels' in data:
                     models = data['initialModels']
             except json.JSONDecodeError as e:
-                print(f"Erro ao fazer parse dos dados: {e}")
+                msg = f"Erro ao fazer parse dos dados: {e}\n"
+                if output_stream:
+                    output_stream.write(msg)
+                    output_stream.flush()
         return models
 
     @staticmethod
@@ -140,7 +152,7 @@ class ModelsGenerator:
         ]
 
     @staticmethod
-    def generate_full_code(models: List[Dict[str, Any]]) -> str:
+    def generate_full_code(models: List[Dict[str, Any]], output_stream: Optional[TextIO] = None) -> str:
         models_code = ModelsGenerator.format_models_python(models)
         text_models = ModelsGenerator.extract_text_models(models)
         image_models = ModelsGenerator.extract_image_models(models)
@@ -159,37 +171,55 @@ class ModelsGenerator:
         return code
 
 
-def main():
-    import sys
+def main(output_stream: Optional[TextIO] = None):
+    if output_stream is None:
+        output_stream = sys.stdout
+    
     if len(sys.argv) < 2:
-        print("Uso: python models_generator.py <arquivo_json_ou_texto>")
-        print("\nExemplo:")
-        print("  python models_generator.py dados_lmarena.json")
+        output_stream.write("Uso: python models_generator.py <arquivo_json_ou_texto>\n")
+        output_stream.write("\nExemplo:\n")
+        output_stream.write("  python models_generator.py dados_lmarena.json\n")
+        output_stream.flush()
         sys.exit(1)
     input_file = sys.argv[1]
     try:
         with open(input_file, 'r', encoding='utf-8') as f:
             raw_data = f.read()
     except FileNotFoundError:
-        print(f"Erro: Arquivo '{input_file}' não encontrado.")
+        output_stream.write(f"Erro: Arquivo '{input_file}' não encontrado.\n")
+        output_stream.flush()
         sys.exit(1)
-    models = ModelsGenerator.extract_initial_models(raw_data)
+    
+    output_stream.write(f"Processando arquivo: {input_file}\n")
+    output_stream.flush()
+    
+    models = ModelsGenerator.extract_initial_models(raw_data, output_stream)
     if not models:
-        print("Nenhum modelo encontrado nos dados.")
+        output_stream.write("Nenhum modelo encontrado nos dados.\n")
+        output_stream.flush()
         sys.exit(1)
-    print(f"Encontrados {len(models)} modelos.")
-    code = ModelsGenerator.generate_full_code(models)
-    print(code)
+    
+    output_stream.write(f"Encontrados {len(models)} modelos.\n")
+    output_stream.flush()
+    
+    code = ModelsGenerator.generate_full_code(models, output_stream)
+    output_stream.write(code)
+    output_stream.write("\n")
+    output_stream.flush()
     output_file = input_file.replace('.json', '_models.py').replace('.txt', '_models.py')
     if output_file != input_file:
+        output_stream.write(f"\nSalvando código em: {output_file}\n")
+        output_stream.flush()
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(code)
-        print(f"\nCódigo salvo em: {output_file}")
+        output_stream.write(f"Código salvo com sucesso em: {output_file}\n")
+        output_stream.flush()
 
 
 def example_extract_and_save_json():
     # Apenas um exemplo curto; o original tem um payload muito longo.
-    print("Exemplo de extração (skip) - use CLI com arquivo real")
+    sys.stdout.write("Exemplo de extração (skip) - use CLI com arquivo real\n")
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":
