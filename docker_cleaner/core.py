@@ -157,6 +157,57 @@ class WSLDockerCleaner:
                 self.log(f"Erro ao executar comando: {str(e)}", "ERROR")
             return subprocess.CompletedProcess(command, -1, "", str(e))
 
+    async def run_elevated_command_async(
+        self, 
+        command: str, 
+        stream_callback: Optional[Callable[[str], None]] = None
+    ) -> subprocess.CompletedProcess:
+        """Executa comando elevated (admin) via PowerShell Start-Process RunAs hidden, sem janela visível."""
+        if stream_callback:
+            stream_callback("Solicitando privilégios admin (UAC)...\n")
+        
+        # Escape para PS
+        escaped_cmd = command.replace("'", "'\"'\"'").replace('"', '\\"').replace("\n", "`n")
+        
+        ps_script = f'''
+$outFile = [System.IO.Path]::GetTempFileName().Replace(".tmp", ".txt")
+$errFile = [System.IO.Path]::GetTempFileName().Replace(".tmp", ".txt")
+try {{
+    $proc = Start-Process powershell -ArgumentList "-NoProfile", "-Command", "{escaped_cmd}" -Verb RunAs -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+    Get-Content $outFile -Raw -Encoding UTF8
+    if (Test-Path $errFile) {{ "[stderr]`n" + (Get-Content $errFile -Raw -Encoding UTF8) }}
+}} finally {{
+    if (Test-Path $outFile) {{ Remove-Item $outFile -Force }}
+    if (Test-Path $errFile) {{ Remove-Item $errFile -Force }}
+}}
+'''
+        ps_cmd = f'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "{ps_script}"'
+        
+        return await self.run_command_async(ps_cmd, shell=True, stream_callback=stream_callback)
+
+
+    def run_elevated_command(
+        self, 
+        command: str
+    ) -> subprocess.CompletedProcess | None:
+        """Versão sync para CLI."""
+        escaped_cmd = command.replace("'", "'\"'\"'").replace('"', '\\"')
+        
+        ps_script = f'''
+$outFile = [System.IO.Path]::GetTempFileName().Replace(".tmp", ".txt")
+$errFile = [System.IO.Path]::GetTempFileName().Replace(".tmp", ".txt")
+try {{
+    Start-Process powershell -ArgumentList "-NoProfile", "-Command", "{escaped_cmd}" -Verb RunAs -WindowStyle Hidden -Wait -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+    Get-Content $outFile -Raw -Encoding UTF8
+    if (Test-Path $errFile) {{ Get-Content $errFile -Raw -Encoding UTF8 }}
+}} finally {{
+    Remove-Item $outFile, $errFile -Force -ErrorAction SilentlyContinue
+}}
+'''
+        ps_cmd = f'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "{ps_script}"'
+        
+        self.log(f"Executando elevated: {command}")
+        return self.run_command(ps_cmd)
     def is_docker_running(self):
         """Verifica se o Docker está rodando"""
         result = self.run_command('tasklist /FI "IMAGENAME eq Docker Desktop.exe" 2>NUL | find /I "Docker Desktop.exe" >NUL', capture_output=True)
@@ -342,9 +393,6 @@ swapFile=%TEMP%\\wsl-swap.vhdx
         return True
 
     def compact_vhdx_files(self):
-        if not self.is_admin():
-            self.log("AVISO: Execução como administrador recomendada para compactação VHDX", "WARNING")
-            return False
         self.log("=== COMPACTANDO ARQUIVOS VHDX ===")
         vhdx_paths = [
             os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx"),
@@ -357,7 +405,7 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                 size_before_gb = size_before / (1024**3)
                 self.log(f"Compactando {vhdx_path} ({size_before_gb:.2f} GB)...")
                 ps_command = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
-                result = self.run_command(f'powershell -Command "{ps_command}"')
+                result = self.run_elevated_command(ps_command)
                 if result and result.returncode == 0:
                     time.sleep(5)
                     if os.path.exists(vhdx_path):
@@ -399,6 +447,7 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                         self.log(f"{files_deleted} arquivo(s) temporário(s) removido(s) de {temp_path}")
                 except Exception as e:
                     self.log(f"Erro limpando {temp_path}: {str(e)}", "ERROR")
+        return True
 
     # ========== MÉTODOS ASYNC COM STREAMING ==========
     
@@ -456,57 +505,56 @@ swapFile=%TEMP%\\wsl-swap.vhdx
         return True
     
     async def stop_docker_wsl_async(self, stream_callback: Optional[Callable[[str], None]] = None):
-        """Versão async de stop_docker_wsl com streaming."""
+        """Versão async de stop_docker_wsl com batch elevated único."""
         if stream_callback:
-            stream_callback("=== PARANDO DOCKER E WSL ===\n")
-        else:
-            self.log("=== PARANDO DOCKER E WSL ===")
+            stream_callback("=== PARANDO DOCKER E WSL (batch elevated) ===\n")
         
         docker_processes = [
-            "Docker Desktop.exe",
-            "Docker.exe",
-            "com.docker.backend.exe",
-            "com.docker.proxy.exe",
-            "dockerd.exe",
-            "vpnkit.exe"
+            "Docker Desktop.exe", "Docker.exe", "com.docker.backend.exe",
+            "com.docker.proxy.exe", "dockerd.exe", "vpnkit.exe"
         ]
+        processes_str = ' '.join([f'/IM "{p}"' for p in docker_processes])
         
-        for process in docker_processes:
-            if stream_callback:
-                stream_callback(f"Finalizando processo: {process}\n")
-            await self.run_command_async(f'taskkill /F /IM "{process}"', shell=True, stream_callback=stream_callback)
-        
-        # Aguardar processos finalizarem
-        await asyncio.sleep(5)
+        ps_batch_cmd = f'''
+taskkill /F {processes_str} 2>nul; 
+wsl --shutdown
+'''
         
         if stream_callback:
-            stream_callback("Parando WSL...\n")
-        await self.run_command_async("wsl --shutdown", shell=True, stream_callback=stream_callback)
+            stream_callback("Executando batch kill + wsl shutdown...\n")
+            stream_callback("Solicitando privilégios admin (UAC único)...\n")
+        
+        result = await self.run_elevated_command_async(ps_batch_cmd, stream_callback=stream_callback)
         
         await asyncio.sleep(10)
         
         if stream_callback:
             stream_callback("=== DOCKER E WSL PARADOS ===\n")
         
-        return True
+        return result.returncode == 0 if result else False
     
     async def configure_wsl_sparse_async(self, stream_callback: Optional[Callable[[str], None]] = None):
-        """Versão async de configure_wsl_sparse com streaming."""
+        """Versão async com batch elevated."""
         if stream_callback:
             stream_callback("=== CONFIGURANDO MODO SPARSE ===\n")
-        else:
-            self.log("=== CONFIGURANDO MODO SPARSE ===")
         
+        # List distros first (non-elevated)
         result = await self.run_command_async("wsl -l -v", shell=True, stream_callback=stream_callback)
         if not result or result.returncode != 0:
+            if stream_callback:
+                stream_callback("Erro listando WSL distros.\n")
             return False
         
         distributions = ["docker-desktop", "docker-desktop-data"]
-        for distro in distributions:
-            if stream_callback:
-                stream_callback(f"Configurando sparse para {distro}...\n")
-            await self.run_command_async(f'wsl --manage "{distro}" --set-sparse true', shell=True, stream_callback=stream_callback)
+        sparse_cmds = '; '.join([f'wsl --manage "{distro}" --set-sparse true' for distro in distributions])
         
+        if stream_callback:
+            stream_callback(f"Configurando sparse para {', '.join(distributions)}...\n")
+            stream_callback("Solicitando privilégios admin (UAC único)...\n")
+        
+        result = await self.run_elevated_command_async(sparse_cmds, stream_callback=stream_callback)
+        
+        # .wslconfig (non-elevated)
         wslconfig_path = os.path.expanduser("~/.wslconfig")
         wslconfig_content = """[wsl2]
 sparseVhd=true
@@ -519,27 +567,18 @@ swapFile=%TEMP%\\wsl-swap.vhdx
             with open(wslconfig_path, 'w', encoding='utf-8') as f:
                 f.write(wslconfig_content)
             if stream_callback:
-                stream_callback(f"Arquivo .wslconfig atualizado: {wslconfig_path}\n")
+                stream_callback(f".wslconfig atualizado: {wslconfig_path}\n")
         except Exception as e:
             if stream_callback:
-                stream_callback(f"Erro ao criar .wslconfig: {str(e)}\n")
+                stream_callback(f"Erro .wslconfig: {str(e)}\n")
         
         return True
     
     async def compact_vhdx_files_async(self, stream_callback: Optional[Callable[[str], None]] = None):
         """Versão async de compact_vhdx_files com streaming."""
-        if not self.is_admin():
-            msg = "AVISO: Execução como administrador recomendada para compactação VHDX\n"
-            if stream_callback:
-                stream_callback(msg)
-            else:
-                self.log("AVISO: Execução como administrador recomendada para compactação VHDX", "WARNING")
-            return False
         
         if stream_callback:
             stream_callback("=== COMPACTANDO ARQUIVOS VHDX ===\n")
-        else:
-            self.log("=== COMPACTANDO ARQUIVOS VHDX ===")
         
         vhdx_paths = [
             os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx"),
@@ -556,7 +595,7 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                     stream_callback(f"Compactando {vhdx_path} ({size_before_gb:.2f} GB)...\n")
                 
                 ps_command = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
-                result = await self.run_command_async(f'powershell -Command "{ps_command}"', shell=True, stream_callback=stream_callback)
+                result = await self.run_elevated_command_async(ps_command, stream_callback=stream_callback)
                 
                 if result and result.returncode == 0:
                     await asyncio.sleep(5)

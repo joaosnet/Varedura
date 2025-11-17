@@ -359,9 +359,14 @@ class CommandRunnerApp(App[None]):
         self._run_full_cleanup()
 
     @on(Button.Pressed, "#docker_options")
-    async def handle_docker_options(self) -> None:
-        # Present the options screen with sensible defaults
-        # Try load saved preferences from file
+    def handle_docker_options(self) -> None:
+        """Handler to show cleanup options modal."""
+        self._run_docker_options()
+
+    @work(exclusive=True)
+    async def _run_docker_options(self) -> None:
+        """Worker to load prefs, show modal, and execute selected options."""
+        # Load saved preferences from file
         defaults = {
             "opt_stop_wsl": False,
             "opt_prune_containers": True,
@@ -386,7 +391,6 @@ class CommandRunnerApp(App[None]):
         except Exception:
             pass
         opts_screen = CleanupOptionsScreen("Selecione as opções de limpeza", defaults=defaults)
-        # Usar push_screen_wait para aguardar o modal ser fechado
         self.write_ui_log("[DEBUG] Abrindo modal de opções de limpeza...")
         result = await self.push_screen(opts_screen, wait_for_dismiss=True)
         self.write_ui_log(f"[DEBUG] Modal fechado. Resultado: {result}, selected_options: {opts_screen.selected_options}")
@@ -785,7 +789,7 @@ class CommandRunnerApp(App[None]):
             self.write_ui_log(f"Prune containers error: {e}\n")
             self.finish_progress()
 
-    @work(exclusive=True)
+    @work()
     async def _run_prune_images(self) -> None:
         try:
             from docker_cleaner.core import WSLDockerCleaner
@@ -803,7 +807,7 @@ class CommandRunnerApp(App[None]):
             self.write_ui_log(f"Prune images error: {e}\n")
             self.finish_progress()
 
-    @work(exclusive=True)
+    @work()
     async def _run_prune_volumes(self) -> None:
         try:
             from docker_cleaner.core import WSLDockerCleaner
@@ -821,7 +825,7 @@ class CommandRunnerApp(App[None]):
             self.write_ui_log(f"Prune volumes error: {e}\n")
             self.finish_progress()
 
-    @work(exclusive=True)
+    @work()
     async def _run_prune_networks(self) -> None:
         try:
             from docker_cleaner.core import WSLDockerCleaner
@@ -839,7 +843,7 @@ class CommandRunnerApp(App[None]):
             self.write_ui_log(f"Prune networks error: {e}\n")
             self.finish_progress()
 
-    @work(exclusive=True)
+    @work()
     async def _run_prune_builder(self) -> None:
         try:
             from docker_cleaner.core import WSLDockerCleaner
@@ -857,7 +861,7 @@ class CommandRunnerApp(App[None]):
             self.write_ui_log(f"Prune builder error: {e}\n")
             self.finish_progress()
 
-    @work(exclusive=True)
+    @work()
     async def _run_prune_system(self) -> None:
         try:
             from docker_cleaner.core import WSLDockerCleaner
@@ -1073,15 +1077,8 @@ class CommandRunnerApp(App[None]):
             pass
 
         # Log de inicialização com status de admin
-        try:
-            import ctypes
-            is_admin = ctypes.windll.shell32.IsUserAnAdmin()
-            admin_msg = "com privilégios de administrador" if is_admin else "SEM privilégios de administrador"
-            self.write_ui_log(f"=== Docker-Clennear Iniciado {admin_msg} ===\n")
-            if not is_admin:
-                self.write_ui_log("⚠ AVISO: Algumas operações podem falhar sem privilégios de administrador.\n")
-        except Exception:
-            self.write_ui_log("=== Docker-Clennear Iniciado ===\n")
+        self.write_ui_log("=== Docker-Clennear Iniciado (non-admin, elevated per op) ===\n")
+        self.write_ui_log("Operações admin usarão UAC prompt quando necessário.\n")
 
     def on_worker_state_changed(self, event) -> None:
         """Track worker states to show a spinner and log errors.
@@ -1121,85 +1118,9 @@ class CommandRunnerApp(App[None]):
             # Avoid crashing the app event handler; this is noisy but safe
             pass
 
-    async def _ask_elevate_and_relaunch(self, operation_name: str) -> None:
-        """Show confirmation modal asking the user whether to relaunch the app with admin rights.
 
-        This coroutine should be scheduled on the app's main loop via call_from_thread
-        when invoked from a worker thread.
-        """
-        try:
-            message = f"A operação '{operation_name}' requer privilégios de administrador. Deseja reiniciar o aplicativo como administrador?"
-            confirm = ConfirmScreen(message)
-            result = await self.push_screen(confirm, wait_for_dismiss=True)
-            if not result:
-                self.write_ui_log(f"{operation_name} cancelada pelo usuário (não concedeu admin).")
-                return
-            # Launch elevated process and exit this app instance.
-            # If operation is a specific admin task, attempt to run the `cli.admin_tasks` helper elevated
-            try:
-                # Map operation to helper task name if present
-                op_map = {
-                    "Compactar VHDX": "compact_vhdx",
-                    "Full Cleanup": ""  # empty means re-launch whole app as admin
-                }
-                helper_task = op_map.get(operation_name, "")
-                if helper_task:
-                    # Run the admin helper with ShellExecute runas
-                    python_exe = sys.executable
-                    params = f'-m cli.admin_tasks {helper_task}'
-                    import ctypes
-                    ctypes.windll.shell32.ShellExecuteW(None, "runas", python_exe, params, None, 1)
-                    self.write_ui_log(f"Administrador solicitado: rodando helper {helper_task}")
-                    # If helper is invoked, exit current app to avoid duplicate operations
-                    self.exit()
-                else:
-                    # Perform full relaunch as admin if op_map doesn't list a helper
-                    from docker_cleaner.core import WSLDockerCleaner
-                    cleaner = WSLDockerCleaner()
-                    cleaner.run_as_admin()
-            except Exception as e:
-                self.write_ui_log(f"Erro ao solicitar elevação: {e}")
-        except Exception as e:
-            self.write_ui_log(f"Erro ao solicitar confirmação de elevação: {e}")
 
 
 if __name__ == "__main__":
-    import ctypes
-    import sys
-    
-    # Verificar se está rodando como administrador (apenas Windows)
-    def is_admin():
-        """Verifica se o script está rodando como administrador."""
-        try:
-            return ctypes.windll.shell32.IsUserAnAdmin()
-        except Exception:
-            return False
-    
-    # Se não estiver como admin, solicitar elevação automaticamente
-    if sys.platform.startswith('win') and not is_admin():
-        try:
-            # Reiniciar o script com privilégios de administrador
-            python_exe = sys.executable
-            script_path = os.path.abspath(__file__)
-            
-            # Usar ShellExecute com "runas" para solicitar UAC
-            ctypes.windll.shell32.ShellExecuteW(
-                None,
-                "runas",
-                python_exe,
-                f'"{script_path}"',
-                None,
-                1  # SW_SHOW
-            )
-            
-            # Sair da instância não-elevada
-            sys.exit(0)
-        except Exception as e:
-            # Se falhar, continuar sem admin (usuário pode ter cancelado UAC)
-            print(f"Aviso: Não foi possível elevar privilégios: {e}")
-            print("Algumas operações podem falhar sem privilégios de administrador.")
-            print("Continuando sem elevação...\n")
-    
-    # Executar o app
     app = CommandRunnerApp()
     app.run()
