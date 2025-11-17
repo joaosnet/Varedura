@@ -404,45 +404,40 @@ class CommandRunnerApp(App[None]):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True, classes="app--header")
-        with Horizontal(classes="app--layout"):
-            with Vertical(id="sidebar", classes="app--sidebar"):
-                yield Static("[bold]Ações Disponíveis[/bold]", id="menu_title", classes="sidebar--title")
-                
-                # Indicador de privilégios de admin
-                try:
-                    import ctypes
-                    is_admin = ctypes.windll.shell32.IsUserAnAdmin()
-                    admin_status = "[green]✓ Admin[/green]" if is_admin else "[yellow]⚠ Sem Admin[/yellow]"
-                    yield Static(f"Status: {admin_status}", id="admin_status", classes="sidebar--status")
-                except Exception:
-                    pass
-                
-                yield Button("Limpeza Docker", id="docker_cleanup", classes="sidebar--button")
-                yield Button("Opções de Limpeza", id="docker_options", classes="sidebar--button")
-                yield Button("LMArena: Gerar Models", id="models_generator", classes="sidebar--button")
-                yield Button("Abrir pasta de logs", id="open_logs", classes="sidebar--button")
-                yield Button("Limpar logs UI", id="clear_logs", classes="sidebar--button")
-                yield Button("Sair", id="exit", classes="sidebar--button")
-                yield LoadingIndicator(id="spinner", classes="main--spinner hidden")
-            with VerticalScroll(id="main", classes="app--main"):
-                yield Static("[bold]Detalhes / Controles[/bold]", id="details_title", classes="main--title")
-                yield Label("Selecione uma ação à esquerda e use os botões abaixo para rodar.", classes="main--label")
-                default_models = "lmarena_models.txt" if Path("lmarena_models.txt").exists() else ""
-                yield Input(value=default_models, placeholder="Caminho do arquivo para models (ex: lmarena_models.txt)", id="models_path", classes="main--input")
-                yield Button("Executar Generator", id="run_models", classes="main--button")
-
-                # Nova estrutura com Tabs
-                with TabbedContent(initial="overview"):
-                    # Aba Visão Geral: DataTable para tarefas ativas
-                    with TabPane("Visão Geral", id="overview"):
-                        yield DataTable(id="tasks_table", zebra_stripes=True, show_cursor=True)
-                    # Aba Progresso: ProgressBar gradiente + Sparkline histórico
-                    with TabPane("Progresso", id="progress"):
-                        yield ProgressBar(total=100, id="main_progress")
-                        yield Sparkline(id="space_spark")
-                    # Aba Logs: RichLog existente
-                    with TabPane("Logs", id="logs"):
-                        yield RichLog(id="log", highlight=True, markup=True, classes="main--log")
+        with TabbedContent(initial="docker_cleaner"):
+            # Tab Docker Cleaner
+            with TabPane("Docker Cleaner", id="docker_cleaner"):
+                with Vertical(classes="docker--controls"):
+                    try:
+                        import ctypes
+                        is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+                        admin_status = "[green]✓ Admin[/green]" if is_admin else "[yellow]⚠ Sem Admin[/yellow]"
+                        yield Static(f"Status: {admin_status}", id="admin_status", classes="sidebar--status")
+                    except Exception:
+                        pass
+                    yield Button("Limpeza Completa", id="docker_cleanup", classes="main--button")
+                    yield Button("Opções de Limpeza", id="docker_options", classes="main--button")
+                    yield Button("Configurar Sparse (WSL)", id="docker_sparse", classes="main--button")
+                    yield Button("Compactar VHDX", id="docker_vhdx", classes="main--button")
+                    yield Button("Limpar arquivos temporários", id="docker_temp", classes="main--button")
+                yield Static("[bold]Progresso da Limpeza[/bold]", classes="main--title")
+                yield ProgressBar(total=100, id="docker_progress")
+                yield Sparkline(id="docker_space_spark")
+            # Tab LMArena Generator
+            with TabPane("LMArena Generator", id="lmarena_generator"):
+                with Vertical(classes="lmarena--controls"):
+                    default_models = "lmarena_models.txt" if Path("lmarena_models.txt").exists() else ""
+                    yield Input(value=default_models, placeholder="Caminho do arquivo para models (ex: lmarena_models.txt)", id="models_path", classes="main--input")
+                    yield Button("Executar Generator", id="run_models", classes="main--button")
+                yield Static("[bold]Progresso do Generator[/bold]", classes="main--title")
+                yield ProgressBar(total=100, id="generator_progress")
+            # Tab Logs
+            with TabPane("Logs", id="logs_tab"):
+                with Vertical(classes="logs--controls"):
+                    yield Button("Abrir pasta de logs", id="open_logs", classes="main--button")
+                    yield Button("Limpar logs UI", id="clear_logs", classes="main--button")
+                    yield Button("Sair", id="exit", classes="main--button")
+                yield RichLog(id="log", highlight=True, markup=True, classes="main--log")
         yield Footer(classes="app--footer")
 
     @on(Button.Pressed, "#exit")
