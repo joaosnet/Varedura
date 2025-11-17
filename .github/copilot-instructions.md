@@ -404,6 +404,118 @@ def test_docker_cleanup(mock_run):
     assert mock_run.called
 ```
 
+**Creating custom widgets**:
+```python
+# Simple widget with render method
+class HelloWorld(Widget):
+    def render(self) -> str:
+        return "[b]Hello[/b] World"
+
+# Widget with embedded CSS
+class StyledWidget(Widget):
+    DEFAULT_CSS = """
+        StyledWidget {
+            background: blue;
+            color: white;
+            padding: 1 2;
+        }
+    """
+    
+    def render(self) -> str:
+        return "Styled Content"
+
+# Widget with compose (compound widget)
+class InputWithLabel(Container):
+    def __init__(self, label: str, **kwargs):
+        super().__init__(**kwargs)
+        self.label_text = label
+    
+    def compose(self) -> ComposeResult:
+        yield Label(self.label_text)
+        yield Input(placeholder="Enter text...")
+
+# Widget with reactive state
+class Counter(Static):
+    count = reactive(0)
+    
+    def watch_count(self, count: int) -> None:
+        self.update(f"Count: {count}")
+```
+
+**Adding animations**:
+```python
+# Animate opacity (fade out)
+widget.styles.animate("opacity", value=0.0, duration=2.0)
+
+# Animate background color
+widget.styles.animate("background", value="blue", duration=0.5)
+
+# Animate offset (move widget)
+widget.styles.animate("offset", value=(10, 5), duration=1.0)
+
+# Animated gradient background
+class AnimatedWidget(Widget):
+    gradient_offset = var(0.0)
+    
+    def on_mount(self) -> None:
+        self.set_interval(1/30, self.update_animation)
+    
+    def update_animation(self) -> None:
+        self.gradient_offset += 0.01
+        self.refresh()
+    
+    def render(self) -> LinearGradient:
+        return LinearGradient(
+            Color(0, 0, 255),
+            Color(0, 255, 255),
+            Color(255, 0, 255)
+        ).shift(self.gradient_offset)
+```
+
+**Styling widgets**:
+```python
+# Programmatic styling
+widget.styles.background = "blue"
+widget.styles.border = ("heavy", "white")
+widget.styles.padding = (1, 2)
+
+# CSS styling (in app or widget)
+CSS = """
+#my-widget {
+    background: $primary;
+    border: solid green;
+    text-align: center;
+}
+
+.warning {
+    background: red;
+    color: white;
+}
+"""
+
+# Border titles and subtitles
+widget.border_title = "Title"
+widget.border_subtitle = "Subtitle"
+widget.styles.border_title_align = "center"
+
+# Component classes for sub-parts
+class CustomWidget(Widget):
+    COMPONENT_CLASSES = {
+        "custom--header",
+        "custom--body",
+        "custom--footer"
+    }
+    
+    DEFAULT_CSS = """
+    CustomWidget .custom--header {
+        background: blue;
+    }
+    CustomWidget .custom--body {
+        background: white;
+    }
+    """
+```
+
 **Debugging streaming issues**:
 - Check `stream_callback` is called with `\n`-terminated strings
 - Verify `call_from_thread()` is used when writing from worker threads
