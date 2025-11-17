@@ -109,3 +109,25 @@ def test_wsl_docker_cleaner_log_uses_python_logging(tmp_path):
     assert expected_file.exists()
     content = expected_file.read_text(encoding="utf-8")
     assert "Cleaner test error" in content
+
+
+def test_daily_writer_handles_write_and_ui_exceptions(tmp_path):
+    # Writer with file that raises on write and UI callback that raises
+    logs_dir = tmp_path / "logs_ex"
+    def ui_raise(text: str) -> None:
+        raise RuntimeError("ui fail")
+    writer = DailyLogWriter(logs_dir=logs_dir, ui_write=ui_raise)
+    # Create dummy file-like object that raises on write
+    class BrokenFP:
+        def write(self, _):
+            raise IOError("disk full")
+        def flush(self):
+            raise IOError("flush fail")
+        def close(self):
+            raise IOError("close fail")
+    writer._current_fp = BrokenFP()
+    # The write should not raise even if underlying operations fail
+    writer.write("hello")
+    # flush and close should be swallow exceptions
+    writer.flush()
+    writer.close()

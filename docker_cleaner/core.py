@@ -452,6 +452,43 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                     self.log(f"Erro limpando {temp_path}: {str(e)}", "ERROR")
         return True
 
+    async def cleanup_temp_files_async(self, stream_callback: Optional[Callable[[str], None]] = None):
+        """Versão async de cleanup_temp_files com streaming."""
+        if stream_callback:
+            stream_callback("=== LIMPANDO ARQUIVOS TEMPORÁRIOS ===\n")
+        
+        temp_paths = [
+            os.path.expandvars(r"%TEMP%"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Temp"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Docker\log")
+        ]
+        
+        total_deleted = 0
+        for temp_path in temp_paths:
+            if os.path.exists(temp_path):
+                if stream_callback:
+                    stream_callback(f"Limpando: {temp_path}\n")
+                try:
+                    import glob
+                    patterns = ["*.log", "*.tmp", "*docker*.log", "*docker*.tmp"]
+                    for pattern in patterns:
+                        search_pattern = os.path.join(temp_path, pattern)
+                        files = glob.glob(search_pattern)
+                        for file_path in files:
+                            try:
+                                os.remove(file_path)
+                                total_deleted += 1
+                            except Exception:
+                                pass
+                except Exception as e:
+                    if stream_callback:
+                        stream_callback(f"Erro limpando {temp_path}: {str(e)}\n")
+        
+        if stream_callback and total_deleted > 0:
+            stream_callback(f"{total_deleted} arquivo(s) temporário(s) removido(s)\n")
+        
+        return total_deleted > 0
+
     # ========== MÉTODOS ASYNC COM STREAMING ==========
     
     async def docker_cleanup_async(self, stream_callback: Optional[Callable[[str], None]] = None):

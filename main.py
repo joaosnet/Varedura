@@ -926,8 +926,8 @@ class CommandRunnerApp(App[None]):
             self.current_progress = 90
             self.active_tasks[-1]["progress"] = 90
             self.active_tasks[-1]["status"] = "Temp files"
-            self.write_ui_log("Etapa 5/5: Limpando temp...\n")
-            cleaner.cleanup_temp_files()
+            self.write_ui_log("Etapa 5/5: Limpando arquivos temporários...\n")
+            await cleaner.cleanup_temp_files_async(stream_callback=self.write_ui_log)
             
             self.current_progress = 100
             self.active_tasks[-1]["progress"] = 100
@@ -1150,27 +1150,30 @@ class CommandRunnerApp(App[None]):
             self.notify(f"Erro {task_name}: {e}", severity="error")
             self.active_tasks.pop()
 
-    @work(thread=True)
-    def _run_cleanup_temp(self) -> None:
-        task_name = "Cleanup Temp"
+    @work(exclusive=True)
+    async def _run_cleanup_temp(self) -> None:
+        """Worker async para limpeza de arquivos temporários com streaming."""
+        task_name = "Limpar arquivos temporários"
         self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
+        self.notify(f"Iniciando {task_name}", severity="information")
+        
         try:
             from docker_cleaner.core import WSLDockerCleaner
             cleaner = WSLDockerCleaner()
-            cleaner.cleanup_temp_files()
-            self.call_from_thread(self.notify, f"{task_name} concluído", severity="success")
-            # Ensure test looks for legacy string
-            self.write_ui_log("Cleanup temp error")
-            try:
-                self.query_one(RichLog).write("Cleanup temp error")
-            except Exception:
-                pass
+            self.active_tasks[-1]["status"] = "executando"
+            self.current_progress = 50
+            
+            await cleaner.cleanup_temp_files_async(stream_callback=self.write_ui_log)
+            
+            self.current_progress = 100
+            self.active_tasks[-1]["status"] = "concluído"
+            self.notify(f"{task_name} concluído!", severity="success")
+            self.write_ui_log("Limpeza de arquivos temporários concluída")
+            
             self.active_tasks.pop()
         except Exception as e:
-            try:
-                self.call_from_thread(self.notify, f"Erro {task_name}: {e}", severity="error")
-            except Exception:
-                pass
+            self.active_tasks[-1]["status"] = f"erro: {str(e)}"
+            self.notify(f"Erro em {task_name}: {e}", severity="error")
             self.active_tasks.pop()
 
     @work(exclusive=True)
