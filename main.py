@@ -870,8 +870,8 @@ class CommandRunnerApp(App[None]):
                     def clear_bar():
                             try:
                                 bar.remove()
-                                prog_tab._progress = None
-                                prog_tab.progress_value = 0
+                                progress_tab._progress = None
+                                progress_tab.progress_value = 0
                             except Exception:
                                 pass
                     self.set_interval(1.5, clear_bar, repeat=False)
