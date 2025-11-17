@@ -20,8 +20,9 @@ from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Button, Static, Input, Label, RichLog, Checkbox, LoadingIndicator
 from textual.screen import Screen
-from textual import work
+from textual import work, on
 from textual.worker import Worker, WorkerState
+from textual.reactive import reactive, var
 from typing import Callable
 from rich.console import Console as RichConsole
 from rich.progress import Progress as RichProgress, BarColumn, TextColumn, TaskProgressColumn
@@ -39,18 +40,20 @@ class ConfirmScreen(Screen):
         self.result = False
 
     def compose(self) -> ComposeResult:
-        yield Static(f"[bold yellow]{self.message}[/bold yellow]")
-        with Horizontal():
-            yield Button("Confirmar", id="confirm_yes")
-            yield Button("Cancelar", id="confirm_no")
+        yield Static(f"[bold yellow]{self.message}[/bold yellow]", classes="confirm--message")
+        with Horizontal(classes="confirm--buttons"):
+            yield Button("Confirmar", id="confirm_yes", classes="confirm--button confirm--yes")
+            yield Button("Cancelar", id="confirm_no", classes="confirm--button confirm--no")
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "confirm_yes":
-            self.result = True
-            self.dismiss(result=True)
-        else:
-            self.result = False
-            self.dismiss(result=False)
+    @on(Button.Pressed, "#confirm_yes")
+    def handle_confirm_yes(self) -> None:
+        self.result = True
+        self.dismiss(result=True)
+
+    @on(Button.Pressed, "#confirm_no")
+    def handle_confirm_no(self) -> None:
+        self.result = False
+        self.dismiss(result=False)
 
 
 class CleanupOptionsScreen(Screen):
@@ -68,10 +71,10 @@ class CleanupOptionsScreen(Screen):
         self.selected_options: dict = {}
 
     def compose(self) -> ComposeResult:
-        with Container():
-            yield Static(f"[bold yellow]{self.message}[/bold yellow]")
+        with Container(classes="cleanup--container"):
+            yield Static(f"[bold yellow]{self.message}[/bold yellow]", classes="cleanup--header")
             # Place the large list of options in a scrollable vertical area so footer buttons remain visible
-            with VerticalScroll(id="opts_body"):
+            with VerticalScroll(id="opts_body", classes="cleanup--body"):
                 # Checkboxes for the available granular cleanup steps
                 yield Checkbox("Parar Dockers e WSL (taskkill + wsl --shutdown)", id="opt_stop_wsl")
                 yield Checkbox("Prune containers (docker container prune -f)", id="opt_prune_containers")
@@ -84,15 +87,15 @@ class CleanupOptionsScreen(Screen):
                 yield Checkbox("Compactar VHDX (admin)", id="opt_compact_vhdx")
                 yield Checkbox("Limpar arquivos temporários", id="opt_cleanup_temp")
             # Preset buttons to quickly set common combos — outside scroll area
-            with Horizontal(id="opts_presets"):
-                yield Button("Quick", id="opts_preset_quick", variant="success")
-                yield Button("Full", id="opts_preset_full", variant="warning")
-                yield Button("Limpar Seleção", id="opts_clear", variant="error")
+            with Horizontal(id="opts_presets", classes="cleanup--presets"):
+                yield Button("Quick", id="opts_preset_quick", variant="success", classes="cleanup--preset-button")
+                yield Button("Full", id="opts_preset_full", variant="warning", classes="cleanup--preset-button")
+                yield Button("Limpar Seleção", id="opts_clear", variant="error", classes="cleanup--preset-button")
             # Footer controls — always visible at the bottom of the modal
-            with Horizontal(id="opts_footer"):
-                yield Button("Executar", id="opts_exec", variant="primary")
-                yield Button("Salvar Preferências", id="opts_save")
-                yield Button("Cancelar", id="opts_cancel")
+            with Horizontal(id="opts_footer", classes="cleanup--footer"):
+                yield Button("Executar", id="opts_exec", variant="primary", classes="cleanup--action-button")
+                yield Button("Salvar Preferências", id="opts_save", classes="cleanup--action-button")
+                yield Button("Cancelar", id="opts_cancel", classes="cleanup--action-button")
 
     def on_mount(self) -> None:
         # Initialize default checkbox state
@@ -103,302 +106,373 @@ class CleanupOptionsScreen(Screen):
             except Exception:
                 pass
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "opts_cancel":
-            self.result = False
-            self.selected_options = {}
-            self.dismiss(result=False)
-            return
-        
-        # Preset handling: set specific checkboxes
-        if event.button.id == "opts_preset_quick":
-            # set containers/images/volumes True, others False
-            for chk in self.query(Checkbox):
-                if chk.id in ("opt_prune_containers", "opt_prune_images", "opt_prune_volumes"):
-                    chk.value = True
-                else:
-                    chk.value = False
-            return
-        
-        if event.button.id == "opts_preset_full":
-            for chk in self.query(Checkbox):
+    @on(Button.Pressed, "#opts_cancel")
+    def handle_opts_cancel(self) -> None:
+        self.result = False
+        self.selected_options = {}
+        self.dismiss(result=False)
+
+    @on(Button.Pressed, "#opts_preset_quick")
+    def handle_opts_preset_quick(self) -> None:
+        # set containers/images/volumes True, others False
+        for chk in self.query(Checkbox):
+            if chk.id in ("opt_prune_containers", "opt_prune_images", "opt_prune_volumes"):
                 chk.value = True
-            return
-        
-        if event.button.id == "opts_clear":
-            for chk in self.query(Checkbox):
+            else:
                 chk.value = False
-            return
-        
-        # Save selected options as default preferences
-        if event.button.id == "opts_save":
-            opts = {chk.id: chk.value for chk in self.query(Checkbox)}
-            # Persist to user home
+
+    @on(Button.Pressed, "#opts_preset_full")
+    def handle_opts_preset_full(self) -> None:
+        for chk in self.query(Checkbox):
+            chk.value = True
+
+    @on(Button.Pressed, "#opts_clear")
+    def handle_opts_clear(self) -> None:
+        for chk in self.query(Checkbox):
+            chk.value = False
+
+    @on(Button.Pressed, "#opts_save")
+    def handle_opts_save(self) -> None:
+        opts = {chk.id: chk.value for chk in self.query(Checkbox)}
+        # Persist to user home
+        try:
+            import json
+            config_path = Path.home() / ".docker_clennear_prefs.json"
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(opts, f, indent=2)
+            # If hosted under an app with write_ui_log, use it
             try:
-                import json
-                config_path = Path.home() / ".docker_clennear_prefs.json"
-                with open(config_path, "w", encoding="utf-8") as f:
-                    json.dump(opts, f, indent=2)
-                # If hosted under an app with write_ui_log, use it
-                try:
-                    getattr(self.app, "write_ui_log", lambda *_: None)(f"Preferências salvas em: {config_path}")
-                except Exception:
-                    pass
-                # Don't dismiss, let user continue selecting or execute
-                return
-            except Exception as e:
-                try:
-                    getattr(self.app, "write_ui_log", lambda *_: None)(f"Erro ao salvar preferências: {e}")
-                except Exception:
-                    pass
-                return
-        
-        # Execute button - collect checkbox values and dismiss with result=True
-        if event.button.id == "opts_exec":
-            opts = {}
-            for chk in self.query(Checkbox):
-                opts[chk.id] = chk.value
-            self.selected_options = opts
-            self.result = True
-            self.dismiss(result=True)
-            return
+                getattr(self.app, "write_ui_log", lambda *_: None)(f"Preferências salvas em: {config_path}")
+            except Exception:
+                pass
+            # Don't dismiss, let user continue selecting or execute
+        except Exception as e:
+            try:
+                getattr(self.app, "write_ui_log", lambda *_: None)(f"Erro ao salvar preferências: {e}")
+            except Exception:
+                pass
 
+    @on(Button.Pressed, "#opts_exec")
+    def handle_opts_exec(self) -> None:
+        opts = {}
+        for chk in self.query(Checkbox):
+            opts[chk.id] = chk.value
+        self.selected_options = opts
+        self.result = True
+        self.dismiss(result=True)
 
-class CommandRunnerApp(App[None]):
     CSS = """
-    #layout
-    Horizontal {
-        height: 1fr;
+    /* ConfirmScreen styles */
+    ConfirmScreen {
+        align: center middle;
     }
-    #sidebar {
-        width: 30;
-        padding: 1 1;
-        border: heavy $accent;
+    .confirm--message {
+        width: 100%;
+        text-align: center;
+        padding: 1;
+        background: $boost;
     }
-    #main {
-        width: 1fr;
-        padding: 1 1;
-        layout: vertical;
+    .confirm--buttons {
+        width: 100%;
+        height: auto;
+        padding: 1;
+        background: $panel;
     }
-    #log {
-        height: 10;
-        min-height: 8;
-        border: solid $surface;
-    }
-    #progress {
-        height: 3;
-        padding: 0 1;
-        border: heavy $accent;
-    }
-    LoadingIndicator.hidden {
-        display: none;
-    }
-    #menu_title, #details_title {
-        content-align: center middle;
-        padding: 0 1;
-        border-bottom: dashed $accent;
+    .confirm--button {
+        margin: 0 1;
     }
     
     /* CleanupOptionsScreen styles */
     CleanupOptionsScreen {
         align: center middle;
     }
-    CleanupOptionsScreen > Static {
+    .cleanup--container {
+        width: 100%;
+        height: 100%;
+    }
+    .cleanup--header {
         width: 100%;
         text-align: center;
         padding: 1;
         background: $boost;
     }
-    #opts_body {
+    .cleanup--body {
         width: 100%;
         height: 1fr;
         border: solid $primary;
         padding: 1 2;
         margin: 1 0;
     }
-    #opts_body Checkbox {
-        margin: 0 0 1 0;
-    }
-    #opts_presets {
+    .cleanup--presets {
         width: 100%;
         height: auto;
         padding: 1;
         margin: 1 0;
     }
-    #opts_footer {
+    .cleanup--preset-button {
+        margin: 0 1;
+    }
+    .cleanup--footer {
         width: 100%;
         height: auto;
         dock: bottom;
         padding: 1;
         background: $panel;
     }
-    #opts_footer Button {
+    .cleanup--action-button {
         margin: 0 1;
     }
     """
 
-    TITLE = "Docker-Clennear UI"
+class CommandRunnerApp(App[None]):
+
+    active_workers = reactive(0)
+
+    CSS = """
+    /* CommandRunnerApp layout styles */
+    .app--layout {
+        height: 1fr;
+    }
+    .app--sidebar {
+        width: 30;
+        padding: 1 1;
+        border: heavy $accent;
+    }
+    .app--main {
+        width: 1fr;
+        padding: 1 1;
+        layout: vertical;
+    }
+    .app--header, .app--footer {
+        /* Default header/footer styles */
+    }
+    
+    /* Sidebar component styles */
+    .sidebar--title {
+        content-align: center middle;
+        padding: 0 1;
+        border-bottom: dashed $accent;
+    }
+    .sidebar--status {
+        padding: 0 1;
+        margin: 1 0;
+    }
+    .sidebar--button {
+        width: 100%;
+        margin: 0 0 1 0;
+    }
+    
+    /* Main area component styles */
+    .main--title {
+        content-align: center middle;
+        padding: 0 1;
+        border-bottom: dashed $accent;
+    }
+    .main--label {
+        margin: 1 0;
+    }
+    .main--input {
+        margin: 1 0;
+    }
+    .main--button {
+        margin: 1 0;
+    }
+    .main--progress-label {
+        margin: 1 0;
+    }
+    .main--progress {
+        height: 3;
+        padding: 0 1;
+        border: heavy $accent;
+    }
+    .main--spinner {
+        /* Additional spinner styles if needed */
+    }
+    .main--log-label {
+        margin: 1 0;
+    }
+    .main--log {
+        height: 10;
+        min-height: 8;
+        border: solid $surface;
+    }
+    
+    /* Loading indicator */
+    LoadingIndicator.hidden {
+        display: none;
+    }
+    """
+
+    def watch_active_workers(self, count: int) -> None:
+        """Show/hide spinner based on active workers count."""
+        try:
+            spinner = self.query_one("#spinner", LoadingIndicator)
+            if count > 0:
+                spinner.remove_class("hidden")
+            else:
+                spinner.add_class("hidden")
+        except Exception:
+            pass
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
-        with Horizontal():
-            with Vertical(id="sidebar"):
-                yield Static("[bold]Ações Disponíveis[/bold]", id="menu_title")
+        yield Header(show_clock=True, classes="app--header")
+        with Horizontal(classes="app--layout"):
+            with Vertical(id="sidebar", classes="app--sidebar"):
+                yield Static("[bold]Ações Disponíveis[/bold]", id="menu_title", classes="sidebar--title")
                 
                 # Indicador de privilégios de admin
                 try:
                     import ctypes
                     is_admin = ctypes.windll.shell32.IsUserAnAdmin()
                     admin_status = "[green]✓ Admin[/green]" if is_admin else "[yellow]⚠ Sem Admin[/yellow]"
-                    yield Static(f"Status: {admin_status}", id="admin_status")
+                    yield Static(f"Status: {admin_status}", id="admin_status", classes="sidebar--status")
                 except Exception:
                     pass
                 
-                yield Button("Limpeza Docker", id="docker_cleanup")
-                yield Button("Opções de Limpeza", id="docker_options")
-                yield Button("LMArena: Gerar Models", id="models_generator")
-                yield Button("Abrir pasta de logs", id="open_logs")
-                yield Button("Limpar logs UI", id="clear_logs")
-                yield Button("Sair", id="exit")
-            with VerticalScroll(id="main"):
-                yield Static("[bold]Detalhes / Controles[/bold]", id="details_title")
-                yield Label("Selecione uma ação à esquerda e use os botões abaixo para rodar.")
+                yield Button("Limpeza Docker", id="docker_cleanup", classes="sidebar--button")
+                yield Button("Opções de Limpeza", id="docker_options", classes="sidebar--button")
+                yield Button("LMArena: Gerar Models", id="models_generator", classes="sidebar--button")
+                yield Button("Abrir pasta de logs", id="open_logs", classes="sidebar--button")
+                yield Button("Limpar logs UI", id="clear_logs", classes="sidebar--button")
+                yield Button("Sair", id="exit", classes="sidebar--button")
+            with VerticalScroll(id="main", classes="app--main"):
+                yield Static("[bold]Detalhes / Controles[/bold]", id="details_title", classes="main--title")
+                yield Label("Selecione uma ação à esquerda e use os botões abaixo para rodar.", classes="main--label")
                 default_models = "lmarena_models.txt" if Path("lmarena_models.txt").exists() else ""
-                yield Input(value=default_models, placeholder="Caminho do arquivo para models (ex: lmarena_models.txt)", id="models_path")
-                yield Button("Executar Generator", id="run_models")
-                yield Static("Progresso:")
-                yield Static("", id="progress")
-                yield LoadingIndicator(id="spinner", classes="hidden")
-                yield Static("Logs de saída:")
-                yield RichLog(id="log", highlight=True, markup=True)
-        yield Footer()
+                yield Input(value=default_models, placeholder="Caminho do arquivo para models (ex: lmarena_models.txt)", id="models_path", classes="main--input")
+                yield Button("Executar Generator", id="run_models", classes="main--button")
+                yield Static("Progresso:", classes="main--progress-label")
+                yield Static("", id="progress", classes="main--progress")
+                yield LoadingIndicator(id="spinner", classes="hidden main--spinner")
+                yield Static("Logs de saída:", classes="main--log-label")
+                yield RichLog(id="log", highlight=True, markup=True, classes="main--log")
+        yield Footer(classes="app--footer")
 
-    async def on_button_pressed(self, event: Button.Pressed) -> None:
-        button_id = event.button.id
-        if button_id == "exit":
-            self.exit()
-            return
-        if button_id == "docker_cleanup":
-            # Single-command: run the full cleanup by default
-            self.write_ui_log("Executando Limpeza Docker Completa (elevada, pode exigir admin)...")
-            self._run_full_cleanup()
-            return
-        if button_id == "docker_options":
-            # Present the options screen with sensible defaults
-            # Try load saved preferences from file
-            defaults = {
-                "opt_stop_wsl": False,
-                "opt_prune_containers": True,
-                "opt_prune_images": True,
-                "opt_prune_volumes": True,
-                "opt_prune_networks": False,
-                "opt_prune_builder": False,
-                "opt_prune_system": False,
-                "opt_configure_sparse": False,
-                "opt_compact_vhdx": False,
-                "opt_cleanup_temp": True,
-            }
-            try:
-                import json
-                config_path = Path.home() / ".docker_clennear_prefs.json"
-                if config_path.exists():
-                    with open(config_path, "r", encoding="utf-8") as f:
-                        loaded = json.load(f)
-                        if isinstance(loaded, dict):
-                            for k, v in loaded.items():
-                                defaults[k] = v
-            except Exception:
-                pass
-            opts_screen = CleanupOptionsScreen("Selecione as opções de limpeza", defaults=defaults)
-            # Usar push_screen_wait para aguardar o modal ser fechado
-            self.write_ui_log("[DEBUG] Abrindo modal de opções de limpeza...")
-            result = await self.push_screen(opts_screen, wait_for_dismiss=True)
-            self.write_ui_log(f"[DEBUG] Modal fechado. Resultado: {result}, selected_options: {opts_screen.selected_options}")
-            
-            # Verificar se usuário cancelou - result é o valor passado para dismiss()
-            if not result:
-                self.write_ui_log("Limpeza Docker cancelada pelo usuário.")
-                return
-            
-            selected = opts_screen.selected_options
-            # Execute the selected options in a reasonable order
-            # 1) Stop WSL/Docker, 2) Quick cleanup (in-process or subprocess), 3) Full cleanup, 4) Configure/Compact, 5) Cleanup temp
-            if selected.get("opt_stop_wsl"):
-                self.write_ui_log("Executando: Parar Docker e WSL...")
-                # Use a worker to run stop_docker_wsl
-                self._run_stop_wsl()
-            # Run prune commands selected
-            if selected.get("opt_prune_containers"):
-                self.write_ui_log("Executando prune containers...")
-                self._run_prune_containers()
-            if selected.get("opt_prune_images"):
-                self.write_ui_log("Executando prune images...")
-                self._run_prune_images()
-            if selected.get("opt_prune_volumes"):
-                self.write_ui_log("Executando prune volumes...")
-                self._run_prune_volumes()
-            if selected.get("opt_prune_networks"):
-                self.write_ui_log("Executando prune networks...")
-                self._run_prune_networks()
-            if selected.get("opt_prune_builder"):
-                self.write_ui_log("Executando prune builder...")
-                self._run_prune_builder()
-            if selected.get("opt_prune_system"):
-                self.write_ui_log("Executando prune system (docker system prune -af --volumes)...")
-                self._run_prune_system()
-            # Removed legacy quick/full options: execution now maps to the granular options selected above.
-            if selected.get("opt_configure_sparse"):
-                self.write_ui_log("Configurando sparse (WSL)...")
-                self._run_configure_sparse()
-            if selected.get("opt_compact_vhdx"):
-                self.write_ui_log("Compactando VHDX (pode requerer administrador)...")
-                self._run_compact_vhdx()
-            if selected.get("opt_cleanup_temp"):
-                self.write_ui_log("Limpando arquivos temporários...")
-                self._run_cleanup_temp()
-            return
-        # removed: duplicate full_cleanup handler — consolidated under 'docker_cleanup'
-        # Legacy quick-inprocess was removed; keep worker in code for reuse.
-        # The `Full Cleanup` button was removed in favor of customizable options.
-        # Full Cleanup elevated removed in UI; use the 'Compact VHDX' and 'Configurar sparse' options if required.
-        if button_id == "models_generator":
-            # focus the input field
-            self.query_one(Input).focus()
-            return
-        if button_id == "run_models":
-            path_input = self.query_one(Input)
-            path = path_input.value.strip() if path_input.value else ""
-            if not path:
-                self.write_ui_log("Por favor informe um caminho de arquivo válido para gerar modelos.")
-                return
-            await self.run_python_script(["-m", "lmarena.generator", path], "Models Generator")
+    @on(Button.Pressed, "#exit")
+    def handle_exit(self) -> None:
+        self.exit()
 
-        if button_id == "open_logs":
-            logs_dir = Path("logs")
-            if not logs_dir.exists():
-                self.write_ui_log("Diretório de logs não encontrado: logs")
-                return
-            try:
-                # platform-specific: Windows explorer
-                if sys.platform.startswith("win"):
-                    os.startfile(str(logs_dir))
-                else:
-                    import webbrowser
+    @on(Button.Pressed, "#docker_cleanup")
+    def handle_docker_cleanup(self) -> None:
+        # Single-command: run the full cleanup by default
+        self.write_ui_log("Executando Limpeza Docker Completa (elevada, pode exigir admin)...")
+        self._run_full_cleanup()
 
-                    webbrowser.open(str(logs_dir))
-                self.write_ui_log("Abrindo pasta de logs...")
-            except Exception as e:
-                self.write_ui_log(f"Falha ao abrir pasta de logs: {e}")
+    @on(Button.Pressed, "#docker_options")
+    async def handle_docker_options(self) -> None:
+        # Present the options screen with sensible defaults
+        # Try load saved preferences from file
+        defaults = {
+            "opt_stop_wsl": False,
+            "opt_prune_containers": True,
+            "opt_prune_images": True,
+            "opt_prune_volumes": True,
+            "opt_prune_networks": False,
+            "opt_prune_builder": False,
+            "opt_prune_system": False,
+            "opt_configure_sparse": False,
+            "opt_compact_vhdx": False,
+            "opt_cleanup_temp": True,
+        }
+        try:
+            import json
+            config_path = Path.home() / ".docker_clennear_prefs.json"
+            if config_path.exists():
+                with open(config_path, "r", encoding="utf-8") as f:
+                    loaded = json.load(f)
+                    if isinstance(loaded, dict):
+                        for k, v in loaded.items():
+                            defaults[k] = v
+        except Exception:
+            pass
+        opts_screen = CleanupOptionsScreen("Selecione as opções de limpeza", defaults=defaults)
+        # Usar push_screen_wait para aguardar o modal ser fechado
+        self.write_ui_log("[DEBUG] Abrindo modal de opções de limpeza...")
+        result = await self.push_screen(opts_screen, wait_for_dismiss=True)
+        self.write_ui_log(f"[DEBUG] Modal fechado. Resultado: {result}, selected_options: {opts_screen.selected_options}")
+        
+        # Verificar se usuário cancelou - result é o valor passado para dismiss()
+        if not result:
+            self.write_ui_log("Limpeza Docker cancelada pelo usuário.")
             return
+        
+        selected = opts_screen.selected_options
+        # Execute the selected options in a reasonable order
+        # 1) Stop WSL/Docker, 2) Quick cleanup (in-process or subprocess), 3) Full cleanup, 4) Configure/Compact, 5) Cleanup temp
+        if selected.get("opt_stop_wsl"):
+            self.write_ui_log("Executando: Parar Docker e WSL...")
+            # Use a worker to run stop_docker_wsl
+            self._run_stop_wsl()
+        # Run prune commands selected
+        if selected.get("opt_prune_containers"):
+            self.write_ui_log("Executando prune containers...")
+            self._run_prune_containers()
+        if selected.get("opt_prune_images"):
+            self.write_ui_log("Executando prune images...")
+            self._run_prune_images()
+        if selected.get("opt_prune_volumes"):
+            self.write_ui_log("Executando prune volumes...")
+            self._run_prune_volumes()
+        if selected.get("opt_prune_networks"):
+            self.write_ui_log("Executando prune networks...")
+            self._run_prune_networks()
+        if selected.get("opt_prune_builder"):
+            self.write_ui_log("Executando prune builder...")
+            self._run_prune_builder()
+        if selected.get("opt_prune_system"):
+            self.write_ui_log("Executando prune system (docker system prune -af --volumes)...")
+            self._run_prune_system()
+        # Removed legacy quick/full options: execution now maps to the granular options selected above.
+        if selected.get("opt_configure_sparse"):
+            self.write_ui_log("Configurando sparse (WSL)...")
+            self._run_configure_sparse()
+        if selected.get("opt_compact_vhdx"):
+            self.write_ui_log("Compactando VHDX (pode requerer administrador)...")
+            self._run_compact_vhdx()
+        if selected.get("opt_cleanup_temp"):
+            self.write_ui_log("Limpando arquivos temporários...")
+            self._run_cleanup_temp()
 
-        if button_id == "clear_logs":
-            # Clear the UI-only content (won't delete log files)
-            try:
-                self.query_one(RichLog).clear()
-                self.write_ui_log("UI logs limpos")
-            except Exception as e:
-                self.write_ui_log(f"Erro ao limpar log UI: {e}")
+    @on(Button.Pressed, "#models_generator")
+    def handle_models_generator(self) -> None:
+        # focus the input field
+        self.query_one(Input).focus()
+
+    @on(Button.Pressed, "#run_models")
+    async def handle_run_models(self) -> None:
+        path_input = self.query_one(Input)
+        path = path_input.value.strip() if path_input.value else ""
+        if not path:
+            self.write_ui_log("Por favor informe um caminho de arquivo válido para gerar modelos.")
             return
+        await self.run_python_script(["-m", "lmarena.generator", path], "Models Generator")
+
+    @on(Button.Pressed, "#open_logs")
+    def handle_open_logs(self) -> None:
+        logs_dir = Path("logs")
+        if not logs_dir.exists():
+            self.write_ui_log("Diretório de logs não encontrado: logs")
+            return
+        try:
+            # platform-specific: Windows explorer
+            if sys.platform.startswith("win"):
+                os.startfile(str(logs_dir))
+            else:
+                import webbrowser
+
+                webbrowser.open(str(logs_dir))
+            self.write_ui_log("Abrindo pasta de logs...")
+        except Exception as e:
+            self.write_ui_log(f"Falha ao abrir pasta de logs: {e}")
+
+    @on(Button.Pressed, "#clear_logs")
+    def handle_clear_logs(self) -> None:
+        # Clear the UI-only content (won't delete log files)
+        try:
+            self.query_one(RichLog).clear()
+            self.write_ui_log("UI logs limpos")
+        except Exception as e:
+            self.write_ui_log(f"Erro ao limpar log UI: {e}")
 
     def write_ui_log(self, message: str) -> None:
         """Write message to UI log and persist to daily log file.
@@ -998,9 +1072,6 @@ class CommandRunnerApp(App[None]):
         except Exception:
             pass
 
-        # Track number of active workers; used to show/hide a spinner indicator
-        self._active_workers = 0
-        
         # Log de inicialização com status de admin
         try:
             import ctypes
@@ -1023,25 +1094,12 @@ class CommandRunnerApp(App[None]):
             # Identify worker (use its name if provided)
             worker_name = getattr(event.worker, "name", None) or repr(event.worker)
             logging.getLogger().info("Worker state changed: %s -> %s", worker_name, event.state)
-            # show spinner when worker is running
-            try:
-                if event.state == WorkerState.RUNNING:
-                    self._active_workers += 1
-                    spinner = self.query_one("#spinner", LoadingIndicator)
-                    if spinner and "hidden" in spinner.classes:
-                        spinner.remove_class("hidden")
-                else:
-                    # treat non-running as completed/errored → decrement
-                    self._active_workers = max(0, getattr(self, "_active_workers", 0) - 1)
-                    if getattr(self, "_active_workers", 0) == 0:
-                        try:
-                            spinner = self.query_one("#spinner", LoadingIndicator)
-                            if spinner and "hidden" not in spinner.classes:
-                                spinner.add_class("hidden")
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+            # Update reactive active_workers count
+            if event.state == WorkerState.RUNNING:
+                self.active_workers += 1
+            else:
+                # treat non-running as completed/errored → decrement
+                self.active_workers = max(0, self.active_workers - 1)
             # If an error state, try to log the exception details (best-effort)
             if event.state == WorkerState.ERROR:
                 try:
