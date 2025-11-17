@@ -47,9 +47,10 @@ class ConfirmScreen(Screen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "confirm_yes":
             self.result = True
+            self.dismiss(result=True)
         else:
             self.result = False
-        self.dismiss()
+            self.dismiss(result=False)
 
 
 class CleanupOptionsScreen(Screen):
@@ -106,7 +107,7 @@ class CleanupOptionsScreen(Screen):
         if event.button.id == "opts_cancel":
             self.result = False
             self.selected_options = {}
-            self.dismiss()
+            self.dismiss(result=False)
             return
         
         # Preset handling: set specific checkboxes
@@ -159,7 +160,7 @@ class CleanupOptionsScreen(Screen):
                 opts[chk.id] = chk.value
             self.selected_options = opts
             self.result = True
-            self.dismiss()
+            self.dismiss(result=True)
             return
 
 
@@ -309,10 +310,16 @@ class CommandRunnerApp(App[None]):
             except Exception:
                 pass
             opts_screen = CleanupOptionsScreen("Selecione as opções de limpeza", defaults=defaults)
-            await self.push_screen(opts_screen)
-            if not opts_screen.result:
+            # Usar push_screen_wait para aguardar o modal ser fechado
+            self.write_ui_log("[DEBUG] Abrindo modal de opções de limpeza...")
+            result = await self.push_screen(opts_screen, wait_for_dismiss=True)
+            self.write_ui_log(f"[DEBUG] Modal fechado. Resultado: {result}, selected_options: {opts_screen.selected_options}")
+            
+            # Verificar se usuário cancelou - result é o valor passado para dismiss()
+            if not result:
                 self.write_ui_log("Limpeza Docker cancelada pelo usuário.")
                 return
+            
             selected = opts_screen.selected_options
             # Execute the selected options in a reasonable order
             # 1) Stop WSL/Docker, 2) Quick cleanup (in-process or subprocess), 3) Full cleanup, 4) Configure/Compact, 5) Cleanup temp
@@ -1065,8 +1072,8 @@ class CommandRunnerApp(App[None]):
         try:
             message = f"A operação '{operation_name}' requer privilégios de administrador. Deseja reiniciar o aplicativo como administrador?"
             confirm = ConfirmScreen(message)
-            await self.push_screen(confirm)
-            if not confirm.result:
+            result = await self.push_screen(confirm, wait_for_dismiss=True)
+            if not result:
                 self.write_ui_log(f"{operation_name} cancelada pelo usuário (não concedeu admin).")
                 return
             # Launch elevated process and exit this app instance.

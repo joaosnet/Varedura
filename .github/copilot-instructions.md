@@ -1,157 +1,431 @@
-# Copilot instructions — Docker-Clennear
+# Copilot Instructions — Docker-Clennear
 
-Purpose
-- This repo contains two functional areas:
-  - WSL Docker cleanup tools (`cli/main_cleaner.py`, `cli/quick_cleanup.py`, `docker_cleaner/core.py`) — Windows-only utilities to reclaim WSL/Docker space, prune Docker state and compact VHDX files.
-  - LMArena model utilities (`lmarena/generator.py`, `lmarena_models*.{txt,py}`) — parser/transformer that extracts models from raw dumps and writes a Python file (.py) with a `models` list and helper dicts.
+## Purpose & Architecture
 
-Big picture / architecture
-- Minimal, script-based repo (small module layout under `cli/`, `docker_cleaner/`, `lmarena/`). Most functionality is in standalone Python modules and a Textual TUI.
-- `docker_cleaner/core.py` is the main cleaner implementation (`WSLDockerCleaner` class). `cli/main_cleaner.py` is a small CLI wrapper and `cli/quick_cleanup.py` contains a simpler, quick-clean CLI function.
-- `lmarena/generator.py` is a pure data-processing utility which identifies `initialModels` JSON payloads in raw LMArena dumps and produces a Python module containing `models`, `text_models` and helper structures.
+This repo provides **Windows-only** WSL/Docker cleanup tools and LMArena model parsing utilities:
 
-Key files to inspect
-- `docker_cleaner/core.py` — main cleaning logic and rich console UI (`WSLDockerCleaner` class). Key methods: `run_command`, `is_admin`, `run_as_admin`, `docker_cleanup`, `stop_docker_wsl`, `configure_wsl_sparse`, `compact_vhdx_files`, `cleanup_temp_files`, `run_full_cleanup_with_progress`.
-- `cli/main_cleaner.py` — CLI wrapper entrypoint that calls `docker_cleaner.core.main()`.
-- `cli/quick_cleanup.py` — quick cleaning CLI implementation (in-process quick prune & compact flow).
-- `lmarena/generator.py` — parsing functions on `ModelsGenerator` class: `extract_initial_models`, `normalize_model`, `format_models_python`, `extract_text_models`, `extract_image_models`, `extract_vision_models`, `generate_full_code`.
-- `lmarena_models.txt` — example raw input from which `lmarena/generator.py` (or `-m lmarena.generator`) extracts `initialModels`.
-- `lmarena_models_models.py` — example output created by the generator (includes `models`, `text_models`, `image_models`, `vision_models`).
-- `main.py` — Textual TUI that integrates quick & full cleanup operations and the LMArena generator into a unified UI.
-- `README.md` — short project description; expand when making workflow changes.
+- **Docker Cleaner** (`docker_cleaner/core.py`, `cli/`, `main.py`) — Reclaims WSL/Docker space via pruning, VHDX compaction, and temp file cleanup
+- **LMArena Generator** (`lmarena/generator.py`) — Extracts `initialModels` from raw LMArena dumps and generates Python code with model lists
 
-Developer workflows
-- Local dev environment:
-  1. Use the included virtualenv in `.venv` or create one: `python -m venv .venv` then `& .\.venv\Scripts\Activate.ps1`.
-  2. Install `rich`, `textual` and other deps if not installed: `python -m pip install rich textual` (no requirements.txt present — add one if updating dependencies).
+**Key architectural pattern**: Dual execution model (sync + async) in `WSLDockerCleaner`:
+- Sync methods (`docker_cleanup()`, `compact_vhdx_files()`) for CLI/Rich UI
+- Async methods (`docker_cleanup_async()`, `compact_vhdx_files_async()`) for Textual TUI with real-time streaming via callbacks
+- Both use `run_command()`/`run_command_async()` with `shell=True` for Windows commands
 
--- How to run cleaners
-- Full cleaner (requires Windows + admin + Docker Desktop):
-  - `python -m cli.main_cleaner` (wraps `docker_cleaner.core.main`). The app attempts to elevate using UAC if required.
-- Quick cleaner (faster but less aggressive):
-  - `python -m cli.quick_cleanup` or `python -m cli.quick_cleanup` to run stand-alone.
--- Alternatively, start the UI with `python main.py` to use a TUI that can run granular cleanup steps.
-  - Notes: these scripts call `taskkill` and `docker system prune -af --volumes`, and will stop Docker Desktop and call `wsl --shutdown`. These are destructive operations. Ask for confirm if you propose changes that automatically run these commands.
+## Critical Files & Flows
 
--- How to run model generator
-- Basic: `python -m lmarena.generator lmarena_models.txt` — reads a raw payload and writes `lmarena_models_models.py` (or `<input>_models.py`) with `models` and derived dictionaries.
-- Example: run `python -m lmarena.generator --examples` (or call the `ModelsGenerator` class from a small script) to use a built-in example.
+**Docker Cleaner core** (`docker_cleaner/core.py`):
+- `WSLDockerCleaner` class with methods: `docker_cleanup`, `stop_docker_wsl`, `configure_wsl_sparse`, `compact_vhdx_files`, `cleanup_temp_files`
+- Admin elevation: `is_admin()` + `run_as_admin()` using `ctypes.windll.shell32.ShellExecuteW(None, "runas", ...)`
+- Async variants (`*_async`) accept `stream_callback: Callable[[str], None]` for line-by-line output streaming
 
-Project-specific conventions / patterns
-- Platform-specific: All cleaning scripts target Windows and call Windows shell commands (`taskkill`, `Optimize-VHD`, `wsl --shutdown`). `docker_cleaner/core.py` checks `sys.platform.startswith('win')`.
-- Permission & admin flow: `docker_cleaner/core.py` and `WSLDockerCleaner` use `ctypes` and `ShellExecuteW` to re-run as admin (UAC) when required; do not bypass the UAC flow.
-- Logging & UI: The repo uses `rich`/`Textual` for UI and `wsl_docker_cleanup.log` as the default log file; write logs via `WSLDockerCleaner.log()` so they are captured in `self.log_messages` and persisted to the log file.
-- Shell commands and parsing: scripts use `subprocess.run(..., shell=True)` and parse `stdout` for `"Total reclaimed space"` in Docker CLI responses — if you alter this, update parsers and tests accordingly.
+**Textual TUI** (`main.py`):
+- `CommandRunnerApp`: Main app with sidebar buttons, `RichLog` output widget, and progress tracking
+- `CleanupOptionsScreen`: Modal with checkboxes for granular cleanup steps (containers, images, volumes, etc.)
+- Preferences saved to `~/.docker_clennear_prefs.json` (JSON dict mapping `opt_*` checkbox IDs to bool)
+- `@work` decorated methods (`_run_prune_*`, `_run_compact_vhdx`) execute async operations as Textual workers
+- **Auto-elevation**: `main.py` checks admin status on startup and re-launches with UAC if needed (Windows only)
 
-Integration points & external dependencies
-- Docker CLI: `docker ps`, `docker system prune`, `docker container prune`, `docker image prune`, `docker volume prune`, `docker network prune`, `docker builder prune`.
-- Windows components: `tasklist`/`taskkill`, `Optimize-VHD` (PowerShell), `wsl --shutdown`, and files under `%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx`.
-- `rich`, `textual` packages are used for UX; consider adding a `requirements.txt` or `pyproject.toml` updates if adding/removing packages.
+**Logging system** (`cli/richlog.py`):
+- `DailyLogWriter`: File-like object that writes to `logs/YYYY-MM-DD.log` (daily rotation) + optional UI callback
+- All app logging routes through `write_ui_log()` → `DailyLogWriter` → both file and UI widget
+- Exception hooks installed in `on_mount()` capture unhandled exceptions (Python `excepthook`, `asyncio`, `threading`)
 
-Important safety notes (must not change without prompt)
-- `docker system prune -af --volumes` is destructive — avoid changes that reduce confirmation or make this command silent without user's awareness.
-- Compacting VHDX and killing Docker/WSL are disruptive operations — persist in tests and require explicit user confirmation.
-- `docker_cleaner.core.run_command` uses `shell=True` — if you change this to `shell=False` or alter quoting, adjust how arguments are passed and parsed.
+**LMArena Generator** (`lmarena/generator.py`):
+- `ModelsGenerator.extract_initial_models(raw_data)` — Regex-based extraction of `initialModels: [...]` JSON arrays
+- Generates `models`, `text_models`, `image_models`, `vision_models` dicts based on capabilities
+- Output: `<input>_models.py` (e.g., `lmarena_models_models.py`)
 
-Guidance for contributors / copilot suggestions
-- When updating or adding features:
-  - Keep all Windows-specific calls wrapped in platform checks.
-  - Respect admin check and `run_as_admin` logic: do not bypass UAC.
-  - If you need to add unit tests, focus them on `lmarena/generator.py` functions (pure/Python), and `docker_cleaner/core.py` via mocked `run_command` / subprocesses to avoid destructive system calls.
-  - Add `requirements.txt` if you add packages (e.g., `textual`, `rich`).
-  - When adding logging, extend `WSLDockerCleaner.log()` so messages are also appended to `self.log_messages` and persisted to `wsl_docker_cleanup.log`.
+## Developer Workflows
 
-Notes for the AI agent (Copilot)
-- Prefer READ-ONLY changes for new analysis or PRs: tests, static analysis, and unit tests for parsing logic in `lmarena/generator.py`.
-- For changes that require manual testing — e.g., `Optimize-VHD` or `taskkill` — add mocks + a test harness and do not run destructive commands in CI.
-- If you propose changing CLI behavior (adding flags, scheduling), update documentation in `README.md` and add example commands showing behavior.
-- Always call out destructive commands in code review comments and ask maintainers whether they want safer behavior (e.g., `--dry-run`) or confirmations.
+**Setup**:
+```powershell
+& .\.venv\Scripts\Activate.ps1  # Use existing .venv or create new
+# Dependencies tracked in pyproject.toml: rich, textual, pytest
+```
 
-Examples (copy-paste):
-- Run quick test of model generator (module):
-  python -m lmarena.generator lmarena_models.txt
+**Running cleaners**:
+```powershell
+python main.py                          # TUI with auto-elevation (recommended)
+python -m cli.main_cleaner              # Full cleanup CLI (elevates if needed)
+python -m cli.quick_cleanup             # Quick prune-only CLI
+python -m cli.admin_tasks compact_vhdx  # Admin helper for specific task
+```
 
-- Run the full cleanup (requires admin):
-  # PowerShell (Admin):
-  & .\.venv\Scripts\Activate.ps1
-  python -m cli.main_cleaner
+**Running model generator**:
+```powershell
+python -m lmarena.generator lmarena_models.txt  # Outputs lmarena_models_models.py
+```
 
-- Run only the docker prune steps (non-admin but destructive):
-  docker system prune -af --volumes
+**Testing**:
+```powershell
+pytest tests/                           # Unit tests (mock subprocess/ctypes)
+pytest tests/test_generator.py         # LMArena parser tests (pure Python)
+```
 
-UI / Textualize & UV workflow 🔧
-- Textualize: We standardize on the Textual (Textualize) framework for any new terminal UI/TUI or interactive command-line screens. Textual provides a high-quality Compose/Widget/reactive API (see `compose()`, `reactive/var`, `watch_*`, and `mount()` patterns).
-- Mandatory MCP usage: Before implementing any UI, CLI interaction, or new TUI screen, you must fetch and consult the official Textual docs using MCP. This ensures you use the proper API patterns and avoid duplicating outdated patterns.
+## Project Conventions
 
-  Minimum MCP lookup sequence (example):
-  1. Resolve the library id: `mcp_mcp_docker_resolve-library-id('textualize/textual')`.
-  2. Fetch docs and examples for topics you plan to implement: `mcp_mcp_docker_get-library-docs(contextID, tokens=2000, topic='getting_started')` and `topic='widgets'`, `topic='reactivity'`, `topic='compose'`.
-  3. Inspect canonical examples (compose, widgets, input widgets, layout) and verify you use Textual's `compose()` & `reactive` idioms.
+**Windows-specific patterns**:
+- All shell commands use `subprocess.run(..., shell=True)` for Windows compatibility
+- Platform checks: `sys.platform.startswith('win')` guard destructive operations
+- VHDX paths: `%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx` and `distro\ext4.vhdx`
 
-  Notes from the Textual docs (always consult via MCP each time):
-  - Use `compose()` to create nested widgets and containers, not raw render functions.
-  - Prefer `reactive` or `var` for state that triggers UI updates and `watch_*` callbacks to respond to state changes.
-  - Use `mount()` for dynamic insertion and `set_interval()` for periodic updates.
-  - Use CSS/TS files (Textual CSS) for styling and `styles.layout` to adjust layout at runtime.
-  - Prefer built-in widgets (`Header`, `Footer`, `Input`, `Static`, `DataTable`, etc.) and compose compound widgets with containers.
+**Admin & UAC flow**:
+- `is_admin()` checks via `ctypes.windll.shell32.IsUserAnAdmin()`
+- `run_as_admin()` uses `ShellExecuteW("runas")` to trigger UAC and relaunch
+- **Never bypass UAC** — always preserve elevation flow for security
 
-Mandatory MCP usage for all external libraries & system components 🛡️
-- The agent MUST consult authoritative documentation via MCP for any external library, runtime, or system feature it touches. This is mandatory when implementing, refactoring, or testing features that rely on external docs (Textual, Docker, WSL, Windows APIs, Optimize-VHD, Python libs, etc.).
-- Minimal MCP workflow (required for every PR touching external components):
-  1. Resolve the library id: `mcp_mcp_docker_resolve-library-id('<library-name>')`.
-  2. Fetch docs & examples for relevant topics: `mcp_mcp_docker_get-library-docs(contextId, tokens=2000, topic='<topic>')`.
-  3. For each topic, include in the PR description: the resolved library ID, topic names, and 1-2 example snippets you used as reference.
-  4. If no authoritative docs appear in MCP search or results are ambiguous, ask the maintainers which docs or source to use.
+**Streaming output pattern** (Textual UI):
+- Async methods accept `stream_callback: Callable[[str], None]`
+- `run_command_async()` reads stdout/stderr line-by-line via `asyncio.subprocess.PIPE`
+- UI calls `self.write_ui_log(text)` which uses `call_from_thread()` for thread-safe widget updates
 
-  Example: When changing a Textual-based UI you must run:
-    - `mcp_mcp_docker_resolve-library-id('textualize/textual')`
-    - `mcp_mcp_docker_get-library-docs('/textualize/textual', topic='compose')`
-    - `mcp_mcp_docker_get-library-docs('/textualize/textual', topic='reactivity')`
+**Logging conventions**:
+- `WSLDockerCleaner.log(message, level)` writes to `self.log_messages` + Rich console + Python logging
+- UI logging via `DailyLogWriter` persists to `logs/YYYY-MM-DD.log` with timestamps
+- When adding features, use `self.write_ui_log()` in UI context or `self.log()` in cleaner logic
 
-  Example: When modifying Docker/WSL logic you must run:
-    - `mcp_mcp_docker_resolve-library-id('docker/cli')` (or the best match returned)
-    - `mcp_mcp_docker_get-library-docs('<contextId>', topic='cli-reference')`
+## Integration Points
 
-Enforcement & PR checklist ✅
-- Every PR that adds/changes code interacting with external libraries must include a short block in the PR body with:
-  - Libraries consulted (resolved MCP IDs)
-  - Topics consulted (e.g., `compose`, `widgets`, `reactivity`, `docker prune`, `wsl`) and token-limited snippets used
-  - A short summary of which API/behavior was implemented and why (1-2 lines)
-  - Any version constraints or compatibility notes (e.g., Textual v4 API differences)
+**Docker CLI commands** (parsed for `"Total reclaimed space"`):
+- `docker system prune -af --volumes` (⚠️ destructive)
+- `docker container prune -f`, `docker image prune -af`, `docker volume prune -f`
+- `docker network prune -f`, `docker builder prune -af`
 
-Note: This requirement is not optional — it ensures the agent is implementing against the current, authoritative docs and reduces regressions caused by deprecated APIs or mismatched patterns.
+**Windows system commands**:
+- `taskkill /F /IM "Docker Desktop.exe"` (kills Docker processes)
+- `wsl --shutdown` (stops all WSL distributions)
+- `powershell -Command "Optimize-VHD -Path '...' -Mode Full"` (requires admin)
 
-UV CLI policy for package management & runtime 🧭
-- Use the `uv` helper for dependency management and to execute commands in the project environment: prefer `uv add`, `uv pip`, `uv run`, `uv sync` over raw pip or direct invocation.
+**Textual framework** (v6.6.0+):
+- Use `compose()` for widget layouts (not raw render methods)
+- Use `reactive`/`var` for state + `watch_*` callbacks for reactive updates
+- `@work(exclusive=True)` decorator for async workers, `@work(thread=True)` for sync workers
+- CSS styling via app-level `CSS` string or external files
 
-  - Example UV workflow for UI work:
-    1. Add the dependency manifest entry (if your repo tracks packages): `uv add textual`.
-    2. Install with the extras you need: `uv pip install "textual[syntax]"` (for syntax highlighting in TextArea or `uv pip install textual-dev` for dev builds).
-    3. Sync the environment: `uv sync`.
-    4. Run the app or tests: `uv run python main.py` or `uv run python -m lmarena.generator`.
-    5. If editing dependencies: `uv pip uninstall <old>` then `uv pip install <new>` and `uv sync`.
+## Safety Requirements
 
-  Keep these in mind:
-  - Always use `uv add`/`uv pip` to change dependencies; commit lockfile/manifests updated by `uv sync` if you use one.
-  - Use `uv run` for reproducible command execution in the project's environment.
-  - When opening a PR, include the initial MCP query results in your PR description: which `topic` docs you used (examples and links) and the minimal API patterns chosen.
+**Destructive operations** — Always require explicit user confirmation:
+- `docker system prune -af --volumes` deletes all unused containers/images/volumes
+- `taskkill /F` force-kills Docker Desktop processes
+- `wsl --shutdown` stops all WSL distributions
+- `Optimize-VHD` compacts VHDX files (requires admin, can take minutes)
 
-Implementation details & examples 💡
--- Use `lmarena/generator.py` as the canonical example when adding Textual-based UIs to parsing tasks: keep UI code under `ui/` and keep business logic decoupled (no direct shell calls from UI).
-- Example `compose()` pattern to follow (consult Textual docs via MCP and implement accordingly):
-  - Provide `Header()` and `Footer()` for global controls.
-  - Use `VerticalScroll`/`Container` for long content and `Input()` for interactive fields.
-  - Use `reactive` state to update status (e.g., `status = var('ready')`) and `watch_status` to update UI.
+**Testing destructive code**:
+- Mock `subprocess.run` and `ctypes.windll.shell32` in tests (see `tests/test_admin_compact.py`)
+- Never run actual `docker prune`, `taskkill`, or `Optimize-VHD` in CI
+- Test admin logic by mocking `IsUserAnAdmin()` return value
 
-Safety and code-review checklist ⚠️
-- Must include MCP doc citations in PR (which pages/examples were used).
-- Avoid embedding system-level destructive logic (e.g., `docker system prune`, `taskkill`, `wsl --shutdown`) directly in UI logic. UI should call into a safe facade (a function that is well-tested and mocks shell calls in tests).
--- For `docker_cleaner/core.py` and `cli/quick_cleanup.py`, only align UI with Textual when it replaces or adds interactive views; keep destructive operations explicit and request confirmation.
+**Shell command safety**:
+- Commands use `shell=True` — be careful with user input to avoid injection
+- Parse Docker output for `"Total reclaimed space:"` string (fragile to CLI changes)
+- If changing to `shell=False`, update all command strings to list format
 
-Testing and examples
-- Add unit tests for UI logic that do not run shells: create fixtures that mock `subprocess.run`, `Optimize-VHD` and `ctypes` admin checks.
-- For Textual components, add small programmatic tests that instantiate `App` objects and assert the presence of widgets and reactive updates.
+## Textual UI Guidelines
 
--- End of Textualize & UV section --
+**Before implementing any UI feature, consult Textual docs via MCP**:
+1. `mcp_mcp_docker_resolve-library-id('textualize/textual')`
+2. `mcp_mcp_docker_get-library-docs('/textualize/textual', topic='<relevant-topic>')`
+   - Topics: `compose`, `widgets`, `reactivity`, `workers`, `screens`
 
--- End of file --
+### Core Textual Patterns
+
+**Composing widgets** — Use `compose()` method to build UI layout:
+```python
+def compose(self) -> ComposeResult:
+    yield Header()
+    with Container():
+        yield Button("Click me", id="my-button")
+        yield Static("Hello", id="greeting")
+    yield Footer()
+```
+
+**Reactive attributes** — Auto-update UI when values change:
+```python
+from textual.reactive import reactive, var
+
+class MyWidget(Widget):
+    # reactive() triggers refresh/layout
+    count = reactive(0)
+    
+    # var() doesn't trigger refresh (lightweight)
+    color = var("blue")
+    
+    def watch_count(self, old_value: int, new_value: int) -> None:
+        """Called automatically when count changes"""
+        self.query_one("#counter").update(f"Count: {new_value}")
+```
+
+**Workers** — Background tasks without blocking UI:
+```python
+# Async worker (recommended for I/O-bound tasks)
+@work(exclusive=True)
+async def fetch_data(self) -> None:
+    result = await self.run_command_async("docker ps", stream_callback=self.write_ui_log)
+    self.query_one("#output").update(result.stdout)
+
+# Thread worker (for blocking/CPU-bound tasks)
+@work(thread=True)
+def heavy_computation(self) -> None:
+    # Use call_from_thread to update UI from worker
+    self.call_from_thread(self.update_status, "Working...")
+    result = expensive_operation()
+    self.call_from_thread(self.update_status, f"Done: {result}")
+```
+
+**Screens** — Modal dialogs and navigation:
+```python
+# Define screen
+class ConfirmDialog(Screen):
+    def compose(self) -> ComposeResult:
+        yield Static("Are you sure?")
+        yield Button("Yes", id="yes")
+        yield Button("No", id="no")
+    
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "yes")
+
+# Show screen and wait for result
+async def ask_user(self) -> None:
+    result = await self.push_screen(ConfirmDialog(), wait_for_dismiss=True)
+    if result:
+        self.do_action()
+```
+
+**Event handling** — Two approaches:
+```python
+# Method 1: on_<widget>_<event> naming convention
+def on_button_pressed(self, event: Button.Pressed) -> None:
+    if event.button.id == "submit":
+        self.submit_form()
+
+# Method 2: @on decorator with CSS selectors (preferred for specific widgets)
+from textual import on
+
+@on(Button.Pressed, "#submit")
+def handle_submit(self) -> None:
+    self.submit_form()
+
+@on(Input.Changed)
+def handle_input_changed(self, event: Input.Changed) -> None:
+    self.validate_input(event.value)
+```
+
+**Querying widgets** — Access widgets after composition:
+```python
+# Get single widget (raises NoMatches if not found)
+button = self.query_one("#my-button", Button)
+
+# Get all matching widgets
+all_buttons = self.query(Button)
+for button in all_buttons:
+    button.disabled = True
+
+# CSS-style selectors
+self.query_one(".warning", Static).update("⚠️ Warning!")
+```
+
+**Context managers for containers**:
+```python
+def compose(self) -> ComposeResult:
+    with Vertical():
+        yield Label("Top")
+        with Horizontal():
+            yield Button("Left")
+            yield Button("Right")
+        yield Label("Bottom")
+```
+
+### Established patterns in this project (see `main.py`)
+
+- Modal screens: `Screen` subclass with `push_screen(..., wait_for_dismiss=True)`
+- Worker pattern: `@work` decorated methods + `write_ui_log()` via `call_from_thread()`
+- Progress tracking: Custom `start_progress()`, `update_progress()`, `finish_progress()` using Rich `Progress` rendered in `Static` widget
+- Checkbox persistence: Save to `~/.docker_clennear_prefs.json`, load defaults in `CleanupOptionsScreen.on_mount()`
+
+### Testing Textual components
+
+**Unit testing with `run_test()`** — Run apps in headless mode:
+```python
+import pytest
+from textual.app import App
+from textual.widgets import Button
+
+# Basic test structure
+async def test_button_click():
+    """Test button interaction."""
+    app = MyApp()
+    async with app.run_test() as pilot:
+        # Simulate button click
+        await pilot.click("#my-button")
+        # Assert state changes
+        assert app.some_state == expected_value
+```
+
+**Pilot API** — Interact with the app during tests:
+```python
+async with app.run_test() as pilot:
+    # Click widgets
+    await pilot.click("#button-id")
+    await pilot.click(Button)  # Click by type
+    await pilot.click(offset=(10, 5))  # Click at coordinates
+    
+    # Press keys
+    await pilot.press("enter")
+    await pilot.press("h", "e", "l", "l", "o")
+    await pilot.press("ctrl+s")
+    
+    # Hover over widgets
+    await pilot.hover("#widget-id")
+    
+    # Wait for UI updates
+    await pilot.pause()  # Wait for pending messages
+    await pilot.pause(delay=0.1)  # Wait + delay
+```
+
+**Testing reactive attributes**:
+```python
+async def test_counter():
+    """Test reactive counter updates UI."""
+    app = CounterApp()
+    async with app.run_test() as pilot:
+        # Initial state
+        assert app.count == 0
+        
+        # Trigger increment
+        await pilot.click("#increment")
+        await pilot.pause()
+        
+        # Verify reactive update
+        assert app.count == 1
+        assert app.query_one("#counter").renderable == "Count: 1"
+```
+
+**Testing workers**:
+```python
+async def test_background_task():
+    """Test async worker completion."""
+    app = WorkerApp()
+    async with app.run_test() as pilot:
+        # Start worker
+        await pilot.click("#start-task")
+        
+        # Wait for worker to complete
+        await pilot.pause(delay=1.0)
+        
+        # Verify result
+        status = app.query_one("#status")
+        assert "completed" in status.renderable.lower()
+```
+
+**Snapshot testing** — Visual regression tests:
+```python
+# Install: pip install pytest-textual-snapshot
+
+def test_app_appearance(snap_compare):
+    """Test visual appearance matches snapshot."""
+    # First run generates snapshot (will fail)
+    # Subsequent runs compare against saved snapshot
+    assert snap_compare("path/to/app.py")
+
+def test_with_interactions(snap_compare):
+    """Test appearance after interactions."""
+    assert snap_compare(
+        "path/to/app.py",
+        press=["tab", "enter"],  # Simulate key presses
+        terminal_size=(100, 50),  # Custom terminal size
+    )
+
+# Update snapshots after verifying changes
+# pytest --snapshot-update
+```
+
+**Testing screens and modals**:
+```python
+async def test_modal_dialog():
+    """Test modal screen interaction."""
+    app = MyApp()
+    async with app.run_test() as pilot:
+        # Push modal screen
+        await pilot.click("#show-dialog")
+        await pilot.pause()
+        
+        # Verify modal is shown
+        assert isinstance(app.screen, DialogScreen)
+        
+        # Interact with modal
+        await pilot.click("#confirm")
+        await pilot.pause()
+        
+        # Verify modal dismissed
+        assert not isinstance(app.screen, DialogScreen)
+```
+
+**Custom terminal size for tests**:
+```python
+async def test_responsive_layout():
+    """Test layout at different screen sizes."""
+    app = MyApp()
+    # Set custom terminal size
+    async with app.run_test(size=(120, 40)) as pilot:
+        # Test layout behavior
+        widget = app.query_one("#responsive-widget")
+        assert widget.size.width == 120
+```
+
+**Testing project patterns** (see `tests/`):
+- Mock `subprocess.run` for shell commands
+- Mock `ctypes.windll.shell32` for admin checks
+- Never run actual Docker/WSL commands in tests
+- Use `@pytest.fixture` for app instances
+- Test both sync and async variants of methods
+
+## Common Tasks & Examples
+
+**Adding a new cleanup operation**:
+1. Add sync method to `WSLDockerCleaner` (e.g., `def new_cleanup(self): ...`)
+2. Add async variant: `async def new_cleanup_async(self, stream_callback=None): ...`
+3. Add `@work` decorated worker method to `CommandRunnerApp` (e.g., `_run_new_cleanup()`)
+4. Add checkbox to `CleanupOptionsScreen.compose()` with ID `opt_new_cleanup`
+5. Handle checkbox in `on_button_pressed(event)` for "opts_exec" button
+6. Update `~/.docker_clennear_prefs.json` default in `docker_options` handler
+
+**Adding new tests**:
+```python
+# Mock subprocess for Windows commands
+from unittest.mock import patch, MagicMock
+
+@patch('subprocess.run')
+def test_docker_cleanup(mock_run):
+    mock_run.return_value = MagicMock(returncode=0, stdout="Total reclaimed space: 1.5GB")
+    cleaner = WSLDockerCleaner()
+    result = cleaner.docker_cleanup()
+    assert result is True
+    assert mock_run.called
+```
+
+**Debugging streaming issues**:
+- Check `stream_callback` is called with `\n`-terminated strings
+- Verify `call_from_thread()` is used when writing from worker threads
+- Ensure `PYTHONUNBUFFERED=1` env var is set for subprocesses (see `run_python_script()`)
+
+## Dependencies & Package Management
+
+**Current dependencies** (`pyproject.toml`):
+- `rich>=14.2.0` (console UI, progress bars, tables)
+- `textual>=6.6.0` (TUI framework)
+- `pytest>=9.0.1` (testing)
+
+**Package management**:
+- Standard workflow: `pip install -e .` or `pip install rich textual pytest`
+- If using `uv` (optional): `uv add <package>`, `uv sync`, `uv run python main.py`
+- When adding packages, update `pyproject.toml` dependencies list
+
+## Notes for AI Agents
+
+- **Prefer read-only changes** for exploratory work: add tests, static analysis, or documentation
+- **Always call out destructive operations** in code review comments (ask maintainers about `--dry-run` options)
+- **Update README.md** when changing CLI behavior, adding flags, or modifying workflows
+- **Include MCP doc references** in PRs touching Textual, Docker CLI, or Windows APIs (library ID + topic + code snippet)
+- **Do not bypass UAC/admin checks** — respect security boundaries for elevation
+- **Mock external calls in tests** — never run `docker prune`, `taskkill`, `wsl --shutdown`, or `Optimize-VHD` in CI
