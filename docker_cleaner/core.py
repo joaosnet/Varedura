@@ -393,6 +393,9 @@ swapFile=%TEMP%\\wsl-swap.vhdx
         return True
 
     def compact_vhdx_files(self):
+        if not self.is_admin():
+            self.log("Execução como administrador recomendada", "WARNING")
+            return False
         self.log("=== COMPACTANDO ARQUIVOS VHDX ===")
         vhdx_paths = [
             os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx"),

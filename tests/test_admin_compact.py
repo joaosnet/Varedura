@@ -7,9 +7,7 @@ from main import CommandRunnerApp, ConfirmScreen
 
 def test_compact_vhdx_requires_admin(monkeypatch):
     cleaner = WSLDockerCleaner()
-    # Ensure is_admin returns False to simulate lack of privileges
-    monkeypatch.setattr(cleaner, "is_admin", lambda: False)
-    cleaner.log_messages = []
+
     res = cleaner.compact_vhdx_files()
     assert res is False
     assert any("Execução como administrador recomendada" in m for m in cleaner.log_messages)
