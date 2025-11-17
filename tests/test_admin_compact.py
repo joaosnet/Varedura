@@ -3,7 +3,6 @@ import pytest
 
 from docker_cleaner.core import WSLDockerCleaner
 from main import CommandRunnerApp, ConfirmScreen
-import asyncio
 
 
 def test_compact_vhdx_requires_admin(monkeypatch):
@@ -28,39 +27,31 @@ def test_docker_cleanup_logs_error_when_docker_not_found(monkeypatch, tmp_path):
     assert any("Docker Desktop não encontrado" in m for m in cleaner.log_messages)
 
 
-def test_ask_elevate_and_cancel(monkeypatch):
+@pytest.mark.asyncio
+async def test_ask_elevate_and_cancel(textual_app):
     app = CommandRunnerApp()
-    messages = []
-    monkeypatch.setattr(app, "write_ui_log", lambda msg: messages.append(msg))
-
-    async def fake_push_screen(screen):
-        # Simulate the user pressing "Cancelar" in the ConfirmScreen
-        if isinstance(screen, ConfirmScreen):
-            screen.result = False
-        return None
-
-    monkeypatch.setattr(app, "push_screen", fake_push_screen)
-    # Replace ShellExecute invocation to avoid actual elevation during tests
-    monkeypatch.setattr("ctypes.windll.shell32.ShellExecuteW", lambda *args, **kwargs: 1)
-    asyncio.run(app._ask_elevate_and_relaunch("Teste Elevação"))
-    assert any("cancelada pelo usuário" in m for m in messages)
+    async with app.run_test() as pilot:
+        # Mock push_screen to simulate cancel
+        async def mock_push_screen(screen, wait_for_dismiss=False):
+            return False  # Cancel
+        app.push_screen = mock_push_screen
+        await app._ask_elevate_and_relaunch("Teste Elevação")
+        
+        log_widget = app.query_one("#log")
+        log_content = "\n".join(str(line) for line in log_widget.lines)
+        assert "cancelada pelo usuário" in log_content
 
 
-def test_ask_elevate_and_confirm_runs_helper(monkeypatch):
+@pytest.mark.asyncio
+async def test_ask_elevate_and_confirm_runs_helper(textual_app):
     app = CommandRunnerApp()
-    messages = []
-    monkeypatch.setattr(app, "write_ui_log", lambda msg: messages.append(msg))
-
-    async def fake_push_screen(screen):
-        # Simulate the user pressing "Confirmar" in the ConfirmScreen
-        if isinstance(screen, ConfirmScreen):
-            screen.result = True
-        return None
-
-    monkeypatch.setattr(app, "push_screen", fake_push_screen)
-    # Replace ShellExecute method so we don't actually elevate the process
-    import ctypes
-    monkeypatch.setattr(ctypes.windll.shell32, "ShellExecuteW", lambda *a, **k: 1)
-    import asyncio
-    asyncio.run(app._ask_elevate_and_relaunch("Compactar VHDX"))
-    assert any("Administrador solicitado" in m for m in messages)
+    async with app.run_test() as pilot:
+        # Mock push_screen to simulate confirm
+        async def mock_push_screen(screen, wait_for_dismiss=False):
+            return True  # Confirm
+        app.push_screen = mock_push_screen
+        await app._ask_elevate_and_relaunch("Compactar VHDX")
+        
+        log_widget = app.query_one("#log")
+        log_content = "\n".join(str(line) for line in log_widget.lines)
+        assert "Administrador solicitado" in log_content
