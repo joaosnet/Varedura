@@ -44,6 +44,7 @@ from typing import Callable
 from rich.console import Console as RichConsole
 from rich.progress import Progress as RichProgress, BarColumn, TextColumn, TaskProgressColumn
 from cli.richlog import DailyLogWriter
+from cli.ui_components import StatCard
 import logging
 import sys
 
@@ -89,29 +90,35 @@ class CleanupOptionsScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with Container(classes="cleanup--container"):
-            yield Static(f"[bold yellow]{self.message}[/bold yellow]", classes="cleanup--header")
-            # Place the large list of options in a scrollable vertical area so footer buttons remain visible
+            yield Static(f"{self.message}", classes="cleanup--header")
+            
             with VerticalScroll(id="opts_body", classes="cleanup--body"):
-                # Checkboxes for the available granular cleanup steps
-                yield Checkbox("Parar Dockers e WSL (taskkill + wsl --shutdown)", id="opt_stop_wsl")
-                yield Checkbox("Prune containers (docker container prune -f)", id="opt_prune_containers")
-                yield Checkbox("Prune images (docker image prune -af)", id="opt_prune_images")
-                yield Checkbox("Prune volumes (docker volume prune -f)", id="opt_prune_volumes")
-                yield Checkbox("Prune networks (docker network prune -f)", id="opt_prune_networks")
-                yield Checkbox("Prune builder cache (docker builder prune -af)", id="opt_prune_builder")
-                yield Checkbox("Prune system (docker system prune -af --volumes)", id="opt_prune_system")
-                yield Checkbox("Configurar sparse (WSL)", id="opt_configure_sparse")
-                yield Checkbox("Compactar VHDX (admin)", id="opt_compact_vhdx")
-                yield Checkbox("Limpar arquivos temporários", id="opt_cleanup_temp")
-            # Preset buttons to quickly set common combos — outside scroll area
-            with Horizontal(id="opts_presets", classes="cleanup--presets"):
-                yield Button("Quick", id="opts_preset_quick", variant="success", classes="cleanup--preset-button")
-                yield Button("Full", id="opts_preset_full", variant="warning", classes="cleanup--preset-button")
-                yield Button("Limpar Seleção", id="opts_clear", variant="error", classes="cleanup--preset-button")
-            # Footer controls — always visible at the bottom of the modal
+                # Group: Docker Objects
+                with Container(classes="option-group"):
+                    yield Static("🐳 Docker Objects", classes="group-title")
+                    yield Checkbox("Prune containers", id="opt_prune_containers")
+                    yield Checkbox("Prune images", id="opt_prune_images")
+                    yield Checkbox("Prune volumes", id="opt_prune_volumes")
+                    yield Checkbox("Prune networks", id="opt_prune_networks")
+                
+                # Group: System & Build
+                with Container(classes="option-group"):
+                    yield Static("⚙️ System & Build", classes="group-title")
+                    yield Checkbox("Prune builder cache", id="opt_prune_builder")
+                    yield Checkbox("Prune system (destructive)", id="opt_prune_system")
+                    yield Checkbox("Limpar arquivos temporários", id="opt_cleanup_temp")
+
+                # Group: WSL & VHDX
+                with Container(classes="option-group"):
+                    yield Static("🪟 WSL & VHDX", classes="group-title")
+                    yield Checkbox("Parar Dockers e WSL", id="opt_stop_wsl")
+                    yield Checkbox("Configurar sparse (WSL)", id="opt_configure_sparse")
+                    yield Checkbox("Compactar VHDX (admin)", id="opt_compact_vhdx")
+
+            # Footer controls
             with Horizontal(id="opts_footer", classes="cleanup--footer"):
                 yield Button("Executar", id="opts_exec", variant="primary", classes="cleanup--action-button")
-                yield Button("Salvar Preferências", id="opts_save", classes="cleanup--action-button")
+                yield Button("Salvar Prefs", id="opts_save", classes="cleanup--action-button")
                 yield Button("Cancelar", id="opts_cancel", classes="cleanup--action-button")
 
     def on_mount(self) -> None:
@@ -128,25 +135,6 @@ class CleanupOptionsScreen(Screen):
         self.result = False
         self.selected_options = {}
         self.dismiss(result=False)
-
-    @on(Button.Pressed, "#opts_preset_quick")
-    def handle_opts_preset_quick(self) -> None:
-        # set containers/images/volumes True, others False
-        for chk in self.query(Checkbox):
-            if chk.id in ("opt_prune_containers", "opt_prune_images", "opt_prune_volumes"):
-                chk.value = True
-            else:
-                chk.value = False
-
-    @on(Button.Pressed, "#opts_preset_full")
-    def handle_opts_preset_full(self) -> None:
-        for chk in self.query(Checkbox):
-            chk.value = True
-
-    @on(Button.Pressed, "#opts_clear")
-    def handle_opts_clear(self) -> None:
-        for chk in self.query(Checkbox):
-            chk.value = False
 
     @on(Button.Pressed, "#opts_save")
     def handle_opts_save(self) -> None:
@@ -178,218 +166,14 @@ class CleanupOptionsScreen(Screen):
         self.result = True
         self.dismiss(result=True)
 
-    CSS = """
-    /* ConfirmScreen styles */
-    ConfirmScreen {
-        align: center middle;
-    }
-    .confirm--message {
-        width: 100%;
-        text-align: center;
-        padding: 1;
-        background: $boost;
-    }
-    .confirm--buttons {
-        width: 100%;
-        height: auto;
-        padding: 1;
-        background: $panel;
-    }
-    .confirm--button {
-        margin: 0 1;
-    }
-    
-    /* CleanupOptionsScreen styles */
-    CleanupOptionsScreen {
-        align: center middle;
-    }
-    .cleanup--container {
-        width: 100%;
-        height: 100%;
-    }
-    .cleanup--header {
-        width: 100%;
-        text-align: center;
-        padding: 1;
-        background: $boost;
-    }
-    .cleanup--body {
-        width: 100%;
-        height: 1fr;
-        border: solid $primary;
-        padding: 1 2;
-        margin: 1 0;
-    }
-    .cleanup--presets {
-        width: 100%;
-        height: auto;
-        padding: 1;
-        margin: 1 0;
-    }
-    .cleanup--preset-button {
-        margin: 0 1;
-    }
-    .cleanup--footer {
-        width: 100%;
-        height: auto;
-        dock: bottom;
-        padding: 1;
-        background: $panel;
-    }
-    .cleanup--action-button {
-        margin: 0 1;
-    }
-
-    /* Novos estilos para tabs e widgets */
-    TabbedContent {
-        height: 1fr;
-    }
-    TabPane {
-        layout: vertical;
-    }
-    DataTable#tasks_table {
-        height: 1fr;
-    }
-    #main_progress {
-        height: 1;
-    }
-    /* Style the inner Bar sub-widget */
-    #main_progress Bar > .bar--bar {
-        color: $warning;
-        background: $surface;
-    }
-    #main_progress Bar > .bar--complete {
-        color: $success;
-        background: $surface;
-    }
-    #space_spark {
-        height: 1;
-        margin-top: 1;
-    }
-    #log {
-        height: 1fr;
-    }
-
-    /* ToastRack */
-    ToastRack {
-        align: right bottom;
-    }
-    """
-
 class CommandRunnerApp(App[None]):
+
+    CSS_PATH = "tui.tcss"
 
     active_workers = reactive(0)
     current_progress = reactive(0)
     space_history = reactive([])
     active_tasks = reactive([])  # [{'name': str, 'status': str, 'progress': int}]
-
-    CSS = """
-    /* CommandRunnerApp layout styles */
-    .app--layout {
-        height: 1fr;
-    }
-    .app--sidebar {
-        width: 30;
-        padding: 1 1;
-        border: heavy $accent;
-    }
-    .app--main {
-        width: 1fr;
-        padding: 1 1;
-        layout: vertical;
-    }
-    .app--header, .app--footer {
-        /* Default header/footer styles */
-    }
-    
-    /* Sidebar component styles */
-    .sidebar--title {
-        content-align: center middle;
-        padding: 0 1;
-        border-bottom: dashed $accent;
-    }
-    .sidebar--status {
-        padding: 0 1;
-        margin: 1 0;
-    }
-    .sidebar--button {
-        width: 100%;
-        margin: 0 0 1 0;
-    }
-    
-    /* Main area component styles */
-    .main--title {
-        content-align: center middle;
-        padding: 0 1;
-        border-bottom: dashed $accent;
-    }
-    .main--label {
-        margin: 1 0;
-    }
-    .main--input {
-        margin: 1 0;
-    }
-    .main--button {
-        margin: 1 0;
-    }
-    .main--progress-label {
-        margin: 1 0;
-    }
-    .main--progress {
-        height: 3;
-        padding: 0 1;
-        border: heavy $accent;
-    }
-    .main--spinner {
-        /* Additional spinner styles if needed */
-    }
-    .main--log-label {
-        margin: 1 0;
-    }
-    .main--log {
-        height: 10;
-        min-height: 8;
-        border: solid $surface;
-    }
-    
-    /* Novos estilos para tabs e widgets */
-    TabbedContent {
-        height: 1fr;
-    }
-    TabPane {
-        layout: vertical;
-    }
-    DataTable#tasks_table {
-        height: 1fr;
-    }
-    #main_progress {
-        height: 1;
-    }
-    #main_progress Bar > .bar--bar {
-        color: $warning;
-        background: $surface;
-    }
-    #main_progress Bar > .bar--complete {
-        color: $success;
-        background: $surface;
-    }
-    #main_progress Bar > .bar--indeterminate {
-        color: $warning;
-        background: $surface;
-    }
-    #space_spark {
-        height: 1;
-        margin-top: 1;
-    }
-    #log {
-        height: 1fr;
-    }
-
-    /* Toast */
-    ToastRack {
-        align: right bottom;
-    }
-    """
 
     def watch_active_workers(self, count: int) -> None:
         """Show/hide spinner based on active workers count."""
@@ -407,22 +191,35 @@ class CommandRunnerApp(App[None]):
         with TabbedContent(initial="docker_cleaner"):
             # Tab Docker Cleaner
             with TabPane("Docker Cleaner", id="docker_cleaner"):
-                with Vertical(classes="docker--controls"):
+                # Dashboard Header
+                with Container(classes="dashboard-header"):
                     try:
                         import ctypes
                         is_admin = ctypes.windll.shell32.IsUserAnAdmin()
-                        admin_status = "[green]✓ Admin[/green]" if is_admin else "[yellow]⚠ Sem Admin[/yellow]"
-                        yield Static(f"Status: {admin_status}", id="admin_status", classes="sidebar--status")
+                        admin_text = "Sim" if is_admin else "Não"
+                        admin_class = "success" if is_admin else "warning"
+                        yield StatCard("Admin Status", admin_text, classes=admin_class)
                     except Exception:
-                        pass
-                    yield Button("Limpeza Completa", id="docker_cleanup", classes="main--button")
-                    yield Button("Opções de Limpeza", id="docker_options", classes="main--button")
-                    yield Button("Configurar Sparse (WSL)", id="docker_sparse", classes="main--button")
-                    yield Button("Compactar VHDX", id="docker_vhdx", classes="main--button")
-                    yield Button("Limpar arquivos temporários", id="docker_temp", classes="main--button")
-                yield Static("[bold]Progresso da Limpeza[/bold]", classes="main--title")
-                yield ProgressBar(total=100, id="docker_progress")
-                yield Sparkline(id="docker_space_spark")
+                        yield StatCard("Admin Status", "Unknown")
+                    
+                    yield StatCard("Espaço Recuperado", "0 MB", id="saved_space_card")
+
+                # Action Grid
+                with Container(classes="action-grid"):
+                    yield Button("🧹 Limpeza Completa", id="docker_cleanup", variant="primary")
+                    yield Button("⚙️ Opções", id="docker_options")
+                    yield Button("🐳 Prune Containers", id="btn_prune_containers")
+                    yield Button("🖼️ Prune Images", id="btn_prune_images")
+                    yield Button("💾 Compact VHDX", id="docker_vhdx")
+                    yield Button("🗑️ Temp Files", id="docker_temp")
+
+                # Monitor Panel
+                with Vertical(classes="monitor-panel"):
+                    yield Static("Monitoramento de Tarefas", classes="monitor-header")
+                    yield DataTable(id="tasks_table")
+                    yield Sparkline(id="docker_space_spark")
+                    yield ProgressBar(total=100, id="main_progress")
+
             # Tab LMArena Generator
             with TabPane("LMArena Generator", id="lmarena_generator"):
                 with Vertical(classes="lmarena--controls"):
@@ -706,19 +503,6 @@ class CommandRunnerApp(App[None]):
         # Log de inicialização com status de admin
         self.write_ui_log("=== Docker-Clennear Iniciado (non-admin, elevated per op) ===\n")
         self.write_ui_log("Operações admin usarão UAC prompt quando necessário.\n")
-        # Attach progress widget handle to the progress TabPane for testing convenience
-        try:
-            progress_tab = self.query_one("#progress")
-            # Find internal ProgressBar with id main_progress
-            try:
-                bar = self.query_one("#main_progress", ProgressBar)
-                progress_tab._progress = bar
-                progress_tab.progress_value = 0
-            except Exception:
-                progress_tab._progress = None
-                progress_tab.progress_value = 0
-        except Exception:
-            pass
 
     def on_worker_state_changed(self, event) -> None:
         """Track worker states to show a spinner and log errors.
@@ -769,8 +553,19 @@ class CommandRunnerApp(App[None]):
     def watch_space_history(self, history: list) -> None:
         """Atualiza Sparkline com histórico de espaço."""
         try:
-            spark = self.query_one("#space_spark", Sparkline)
+            spark = self.query_one("#docker_space_spark", Sparkline)
             spark.data = history[-50:]  # Últimos 50 pontos
+            
+            # Update StatCard
+            if history:
+                total = sum(history)
+                # Assuming the values are in GB based on _run_full_cleanup logs
+                # But let's just show the sum
+                try:
+                    card = self.query_one("#saved_space_card", StatCard)
+                    card.value = f"{total:.2f} GB"
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -799,13 +594,6 @@ class CommandRunnerApp(App[None]):
             try:
                 bar = self.query_one("#main_progress", ProgressBar)
                 bar.update(total=total, progress=0)
-                bar.show_bar = True
-                bar.show_percentage = True
-                bar.show_eta = False
-                # expose on tab
-                prog_tab = self.query_one("#progress")
-                prog_tab._progress = bar
-                prog_tab.progress_value = 0
             except Exception:
                 pass
             # Reveal spinner
@@ -826,11 +614,6 @@ class CommandRunnerApp(App[None]):
                 bar = self.query_one("#main_progress", ProgressBar)
                 # If total is set, update progress param accordingly
                 bar.update(progress=value)
-                try:
-                    prog_tab = self.query_one("#progress")
-                    prog_tab.progress_value = int(value)
-                except Exception:
-                    pass
             except Exception:
                 pass
         except Exception:
@@ -855,26 +638,6 @@ class CommandRunnerApp(App[None]):
             try:
                 spinner = self.query_one("#spinner", LoadingIndicator)
                 spinner.add_class("hidden")
-            except Exception:
-                pass
-            # Hide progress bar content (after short delay) to match UI expectations in tests
-            try:
-                progress_tab = self.query_one("#progress")
-                bar = getattr(progress_tab, "_progress", None)
-                if bar:
-                    bar.show_bar = False
-                    bar.show_percentage = False
-                    bar.show_eta = False
-                    progress_tab.progress_value = 100
-                    # After a short delay, clear the bar visually
-                    def clear_bar():
-                            try:
-                                bar.remove()
-                                progress_tab._progress = None
-                                progress_tab.progress_value = 0
-                            except Exception:
-                                pass
-                    self.set_interval(1.5, clear_bar, repeat=False)
             except Exception:
                 pass
         except Exception:

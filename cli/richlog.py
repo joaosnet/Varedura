@@ -14,6 +14,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
+import asyncio
 
 
 class DailyLogWriter:
@@ -66,7 +67,23 @@ class DailyLogWriter:
             # Also write to UI if provided
             if self.ui_write:
                 try:
-                    self.ui_write(line)
+                    res = self.ui_write(line)
+                    # If the ui_write returned a coroutine (async function), ensure it's awaited/scheduled
+                    if asyncio.iscoroutine(res) or isinstance(res, asyncio.Future):
+                        try:
+                            # If an event loop is running, schedule the coroutine; otherwise run it directly
+                            loop = None
+                            try:
+                                loop = asyncio.get_running_loop()
+                            except RuntimeError:
+                                loop = None
+                            if loop and loop.is_running():
+                                asyncio.create_task(res)
+                            else:
+                                asyncio.run(res)
+                        except Exception:
+                            # Swallow to avoid raising in logger
+                            pass
                 except Exception:
                     pass
 

@@ -131,3 +131,15 @@ def test_daily_writer_handles_write_and_ui_exceptions(tmp_path):
     # flush and close should be swallow exceptions
     writer.flush()
     writer.close()
+
+
+def test_daily_writer_handles_async_ui_write(tmp_path):
+    called = []
+
+    async def ui_write(text: str) -> None:
+        called.append(text)
+
+    writer = DailyLogWriter(logs_dir=tmp_path / "logs_async", ui_write=ui_write)
+    writer.write("async message")
+    # The async ui_write should have been executed (awaited/run)
+    assert any("async message" in c for c in called)

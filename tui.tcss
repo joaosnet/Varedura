@@ -1,0 +1,253 @@
+/* tui.tcss */
+
+/* Global Theme Variables */
+$primary: #0db7ed;
+$primary-dark: #006d8f;
+$secondary: #2496ed;
+$background: #0d1117;
+$surface: #161b22;
+$surface-light: #21262d;
+$success: #2ea043;
+$warning: #d29922;
+$error: #f85149;
+$text: #c9d1d9;
+$text-muted: #8b949e;
+
+Screen {
+    background: $background;
+    color: $text;
+}
+
+/* --- Dashboard Layout --- */
+
+/* Header Area */
+.dashboard-header {
+    height: auto;
+    margin: 1;
+    align: center middle;
+    layout: grid;
+    grid-size: 2;
+    grid-gutter: 1;
+}
+
+/* Stat Cards */
+StatCard {
+    background: $surface;
+    border: tall $surface-light;
+    height: 5;
+    padding: 0 1;
+    align: center middle;
+    box-sizing: border-box;
+}
+
+StatCard .stat-title {
+    color: $text-muted;
+    text-align: center;
+}
+
+StatCard .stat-value {
+    color: $primary;
+    text-style: bold;
+    text-align: center;
+    content-align: center middle;
+}
+
+StatCard.success .stat-value {
+    color: $success;
+}
+
+StatCard.warning .stat-value {
+    color: $warning;
+}
+
+/* Action Grid */
+.action-grid {
+    layout: grid;
+    grid-size: 2;
+    grid-gutter: 1;
+    margin: 0 1;
+    height: auto;
+}
+
+/* Buttons */
+Button {
+    width: 100%;
+    border: none;
+    background: $surface-light;
+    color: $primary;
+}
+
+Button:hover {
+    background: $primary-dark;
+    color: $text;
+}
+
+Button.variant-primary {
+    background: $primary;
+    color: $background;
+    text-style: bold;
+}
+
+Button.variant-primary:hover {
+    background: $secondary;
+}
+
+Button.variant-destructive {
+    color: $error;
+}
+
+Button.variant-destructive:hover {
+    background: $error;
+    color: $text;
+}
+
+/* Monitor Panel */
+.monitor-panel {
+    height: 1fr;
+    margin: 1;
+    background: $surface;
+    border: solid $surface-light;
+    padding: 1;
+}
+
+.monitor-header {
+    background: $surface-light;
+    color: $text;
+    padding: 0 1;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+/* Data Table */
+DataTable {
+    background: $surface;
+    border: none;
+}
+
+DataTable > .datatable--header {
+    background: $surface-light;
+    color: $text-muted;
+}
+
+/* Sparkline */
+Sparkline {
+    height: 3;
+    margin: 1 0;
+    color: $primary;
+}
+
+Sparkline > .sparkline--max {
+    color: $success;
+}
+
+Sparkline > .sparkline--min {
+    color: $secondary;
+}
+
+/* --- Options Screen --- */
+
+CleanupOptionsScreen {
+    align: center middle;
+    background: rgba(0,0,0,0.7);
+}
+
+.cleanup--container {
+    width: 80%;
+    height: 90%;
+    background: $surface;
+    border: thick $primary;
+    padding: 1;
+}
+
+.cleanup--header {
+    text-align: center;
+    text-style: bold;
+    background: $primary;
+    color: $background;
+    padding: 1;
+    margin-bottom: 1;
+}
+
+.cleanup--body {
+    height: 1fr;
+    overflow-y: auto;
+}
+
+.option-group {
+    border: solid $surface-light;
+    background: $background;
+    padding: 1;
+    margin-bottom: 1;
+}
+
+.group-title {
+    background: $surface-light;
+    color: $primary;
+    padding: 0 1;
+    margin-bottom: 1;
+    text-style: bold;
+}
+
+.cleanup--footer {
+    width: 100%;
+    height: auto;
+    dock: bottom;
+    padding-top: 1;
+    align: right middle;
+}
+
+.cleanup--action-button {
+    margin-left: 1;
+}
+
+/* --- Logs Tab --- */
+.logs--controls {
+    height: auto;
+    margin: 1;
+    layout: horizontal;
+}
+
+.logs--controls Button {
+    width: auto;
+    margin-right: 1;
+}
+
+RichLog {
+    background: $background;
+    border: solid $surface-light;
+    padding: 1;
+    scrollbar-background: $surface;
+    scrollbar-color: $primary;
+}
+
+/* --- LMArena Tab --- */
+.lmarena--controls {
+    margin: 1;
+    padding: 1;
+    background: $surface;
+    border: solid $surface-light;
+}
+
+/* ConfirmScreen styles */
+ConfirmScreen {
+    align: center middle;
+    background: rgba(0,0,0,0.7);
+}
+.confirm--message {
+    width: 100%;
+    text-align: center;
+    padding: 1;
+    background: $surface-light;
+    color: $warning;
+    text-style: bold;
+}
+.confirm--buttons {
+    width: 100%;
+    height: auto;
+    padding: 1;
+    background: $surface;
+    align: center middle;
+}
+.confirm--button {
+    margin: 0 1;
+}

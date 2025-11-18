@@ -88,5 +88,9 @@ def test_quick_cleanup_main_exec(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(subprocess, "run", lambda *a, **k: cp)
     # Avoid waiting input
     monkeypatch.setattr('builtins.input', lambda *a, **k: '')
+    # Ensure the module is not in sys.modules to avoid runpy import warning
+    import sys
+    if 'cli.quick_cleanup' in sys.modules:
+        del sys.modules['cli.quick_cleanup']
     # Run module as __main__ - should not raise
     runpy.run_module('cli.quick_cleanup', run_name='__main__')
