@@ -591,11 +591,12 @@ class CommandRunnerApp(App[None]):
             self.active_tasks.append({"name": title, "status": "iniciando", "progress": 0})
             self.current_progress = 0
             # Configure internal progress bar widget
-            try:
-                bar = self.query_one("#main_progress", ProgressBar)
-                bar.update(total=total, progress=0)
-            except Exception:
-                pass
+            for bar_id in ["#main_progress", "#generator_progress"]:
+                try:
+                    bar = self.query_one(bar_id, ProgressBar)
+                    bar.update(total=total, progress=0)
+                except Exception:
+                    pass
             # Reveal spinner
             try:
                 spinner = self.query_one("#spinner", LoadingIndicator)
@@ -610,12 +611,13 @@ class CommandRunnerApp(App[None]):
             self.current_progress = value
             if self.active_tasks:
                 self.active_tasks[-1]["progress"] = int(value)
-            try:
-                bar = self.query_one("#main_progress", ProgressBar)
-                # If total is set, update progress param accordingly
-                bar.update(progress=value)
-            except Exception:
-                pass
+            for bar_id in ["#main_progress", "#generator_progress"]:
+                try:
+                    bar = self.query_one(bar_id, ProgressBar)
+                    # If total is set, update progress param accordingly
+                    bar.update(progress=value)
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -640,6 +642,13 @@ class CommandRunnerApp(App[None]):
                 spinner.add_class("hidden")
             except Exception:
                 pass
+            # Ensure bars are full
+            for bar_id in ["#main_progress", "#generator_progress"]:
+                try:
+                    bar = self.query_one(bar_id, ProgressBar)
+                    bar.update(progress=100)
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -949,8 +958,10 @@ class CommandRunnerApp(App[None]):
         except Exception:
             pass
         try:
+            # Use -u for unbuffered output to ensure we get real-time logs/progress
+            cmd_args = ["-u"] + args
             proc = await asyncio.create_subprocess_exec(
-                sys.executable, *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT
+                sys.executable, *cmd_args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT
             )
             # stream lines to UI
             assert proc.stdout is not None
@@ -958,7 +969,19 @@ class CommandRunnerApp(App[None]):
                 line = await proc.stdout.readline()
                 if not line:
                     break
-                self.write_ui_log(line.decode().rstrip())
+                text = line.decode().rstrip()
+
+                # Intercepta protocolo de progresso
+                if text.startswith("PROGRESS:"):
+                    try:
+                        current, total = map(int, text.split(":")[1].split("/"))
+                        percentage = (current / total) * 100
+                        self.update_progress(percentage)
+                        continue # Não loga a linha de progresso crua
+                    except ValueError:
+                        pass
+
+                self.write_ui_log(text)
             rc = await proc.wait()
             self.write_ui_log(f"{title}: Processo finalizado (rc={rc})")
             try:

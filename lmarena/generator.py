@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 import sys
-from typing import Any, List, Dict, TextIO, Optional
+from typing import Any, List, Dict, TextIO, Optional, Callable
 
 
 class ModelsGenerator:
@@ -92,9 +92,12 @@ class ModelsGenerator:
         return normalized
 
     @staticmethod
-    def format_models_python(models: List[Dict[str, Any]]) -> str:
+    def format_models_python(models: List[Dict[str, Any]], progress_callback: Optional[Callable[[int, int], None]] = None) -> str:
         lines = ["models = ["]
+        total = len(models)
         for i, model in enumerate(models):
+            if progress_callback:
+                progress_callback(i + 1, total)
             normalized = ModelsGenerator.normalize_model(model)
             model_str = "    {"
             fields = []
@@ -152,8 +155,8 @@ class ModelsGenerator:
         ]
 
     @staticmethod
-    def generate_full_code(models: List[Dict[str, Any]], output_stream: Optional[TextIO] = None) -> str:
-        models_code = ModelsGenerator.format_models_python(models)
+    def generate_full_code(models: List[Dict[str, Any]], output_stream: Optional[TextIO] = None, progress_callback: Optional[Callable[[int, int], None]] = None) -> str:
+        models_code = ModelsGenerator.format_models_python(models, progress_callback=progress_callback)
         text_models = ModelsGenerator.extract_text_models(models)
         image_models = ModelsGenerator.extract_image_models(models)
         vision_models = ModelsGenerator.extract_vision_models(models)
@@ -202,7 +205,32 @@ def main(output_stream: Optional[TextIO] = None):
     output_stream.write(f"Encontrados {len(models)} modelos.\n")
     output_stream.flush()
     
-    code = ModelsGenerator.generate_full_code(models, output_stream)
+    # Configuração de progresso
+    is_tty = sys.stdout.isatty()
+    
+    def progress_handler(current, total):
+        # Protocolo simples para a TUI capturar via stdout/stderr
+        # Escreve no stderr para garantir que seja capturado mesmo se stdout for redirecionado,
+        # mas no caso da TUI atual, stderr é mergeado no stdout.
+        sys.stderr.write(f"PROGRESS:{current}/{total}\n")
+        sys.stderr.flush()
+
+    code = ""
+    if is_tty:
+        try:
+            from rich.progress import Progress
+            with Progress() as progress:
+                task = progress.add_task("Gerando código...", total=len(models))
+                
+                def rich_handler(c, t):
+                    progress.update(task, completed=c, total=t)
+                    
+                code = ModelsGenerator.generate_full_code(models, output_stream, progress_callback=rich_handler)
+        except ImportError:
+             code = ModelsGenerator.generate_full_code(models, output_stream)
+    else:
+        code = ModelsGenerator.generate_full_code(models, output_stream, progress_callback=progress_handler)
+
     output_stream.write(code)
     output_stream.write("\n")
     output_stream.flush()
