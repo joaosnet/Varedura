@@ -18,6 +18,10 @@ Screen {
     color: $text;
 }
 
+TabbedContent {
+    height: 1fr;
+}
+
 /* --- Dashboard Layout --- */
 
 /* Header Area */
@@ -101,9 +105,19 @@ Button.variant-destructive:hover {
     color: $text;
 }
 
+/* Docker Cleaner Scroll Container */
+#docker_cleaner_scroll {
+    height: 60%;
+    scrollbar-background: $surface;
+    scrollbar-color: $primary;
+    margin-bottom: 1;
+    border-bottom: solid $surface-light;
+}
+
 /* Monitor Panel */
 .monitor-panel {
-    height: 1fr;
+    height: auto;
+    min-height: 25;
     margin: 1;
     background: $surface;
     border: solid $surface-light;
@@ -122,6 +136,8 @@ Button.variant-destructive:hover {
 DataTable {
     background: $surface;
     border: none;
+    height: auto;
+    min-height: 10;
 }
 
 DataTable > .datatable--header {
@@ -220,12 +236,31 @@ RichLog {
     scrollbar-color: $primary;
 }
 
+.tab--log {
+    height: 1fr;
+    margin-top: 1;
+}
+
 /* --- LMArena Tab --- */
 .lmarena--controls {
     margin: 1;
     padding: 1;
     background: $surface;
     border: solid $surface-light;
+}
+
+/* --- Footer --- */
+#footer {
+    dock: bottom;
+    height: 3;
+    background: $surface;
+    border-top: solid $surface-light;
+    padding: 0 1;
+    align: right middle;
+}
+
+.footer--button {
+    width: auto;
 }
 
 /* ConfirmScreen styles */

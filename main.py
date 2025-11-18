@@ -191,34 +191,38 @@ class CommandRunnerApp(App[None]):
         with TabbedContent(initial="docker_cleaner"):
             # Tab Docker Cleaner
             with TabPane("Docker Cleaner", id="docker_cleaner"):
-                # Dashboard Header
-                with Container(classes="dashboard-header"):
-                    try:
-                        import ctypes
-                        is_admin = ctypes.windll.shell32.IsUserAnAdmin()
-                        admin_text = "Sim" if is_admin else "Não"
-                        admin_class = "success" if is_admin else "warning"
-                        yield StatCard("Admin Status", admin_text, classes=admin_class)
-                    except Exception:
-                        yield StatCard("Admin Status", "Unknown")
-                    
-                    yield StatCard("Espaço Recuperado", "0 MB", id="saved_space_card")
+                with VerticalScroll(id="docker_cleaner_scroll"):
+                    # Dashboard Header
+                    with Container(classes="dashboard-header"):
+                        try:
+                            import ctypes
+                            is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+                            admin_text = "Sim" if is_admin else "Não"
+                            admin_class = "success" if is_admin else "warning"
+                            yield StatCard("Admin Status", admin_text, classes=admin_class)
+                        except Exception:
+                            yield StatCard("Admin Status", "Unknown")
+                        
+                        yield StatCard("Espaço Recuperado", "0 MB", id="saved_space_card")
 
-                # Action Grid
-                with Container(classes="action-grid"):
-                    yield Button("🧹 Limpeza Completa", id="docker_cleanup", variant="primary")
-                    yield Button("⚙️ Opções", id="docker_options")
-                    yield Button("🐳 Prune Containers", id="btn_prune_containers")
-                    yield Button("🖼️ Prune Images", id="btn_prune_images")
-                    yield Button("💾 Compact VHDX", id="docker_vhdx")
-                    yield Button("🗑️ Temp Files", id="docker_temp")
+                    # Action Grid
+                    with Container(classes="action-grid"):
+                        yield Button("🧹 Limpeza Completa", id="docker_cleanup", variant="primary")
+                        yield Button("⚙️ Opções", id="docker_options")
+                        yield Button("🐳 Prune Containers", id="btn_prune_containers")
+                        yield Button("🖼️ Prune Images", id="btn_prune_images")
+                        yield Button("💾 Compact VHDX", id="docker_vhdx")
+                        yield Button("🗑️ Temp Files", id="docker_temp")
 
-                # Monitor Panel
-                with Vertical(classes="monitor-panel"):
-                    yield Static("Monitoramento de Tarefas", classes="monitor-header")
-                    yield DataTable(id="tasks_table")
-                    yield Sparkline(id="docker_space_spark")
-                    yield ProgressBar(total=100, id="main_progress")
+                    # Monitor Panel
+                    with Vertical(classes="monitor-panel"):
+                        yield Static("Monitoramento de Tarefas", classes="monitor-header")
+                        yield DataTable(id="tasks_table")
+                        yield Sparkline(id="docker_space_spark")
+                        yield ProgressBar(total=100, id="main_progress")
+
+                # Logs for Docker Cleaner
+                yield RichLog(id="docker_log", highlight=True, markup=True, classes="tab--log")
 
             # Tab LMArena Generator
             with TabPane("LMArena Generator", id="lmarena_generator"):
@@ -228,14 +232,11 @@ class CommandRunnerApp(App[None]):
                     yield Button("Executar Generator", id="run_models", classes="main--button")
                 yield Static("[bold]Progresso do Generator[/bold]", classes="main--title")
                 yield ProgressBar(total=100, id="generator_progress")
-            # Tab Logs
-            with TabPane("Logs", id="logs_tab"):
-                with Vertical(classes="logs--controls"):
-                    yield Button("Abrir pasta de logs", id="open_logs", classes="main--button")
-                    yield Button("Limpar logs UI", id="clear_logs", classes="main--button")
-                    yield Button("Sair", id="exit", classes="main--button")
-                yield RichLog(id="log", highlight=True, markup=True, classes="main--log")
-        yield Footer(classes="app--footer")
+                # Logs for LMArena Generator
+                yield RichLog(id="generator_log", highlight=True, markup=True, classes="tab--log")
+        # Custom Footer with persistent exit button
+        with Container(id="footer", classes="app--footer"):
+            yield Button("Sair", id="exit", variant="error", classes="footer--button")
 
     @on(Button.Pressed, "#exit")
     def handle_exit(self) -> None:
@@ -402,8 +403,9 @@ class CommandRunnerApp(App[None]):
         This method is thread-safe and should be called from any context.
         """
         try:
-            logger = self.query_one(RichLog)
-            logger.write(message)
+            # Write to all RichLog widgets
+            for log in self.query(RichLog):
+                log.write(message)
         except Exception:
             # Widget not yet available or query failed
             pass
@@ -893,6 +895,27 @@ class CommandRunnerApp(App[None]):
             self.write_ui_log("Stop WSL concluído")
             try:
                 self.query_one(RichLog).write("Stop WSL concluído")
+            except Exception:
+                pass
+            self.active_tasks.pop()
+        except Exception as e:
+            self.active_tasks[-1]["status"] = f"erro: {e}"
+            self.notify(f"Erro {task_name}: {e}", severity="error")
+            self.active_tasks.pop()
+
+    @work(exclusive=True)
+    async def _run_configure_sparse(self) -> None:
+        task_name = "Configurar Sparse"
+        self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
+        try:
+            from docker_cleaner.core import WSLDockerCleaner
+            cleaner = WSLDockerCleaner()
+            await cleaner.configure_wsl_sparse_async(stream_callback=self.write_ui_log)
+            self.active_tasks[-1]["status"] = "concluído"
+            self.notify(f"{task_name} concluído", severity="success")
+            self.write_ui_log("Configure Sparse concluído")
+            try:
+                self.query_one(RichLog).write("Configure Sparse concluído")
             except Exception:
                 pass
             self.active_tasks.pop()
