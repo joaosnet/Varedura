@@ -1,1029 +1,133 @@
 """
-Textual UI launcher for the Docker-Clennear tools.
+Docker-Clennear - System Monitor & Docker Cleanup Tool
 
 Usage:
-    python main.py
+    uv run main.py
 
-This TUI allows running the quick cleanup, full cleanup, and the LMArena models generator
-from a unified interface. Long-running tasks are executed as subprocesses and their output
-is shown in the builtin `Log` widget.
+Main entry point providing a Rich-based menu for all tools.
 """
-from __future__ import annotations
 
-import asyncio
-import os
 import sys
-from pathlib import Path
-from typing import List
-
-from textual.app import App, ComposeResult
-from textual.containers import Container, Horizontal, Vertical, VerticalScroll
-from textual.widgets import (
-    Header,
-    Footer,
-    Button,
-    Static,
-    Input,
-    Label,
-    RichLog,
-    Checkbox,
-    LoadingIndicator,
-    TabbedContent,
-    TabPane,
-    DataTable,
-    Tree,
-    ProgressBar,
-    Sparkline,
-    LoadingIndicator,
-)
-from textual.screen import Screen
-from textual import work, on
-from textual.worker import Worker, WorkerState
-from textual.reactive import reactive, var
-from typing import Callable
-from rich.console import Console as RichConsole
-from rich.progress import Progress as RichProgress, BarColumn, TextColumn, TaskProgressColumn
-from cli.richlog import DailyLogWriter
-from cli.ui_components import StatCard
-import logging
-import sys
-
-
-class ConfirmScreen(Screen):
-    """Small modal screen for confirmation prompts."""
-
-    def __init__(self, message: str = "Confirm?") -> None:
-        super().__init__()
-        self.message = message
-        self.result = False
-
-    def compose(self) -> ComposeResult:
-        yield Static(f"[bold yellow]{self.message}[/bold yellow]", classes="confirm--message")
-        with Horizontal(classes="confirm--buttons"):
-            yield Button("Confirmar", id="confirm_yes", classes="confirm--button confirm--yes")
-            yield Button("Cancelar", id="confirm_no", classes="confirm--button confirm--no")
-
-    @on(Button.Pressed, "#confirm_yes")
-    def handle_confirm_yes(self) -> None:
-        self.result = True
-        self.dismiss(result=True)
-
-    @on(Button.Pressed, "#confirm_no")
-    def handle_confirm_no(self) -> None:
-        self.result = False
-        self.dismiss(result=False)
-
-
-class CleanupOptionsScreen(Screen):
-    """Modal screen offering several cleanup options via checkboxes.
-
-    Use defaults by passing a dict of checkbox ids -> bool.
-    The selected values will be available in `self.selected_options` after dismiss.
-    """
-
-    def __init__(self, message: str = "Cleanup options", defaults: dict | None = None) -> None:
-        super().__init__()
-        self.message = message
-        self.result = False
-        self.defaults = defaults or {}
-        self.selected_options: dict = {}
-
-    def compose(self) -> ComposeResult:
-        with Container(classes="cleanup--container"):
-            yield Static(f"{self.message}", classes="cleanup--header")
-            
-            with VerticalScroll(id="opts_body", classes="cleanup--body"):
-                # Group: Docker Objects
-                with Container(classes="option-group"):
-                    yield Static("🐳 Docker Objects", classes="group-title")
-                    yield Checkbox("Prune containers", id="opt_prune_containers")
-                    yield Checkbox("Prune images", id="opt_prune_images")
-                    yield Checkbox("Prune volumes", id="opt_prune_volumes")
-                    yield Checkbox("Prune networks", id="opt_prune_networks")
-                
-                # Group: System & Build
-                with Container(classes="option-group"):
-                    yield Static("⚙️ System & Build", classes="group-title")
-                    yield Checkbox("Prune builder cache", id="opt_prune_builder")
-                    yield Checkbox("Prune system (destructive)", id="opt_prune_system")
-                    yield Checkbox("Limpar arquivos temporários", id="opt_cleanup_temp")
-
-                # Group: WSL & VHDX
-                with Container(classes="option-group"):
-                    yield Static("🪟 WSL & VHDX", classes="group-title")
-                    yield Checkbox("Parar Dockers e WSL", id="opt_stop_wsl")
-                    yield Checkbox("Configurar sparse (WSL)", id="opt_configure_sparse")
-                    yield Checkbox("Compactar VHDX (admin)", id="opt_compact_vhdx")
-
-            # Footer controls
-            with Horizontal(id="opts_footer", classes="cleanup--footer"):
-                yield Button("Executar", id="opts_exec", variant="primary", classes="cleanup--action-button")
-                yield Button("Salvar Prefs", id="opts_save", classes="cleanup--action-button")
-                yield Button("Cancelar", id="opts_cancel", classes="cleanup--action-button")
-
-    def on_mount(self) -> None:
-        # Initialize default checkbox state
-        for chk_id, val in self.defaults.items():
-            try:
-                chk = self.query_one(f"#{chk_id}", Checkbox)
-                chk.value = bool(val)
-            except Exception:
-                pass
-
-    @on(Button.Pressed, "#opts_cancel")
-    def handle_opts_cancel(self) -> None:
-        self.result = False
-        self.selected_options = {}
-        self.dismiss(result=False)
-
-    @on(Button.Pressed, "#opts_save")
-    def handle_opts_save(self) -> None:
-        opts = {chk.id: chk.value for chk in self.query(Checkbox)}
-        # Persist to user home
-        try:
-            import json
-            config_path = Path.home() / ".docker_clennear_prefs.json"
-            with open(config_path, "w", encoding="utf-8") as f:
-                json.dump(opts, f, indent=2)
-            # If hosted under an app with write_ui_log, use it
-            try:
-                getattr(self.app, "write_ui_log", lambda *_: None)(f"Preferências salvas em: {config_path}")
-            except Exception:
-                pass
-            # Don't dismiss, let user continue selecting or execute
-        except Exception as e:
-            try:
-                getattr(self.app, "write_ui_log", lambda *_: None)(f"Erro ao salvar preferências: {e}")
-            except Exception:
-                pass
-
-    @on(Button.Pressed, "#opts_exec")
-    def handle_opts_exec(self) -> None:
-        opts = {}
-        for chk in self.query(Checkbox):
-            opts[chk.id] = chk.value
-        self.selected_options = opts
-        self.result = True
-        self.dismiss(result=True)
-
-class CommandRunnerApp(App[None]):
-
-    CSS_PATH = "tui.tcss"
-
-    active_workers = reactive(0)
-    current_progress = reactive(0)
-    space_history = reactive([])
-    active_tasks = reactive([])  # [{'name': str, 'status': str, 'progress': int}]
-
-    def watch_active_workers(self, count: int) -> None:
-        """Show/hide spinner based on active workers count."""
-        try:
-            spinner = self.query_one("#spinner", LoadingIndicator)
-            if count > 0:
-                spinner.remove_class("hidden")
-            else:
-                spinner.add_class("hidden")
-        except Exception:
-            pass
-
-    def compose(self) -> ComposeResult:
-        yield Header(show_clock=True, classes="app--header")
-        with TabbedContent(initial="docker_cleaner"):
-            # Tab Docker Cleaner
-            with TabPane("Docker Cleaner", id="docker_cleaner"):
-                with VerticalScroll(id="docker_cleaner_scroll"):
-                    # Dashboard Header
-                    with Container(classes="dashboard-header"):
-                        try:
-                            import ctypes
-                            is_admin = ctypes.windll.shell32.IsUserAnAdmin()
-                            admin_text = "Sim" if is_admin else "Não"
-                            admin_class = "success" if is_admin else "warning"
-                            yield StatCard("Admin Status", admin_text, classes=admin_class)
-                        except Exception:
-                            yield StatCard("Admin Status", "Unknown")
-                        
-                        yield StatCard("Espaço Recuperado", "0 MB", id="saved_space_card")
-
-                    # Action Grid
-                    with Container(classes="action-grid"):
-                        yield Button("🧹 Limpeza Completa", id="docker_cleanup", variant="primary")
-                        yield Button("⚙️ Opções", id="docker_options")
-                        yield Button("🐳 Prune Containers", id="btn_prune_containers")
-                        yield Button("🖼️ Prune Images", id="btn_prune_images")
-                        yield Button("💾 Compact VHDX", id="docker_vhdx")
-                        yield Button("🗑️ Temp Files", id="docker_temp")
-
-                    # Monitor Panel
-                    with Vertical(classes="monitor-panel"):
-                        yield Static("Monitoramento de Tarefas", classes="monitor-header")
-                        yield DataTable(id="tasks_table")
-                        yield Sparkline(id="docker_space_spark")
-                        yield ProgressBar(total=100, id="main_progress")
-
-                # Logs for Docker Cleaner
-                yield RichLog(id="docker_log", highlight=True, markup=True, classes="tab--log")
-
-            # Tab LMArena Generator
-            with TabPane("LMArena Generator", id="lmarena_generator"):
-                with Vertical(classes="lmarena--controls"):
-                    default_models = "lmarena_models.txt" if Path("lmarena_models.txt").exists() else ""
-                    yield Input(value=default_models, placeholder="Caminho do arquivo para models (ex: lmarena_models.txt)", id="models_path", classes="main--input")
-                    yield Button("Executar Generator", id="run_models", classes="main--button")
-                yield Static("[bold]Progresso do Generator[/bold]", classes="main--title")
-                yield ProgressBar(total=100, id="generator_progress")
-                # Logs for LMArena Generator
-                yield RichLog(id="generator_log", highlight=True, markup=True, classes="tab--log")
-        # Custom Footer with persistent exit button
-        with Container(id="footer", classes="app--footer"):
-            yield Button("Sair", id="exit", variant="error", classes="footer--button")
-
-    @on(Button.Pressed, "#exit")
-    def handle_exit(self) -> None:
-        self.exit()
-
-    @on(Button.Pressed, "#docker_cleanup")
-    def handle_docker_cleanup(self) -> None:
-        # Single-command: run the full cleanup by default
-        self.write_ui_log("Executando Limpeza Docker Completa (elevada, pode exigir admin)...")
-        self._run_full_cleanup()
-
-    @on(Button.Pressed, "#docker_options")
-    def handle_docker_options(self) -> None:
-        """Handler to show cleanup options modal."""
-        self._run_docker_options()
-
-    @work(exclusive=True)
-    async def _run_docker_options(self) -> None:
-        """Worker to load prefs, show modal, and execute selected options."""
-        # Load saved preferences from file
-        defaults = {
-            "opt_stop_wsl": False,
-            "opt_prune_containers": True,
-            "opt_prune_images": True,
-            "opt_prune_volumes": True,
-            "opt_prune_networks": False,
-            "opt_prune_builder": False,
-            "opt_prune_system": False,
-            "opt_configure_sparse": False,
-            "opt_compact_vhdx": False,
-            "opt_cleanup_temp": True,
-        }
-        try:
-            import json
-            config_path = Path.home() / ".docker_clennear_prefs.json"
-            if config_path.exists():
-                with open(config_path, "r", encoding="utf-8") as f:
-                    loaded = json.load(f)
-                    if isinstance(loaded, dict):
-                        for k, v in loaded.items():
-                            defaults[k] = v
-        except Exception:
-            pass
-        opts_screen = CleanupOptionsScreen("Selecione as opções de limpeza", defaults=defaults)
-        self.write_ui_log("[DEBUG] Abrindo modal de opções de limpeza...")
-        result = await self.push_screen(opts_screen, wait_for_dismiss=True)
-        self.write_ui_log(f"[DEBUG] Modal fechado. Resultado: {result}, selected_options: {opts_screen.selected_options}")
-        
-        # Verificar se usuário cancelou - result é o valor passado para dismiss()
-        if not result:
-            self.write_ui_log("Limpeza Docker cancelada pelo usuário.")
-            return
-        
-        selected = opts_screen.selected_options
-        # Execute the selected options in a reasonable order
-        # 1) Stop WSL/Docker, 2) Quick cleanup (in-process or subprocess), 3) Full cleanup, 4) Configure/Compact, 5) Cleanup temp
-        if selected.get("opt_stop_wsl"):
-            self.write_ui_log("Executando: Parar Docker e WSL...")
-            # Use a worker to run stop_docker_wsl
-            self._run_stop_wsl()
-        # Run prune commands selected
-        if selected.get("opt_prune_containers"):
-            self.write_ui_log("Executando prune containers...")
-            self._run_prune_containers()
-        if selected.get("opt_prune_images"):
-            self.write_ui_log("Executando prune images...")
-            self._run_prune_images()
-        if selected.get("opt_prune_volumes"):
-            self.write_ui_log("Executando prune volumes...")
-            self._run_prune_volumes()
-        if selected.get("opt_prune_networks"):
-            self.write_ui_log("Executando prune networks...")
-            self._run_prune_networks()
-        if selected.get("opt_prune_builder"):
-            self.write_ui_log("Executando prune builder...")
-            self._run_prune_builder()
-        if selected.get("opt_prune_system"):
-            self.write_ui_log("Executando prune system (docker system prune -af --volumes)...")
-            self._run_prune_system()
-        # Removed legacy quick/full options: execution now maps to the granular options selected above.
-        if selected.get("opt_configure_sparse"):
-            self.write_ui_log("Configurando sparse (WSL)...")
-            self._run_configure_sparse()
-        if selected.get("opt_compact_vhdx"):
-            self.write_ui_log("Compactando VHDX (pode requerer administrador)...")
-            self._run_compact_vhdx()
-        if selected.get("opt_cleanup_temp"):
-            self.write_ui_log("Limpando arquivos temporários...")
-            self._run_cleanup_temp()
-
-    @on(Button.Pressed, "#models_generator")
-    def handle_models_generator(self) -> None:
-        # focus the input field
-        self.query_one(Input).focus()
-
-    @on(Button.Pressed, "#run_models")
-    async def handle_run_models(self) -> None:
-        path_input = self.query_one(Input)
-        path = path_input.value.strip() if path_input.value else ""
-        if not path:
-            self.write_ui_log("Por favor informe um caminho de arquivo válido para gerar modelos.")
-            return
-        # Run as a worker (don't await the returned Worker)
-        self.run_python_script(["-m", "lmarena.generator", path], "Models Generator")
-
-    @on(Button.Pressed, "#open_logs")
-    def handle_open_logs(self) -> None:
-        logs_dir = Path("logs")
-        if not logs_dir.exists():
-            self.write_ui_log("Diretório de logs não encontrado: logs")
-            return
-        try:
-            # platform-specific: Windows explorer
-            if sys.platform.startswith("win"):
-                os.startfile(str(logs_dir))
-            else:
-                import webbrowser
-
-                webbrowser.open(str(logs_dir))
-            self.write_ui_log("Abrindo pasta de logs...")
-        except Exception as e:
-            self.write_ui_log(f"Falha ao abrir pasta de logs: {e}")
-
-    @on(Button.Pressed, "#clear_logs")
-    def handle_clear_logs(self) -> None:
-        # Clear the UI-only content (won't delete log files)
-        try:
-            self.query_one(RichLog).clear()
-            self.write_ui_log("UI logs limpos")
-        except Exception as e:
-            self.write_ui_log(f"Erro ao limpar log UI: {e}")
-
-    def write_ui_log(self, message: str) -> None:
-        """Write message to UI log and persist to daily log file.
-        
-        This method works from both async workers and thread workers.
-        """
-        # Write to file via daily writer
-        try:
-            if hasattr(self, "daily_writer") and self.daily_writer:
-                self.daily_writer.write(message)
-        except Exception:
-            pass
-        
-        # Write to UI widget - check if we're in the main thread
-        try:
-            import threading
-            if threading.current_thread() == threading.main_thread():
-                # We're in the main thread (async worker or UI context), call directly
-                self.write_ui_log_widget(message)
-            else:
-                # We're in a worker thread, use call_from_thread
-                self.call_from_thread(self.write_ui_log_widget, message)
-        except Exception:
-            # Fallback: always try call_from_thread
-            try:
-                self.call_from_thread(self.write_ui_log_widget, message)
-            except Exception:
-                pass
-
-    def write_ui_log_widget(self, message: str) -> None:
-        """Directly write to the UI widget (no file persistence).
-        
-        This method is thread-safe and should be called from any context.
-        """
-        try:
-            # Write to all RichLog widgets
-            for log in self.query(RichLog):
-                log.write(message)
-        except Exception:
-            # Widget not yet available or query failed
-            pass
-
-    def on_mount(self) -> None:
-        """Called when app is mounted: initialize the daily file writer."""
-        # Provide a UI-only writer callback used by DailyLogWriter to avoid recursion
-        def ui_write_direct(text: str) -> None:
-            # This is a sync callback that only writes to the UI widget
-            # Ensure it is scheduled in the app thread
-            self.call_from_thread(lambda: self.write_ui_log_widget(text))
-
-        self.daily_writer = DailyLogWriter(ui_write=ui_write_direct)
-
-        # Configure Python logging to write into the daily writer as well
-        root_logger = logging.getLogger()
-        # Add handler if not present to prevent duplicates
-        found = False
-        for h in list(root_logger.handlers):
-            if isinstance(h, logging.StreamHandler) and getattr(h, "stream", None) == self.daily_writer:
-                found = True
-                break
-        if not found:
-            handler = logging.StreamHandler(self.daily_writer)
-            handler.setLevel(logging.DEBUG)
-            handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
-            root_logger.addHandler(handler)
-        root_logger.setLevel(logging.DEBUG)
-
-        # Unhandled exception hooks
-        def _handle_unhandled_exception(exc_type, exc_value, exc_tb):
-            logging.getLogger("app").exception("Uncaught exception", exc_info=(exc_type, exc_value, exc_tb))
-
-        sys.excepthook = _handle_unhandled_exception
-
-        # Asyncio loop exception handler
-        def _loop_exception(loop, context):
-            # context may contain message and/or exception
-            exc = context.get("exception")
-            if exc:
-                logging.getLogger("asyncio").exception("Unhandled async exception", exc_info=(type(exc), exc, getattr(exc, '__traceback__', None)))
-            else:
-                logging.getLogger("asyncio").error("Unhandled async exception: %s", context.get("message"))
-
-        try:
-            loop = asyncio.get_running_loop()
-            loop.set_exception_handler(_loop_exception)
-        except RuntimeError:
-            # no running loop at mount time
-            pass
-        # Threading exceptions (Python 3.8+) — capture uncaught exceptions in thread workers
-        try:
-            import threading
-
-            def _thread_exc_handler(args):
-                exc = getattr(args, "exc_value", None)
-                if exc:
-                    logging.getLogger("threading").exception("Unhandled thread exception", exc_info=(type(exc), exc, getattr(exc, "__traceback__", None)))
-
-            threading.excepthook = _thread_exc_handler
-        except Exception:
-            pass
-
-        # Redirect stderr to our daily writer so python tracebacks printed to stderr are captured
-        try:
-            self._orig_stderr = sys.stderr
-
-            class _StderrRedirect:
-                def __init__(self, writer, orig):
-                    self.writer = writer
-                    self.orig = orig
-
-                def write(self, text: str) -> None:
-                    try:
-                        self.writer.write(text)
-                    except Exception:
-                        pass
-                    try:
-                        self.orig.write(text)
-                    except Exception:
-                        pass
-
-                def flush(self) -> None:
-                    try:
-                        self.writer.flush()
-                    except Exception:
-                        pass
-                    try:
-                        self.orig.flush()
-                    except Exception:
-                        pass
-
-            sys.stderr = _StderrRedirect(self.daily_writer, self._orig_stderr)
-        except Exception:
-            pass
-
-        # Log de inicialização com status de admin
-        self.write_ui_log("=== Docker-Clennear Iniciado (non-admin, elevated per op) ===\n")
-        self.write_ui_log("Operações admin usarão UAC prompt quando necessário.\n")
-
-    def on_worker_state_changed(self, event) -> None:
-        """Track worker states to show a spinner and log errors.
-
-        This method increments a counter for RUNNING workers and decrements when they
-        complete or error. When there are any active workers, it shows a spinner in
-        the UI; otherwise it hides it.
-        """
-        try:
-            # Identify worker (use its name if provided)
-            worker_name = getattr(event.worker, "name", None) or repr(event.worker)
-            logging.getLogger().info("Worker state changed: %s -> %s", worker_name, event.state)
-            # Update reactive active_workers count
-            if event.state == WorkerState.RUNNING:
-                self.active_workers += 1
-            else:
-                # treat non-running as completed/errored → decrement
-                self.active_workers = max(0, self.active_workers - 1)
-            # If an error state, try to log the exception details (best-effort)
-            if event.state == WorkerState.ERROR:
-                try:
-                    worker_obj = None
-                    if hasattr(self.workers, "_workers"):
-                        for w in self.workers._workers:
-                            if w is event.worker:
-                                worker_obj = w
-                                break
-                    if worker_obj:
-                        err = getattr(worker_obj, "_error", None) or getattr(worker_obj, "error", None)
-                        if err:
-                            logging.getLogger().exception("Worker %s errored with exception", worker_name, exc_info=(type(err), err, getattr(err, "__traceback__", None)))
-                        else:
-                            logging.getLogger().error("Worker %s errored (no error object available)", worker_name)
-                except Exception:
-                    logging.getLogger().exception("Failed to extract worker error for %s", worker_name)
-        except Exception:
-            # Avoid crashing the app event handler; this is noisy but safe
-            pass
-
-    def watch_current_progress(self, progress: int) -> None:
-        """Atualiza ProgressBar principal."""
-        try:
-            pb = self.query_one("#main_progress", ProgressBar)
-            pb.update(progress=progress)
-        except Exception:
-            pass
-
-    def watch_space_history(self, history: list) -> None:
-        """Atualiza Sparkline com histórico de espaço."""
-        try:
-            spark = self.query_one("#docker_space_spark", Sparkline)
-            spark.data = history[-50:]  # Últimos 50 pontos
-            
-            # Update StatCard
-            if history:
-                total = sum(history)
-                # Assuming the values are in GB based on _run_full_cleanup logs
-                # But let's just show the sum
-                try:
-                    card = self.query_one("#saved_space_card", StatCard)
-                    card.value = f"{total:.2f} GB"
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-    def watch_active_tasks(self, tasks: list) -> None:
-        """Atualiza DataTable com tarefas ativas."""
-        try:
-            table = self.query_one("#tasks_table", DataTable)
-            table.clear()  # Limpa e repopula
-            if not table.columns:
-                table.add_columns("Tarefa", "Status", "Progresso")
-            for task in tasks:
-                table.add_row(
-                    task.get("name", "?"),
-                    task.get("status", "unknown"),
-                    f"{task.get('progress', 0)}%"
-                )
-        except Exception:
-            pass
-
-    def start_progress(self, title: str, total: int = 100) -> None:
-        """Start a progress task shown in the UI and enable spinner."""
-        try:
-            self.active_tasks.append({"name": title, "status": "iniciando", "progress": 0})
-            self.current_progress = 0
-            # Configure internal progress bar widget
-            for bar_id in ["#main_progress", "#generator_progress"]:
-                try:
-                    bar = self.query_one(bar_id, ProgressBar)
-                    bar.update(total=total, progress=0)
-                except Exception:
-                    pass
-            # Reveal spinner
-            try:
-                spinner = self.query_one("#spinner", LoadingIndicator)
-                spinner.remove_class("hidden")
-            except Exception:
-                pass
-        except Exception:
-            pass
-
-    def update_progress(self, value: int) -> None:
-        try:
-            self.current_progress = value
-            if self.active_tasks:
-                self.active_tasks[-1]["progress"] = int(value)
-            for bar_id in ["#main_progress", "#generator_progress"]:
-                try:
-                    bar = self.query_one(bar_id, ProgressBar)
-                    # If total is set, update progress param accordingly
-                    bar.update(progress=value)
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-    def advance_progress(self, amount: int) -> None:
-        try:
-            # Increase progress by amount
-            new_val = int(self.current_progress + amount)
-            self.update_progress(new_val)
-        except Exception:
-            pass
-
-    def finish_progress(self) -> None:
-        try:
-            self.current_progress = 100
-            if self.active_tasks:
-                self.active_tasks[-1]["progress"] = 100
-                self.active_tasks[-1]["status"] = "concluído"
-                self.active_tasks.pop()
-            # Hide spinner
-            try:
-                spinner = self.query_one("#spinner", LoadingIndicator)
-                spinner.add_class("hidden")
-            except Exception:
-                pass
-            # Ensure bars are full
-            for bar_id in ["#main_progress", "#generator_progress"]:
-                try:
-                    bar = self.query_one(bar_id, ProgressBar)
-                    bar.update(progress=100)
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-    @work(exclusive=True)
-    async def _run_full_cleanup(self) -> None:
-        task_name = "Full Cleanup"
-        self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
-        self.notify("Iniciando limpeza completa", severity="information")
-        self.current_progress = 5
-        total_saved = 0
-        try:
-            from docker_cleaner.core import WSLDockerCleaner
-            cleaner = WSLDockerCleaner()
-            
-            # Etapa 1
-            self.current_progress = 10
-            self.active_tasks[-1]["progress"] = 10
-            self.active_tasks[-1]["status"] = "Limpeza Docker"
-            self.write_ui_log("Etapa 1/5: Limpeza do Docker...\n")
-            await cleaner.docker_cleanup_async(stream_callback=self.write_ui_log)
-            total_saved += getattr(cleaner, 'total_space_saved', 0) or 0
-            self.space_history.append(total_saved)
-            self.notify("Etapa 1 concluída", severity="success")
-            
-            # Etapa 2
-            self.current_progress = 30
-            self.active_tasks[-1]["progress"] = 30
-            self.active_tasks[-1]["status"] = "Parando WSL"
-            self.write_ui_log("Etapa 2/5: Parando Docker/WSL...\n")
-            await cleaner.stop_docker_wsl_async(stream_callback=self.write_ui_log)
-            
-            # Etapa 3
-            self.current_progress = 50
-            self.active_tasks[-1]["progress"] = 50
-            self.active_tasks[-1]["status"] = "Sparse WSL"
-            self.write_ui_log("Etapa 3/5: Configurando sparse...\n")
-            await cleaner.configure_wsl_sparse_async(stream_callback=self.write_ui_log)
-            
-            # Etapa 4
-            self.current_progress = 70
-            self.active_tasks[-1]["progress"] = 70
-            self.active_tasks[-1]["status"] = "Compact VHDX"
-            self.write_ui_log("Etapa 4/5: Compactando VHDX...\n")
-            await cleaner.compact_vhdx_files_async(stream_callback=self.write_ui_log)
-            
-            # Etapa 5
-            self.current_progress = 90
-            self.active_tasks[-1]["progress"] = 90
-            self.active_tasks[-1]["status"] = "Temp files"
-            self.write_ui_log("Etapa 5/5: Limpando arquivos temporários...\n")
-            await cleaner.cleanup_temp_files_async(stream_callback=self.write_ui_log)
-            
-            self.current_progress = 100
-            self.active_tasks[-1]["progress"] = 100
-            self.active_tasks[-1]["status"] = "concluído"
-            self.space_history.append(total_saved)
-            self.notify(f"Limpeza completa! {total_saved:.2f}GB economizados", severity="success")
-            self.active_tasks.pop()
-        except Exception as e:
-            self.active_tasks[-1]["status"] = f"erro: {str(e)}"
-            self.notify(f"Erro: {e}", severity="error")
-            self.active_tasks.pop()
-
-    @work(exclusive=True)
-    async def _run_prune_containers(self) -> None:
-        task_name = "Prune Containers"
-        self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
-        self.notify(f"Iniciando {task_name}", severity="information")
-        self.current_progress = 10
-        try:
-            from docker_cleaner.core import WSLDockerCleaner
-            cleaner = WSLDockerCleaner()
-            self.active_tasks[-1]["status"] = "executando comando"
-            self.current_progress = 50
-            await cleaner.run_command_async("docker container prune -f", shell=True, stream_callback=self.write_ui_log)
-            # Ensure the success message is present in UI logs for tests
-            self.write_ui_log("Prune containers completo")
-            try:
-                self.query_one(RichLog).write("Prune containers completo")
-            except Exception:
-                pass
-            self.current_progress = 100
-            self.active_tasks[-1]["status"] = "concluído"
-            self.space_history.append(getattr(cleaner, 'total_space_saved', 0) or 0)
-            self.notify(f"{task_name} completo!", severity="success")
-            self.active_tasks.pop()
-        except Exception as e:
-            self.active_tasks[-1]["status"] = f"erro: {str(e)[:50]}"
-            self.notify(f"Erro em {task_name}: {e}", severity="error")
-            self.active_tasks.pop()
-
-    @work(exclusive=True)
-    async def _run_prune_images(self) -> None:
-        task_name = "Prune Images"
-        self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
-        self.notify(f"Iniciando {task_name}", severity="information")
-        self.current_progress = 10
-        try:
-            from docker_cleaner.core import WSLDockerCleaner
-            cleaner = WSLDockerCleaner()
-            self.active_tasks[-1]["status"] = "executando"
-            self.current_progress = 50
-            await cleaner.run_command_async("docker image prune -af", shell=True, stream_callback=self.write_ui_log)
-            self.write_ui_log("Prune images completo")
-            try:
-                self.query_one(RichLog).write("Prune images completo")
-            except Exception:
-                pass
-            self.current_progress = 100
-            self.active_tasks[-1]["status"] = "concluído"
-            saved = 0  # Parse from log or cleaner attr if avail
-            self.space_history.append(saved)
-            self.notify(f"{task_name} OK", severity="success")
-            self.active_tasks.pop()
-        except Exception as e:
-            self.active_tasks[-1]["status"] = f"erro: {e}"
-            self.notify(f"Erro {task_name}: {e}", severity="error")
-            self.active_tasks.pop()
-
-    @work(exclusive=True)
-    async def _run_prune_volumes(self) -> None:
-        task_name = "Prune Volumes"
-        self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
-        self.notify(f"Iniciando {task_name}", severity="information")
-        self.current_progress = 10
-        try:
-            from docker_cleaner.core import WSLDockerCleaner
-            cleaner = WSLDockerCleaner()
-            self.active_tasks[-1]["status"] = "executando"
-            self.current_progress = 50
-            await cleaner.run_command_async("docker volume prune -f", shell=True, stream_callback=self.write_ui_log)
-            self.write_ui_log("Prune volumes completo")
-            try:
-                self.query_one(RichLog).write("Prune volumes completo")
-            except Exception:
-                pass
-            self.current_progress = 100
-            self.active_tasks[-1]["status"] = "concluído"
-            saved = 0  # Parse from log or cleaner attr if avail
-            self.space_history.append(saved)
-            self.notify(f"{task_name} OK", severity="success")
-            self.active_tasks.pop()
-        except Exception as e:
-            self.active_tasks[-1]["status"] = f"erro: {e}"
-            self.notify(f"Erro {task_name}: {e}", severity="error")
-            self.active_tasks.pop()
-
-    @work(exclusive=True)
-    async def _run_prune_networks(self) -> None:
-        task_name = "Prune Networks"
-        self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
-        self.notify(f"Iniciando {task_name}", severity="information")
-        self.current_progress = 10
-        try:
-            from docker_cleaner.core import WSLDockerCleaner
-            cleaner = WSLDockerCleaner()
-            self.active_tasks[-1]["status"] = "executando"
-            self.current_progress = 50
-            await cleaner.run_command_async("docker network prune -f", shell=True, stream_callback=self.write_ui_log)
-            self.write_ui_log("Prune networks completo")
-            try:
-                self.query_one(RichLog).write("Prune networks completo")
-            except Exception:
-                pass
-            self.current_progress = 100
-            self.active_tasks[-1]["status"] = "concluído"
-            saved = 0  # Parse from log or cleaner attr if avail
-            self.space_history.append(saved)
-            self.notify(f"{task_name} OK", severity="success")
-            self.active_tasks.pop()
-        except Exception as e:
-            self.active_tasks[-1]["status"] = f"erro: {e}"
-            self.notify(f"Erro {task_name}: {e}", severity="error")
-            self.active_tasks.pop()
-
-    @work(exclusive=True)
-    async def _run_prune_builder(self) -> None:
-        task_name = "Prune Builder Cache"
-        self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
-        self.notify(f"Iniciando {task_name}", severity="information")
-        self.current_progress = 10
-        try:
-            from docker_cleaner.core import WSLDockerCleaner
-            cleaner = WSLDockerCleaner()
-            self.active_tasks[-1]["status"] = "executando"
-            self.current_progress = 50
-            await cleaner.run_command_async("docker builder prune -af", shell=True, stream_callback=self.write_ui_log)
-            self.write_ui_log("Prune builder completo")
-            try:
-                self.query_one(RichLog).write("Prune builder completo")
-            except Exception:
-                pass
-            self.current_progress = 100
-            self.active_tasks[-1]["status"] = "concluído"
-            saved = 0  # Parse from log or cleaner attr if avail
-            self.space_history.append(saved)
-            self.notify(f"{task_name} OK", severity="success")
-            self.active_tasks.pop()
-        except Exception as e:
-            self.active_tasks[-1]["status"] = f"erro: {e}"
-            self.notify(f"Erro {task_name}: {e}", severity="error")
-            self.active_tasks.pop()
-
-    @work(exclusive=True)
-    async def _run_prune_system(self) -> None:
-        task_name = "Prune System"
-        self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
-        self.notify(f"Iniciando {task_name}", severity="information")
-        self.current_progress = 10
-        try:
-            from docker_cleaner.core import WSLDockerCleaner
-            cleaner = WSLDockerCleaner()
-            self.active_tasks[-1]["status"] = "executando"
-            self.current_progress = 50
-            await cleaner.run_command_async("docker system prune -af --volumes", shell=True, stream_callback=self.write_ui_log)
-            self.write_ui_log("Prune system completo")
-            try:
-                self.query_one(RichLog).write("Prune system completo")
-            except Exception:
-                pass
-            self.current_progress = 100
-            self.active_tasks[-1]["status"] = "concluído"
-            saved = 0  # Parse from log or cleaner attr if avail
-            self.space_history.append(saved)
-            self.notify(f"{task_name} OK", severity="success")
-            self.active_tasks.pop()
-        except Exception as e:
-            self.active_tasks[-1]["status"] = f"erro: {e}"
-            self.notify(f"Erro {task_name}: {e}", severity="error")
-            self.active_tasks.pop()
-
-    @work(exclusive=True)
-    async def _run_stop_wsl(self) -> None:
-        task_name = "Parar WSL"
-        self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
-        try:
-            from docker_cleaner.core import WSLDockerCleaner
-            cleaner = WSLDockerCleaner()
-            await cleaner.stop_docker_wsl_async(stream_callback=self.write_ui_log)
-            self.active_tasks[-1]["status"] = "concluído"
-            self.notify(f"{task_name} concluído", severity="success")
-            self.write_ui_log("Stop WSL concluído")
-            try:
-                self.query_one(RichLog).write("Stop WSL concluído")
-            except Exception:
-                pass
-            self.active_tasks.pop()
-        except Exception as e:
-            self.active_tasks[-1]["status"] = f"erro: {e}"
-            self.notify(f"Erro {task_name}: {e}", severity="error")
-            self.active_tasks.pop()
-
-    @work(exclusive=True)
-    async def _run_configure_sparse(self) -> None:
-        task_name = "Configurar Sparse"
-        self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
-        try:
-            from docker_cleaner.core import WSLDockerCleaner
-            cleaner = WSLDockerCleaner()
-            await cleaner.configure_wsl_sparse_async(stream_callback=self.write_ui_log)
-            self.active_tasks[-1]["status"] = "concluído"
-            self.notify(f"{task_name} concluído", severity="success")
-            self.write_ui_log("Configure Sparse concluído")
-            try:
-                self.query_one(RichLog).write("Configure Sparse concluído")
-            except Exception:
-                pass
-            self.active_tasks.pop()
-        except Exception as e:
-            self.active_tasks[-1]["status"] = f"erro: {e}"
-            self.notify(f"Erro {task_name}: {e}", severity="error")
-            self.active_tasks.pop()
-
-    @work(exclusive=True)
-    async def _run_compact_vhdx(self) -> None:
-        task_name = "Compactar VHDX"
-        self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
-        try:
-            from docker_cleaner.core import WSLDockerCleaner
-            cleaner = WSLDockerCleaner()
-            await cleaner.compact_vhdx_files_async(stream_callback=self.write_ui_log)
-            self.active_tasks[-1]["status"] = "concluído"
-            self.notify(f"{task_name} concluído", severity="success")
-            self.write_ui_log("Compact VHDX concluído com sucesso")
-            try:
-                self.query_one(RichLog).write("Compact VHDX concluído com sucesso")
-            except Exception:
-                pass
-            self.active_tasks.pop()
-        except Exception as e:
-            self.active_tasks[-1]["status"] = f"erro: {e}"
-            self.notify(f"Erro {task_name}: {e}", severity="error")
-            self.active_tasks.pop()
-
-    @work(exclusive=True)
-    async def _run_cleanup_temp(self) -> None:
-        """Worker async para limpeza de arquivos temporários com streaming."""
-        task_name = "Limpar arquivos temporários"
-        self.active_tasks.append({"name": task_name, "status": "iniciando", "progress": 0})
-        self.notify(f"Iniciando {task_name}", severity="information")
-        
-        try:
-            from docker_cleaner.core import WSLDockerCleaner
-            cleaner = WSLDockerCleaner()
-            self.active_tasks[-1]["status"] = "executando"
-            self.current_progress = 50
-            
-            await cleaner.cleanup_temp_files_async(stream_callback=self.write_ui_log)
-            
-            self.current_progress = 100
-            self.active_tasks[-1]["status"] = "concluído"
-            self.notify(f"{task_name} concluído!", severity="success")
-            self.write_ui_log("Limpeza de arquivos temporários concluída")
-            
-            self.active_tasks.pop()
-        except Exception as e:
-            self.active_tasks[-1]["status"] = f"erro: {str(e)}"
-            self.notify(f"Erro em {task_name}: {e}", severity="error")
-            self.active_tasks.pop()
-
-    @work(exclusive=True)
-    async def run_python_script(self, args: list[str], title: str) -> None:
-        """Run a Python command as an async subprocess and stream output to UI."""
-        self.start_progress(title, 100)
-        self.write_ui_log(f"{title}: iniciando")
-        try:
-            self.query_one(RichLog).write(f"{title}: iniciando")
-        except Exception:
-            pass
-        try:
-            # Use -u for unbuffered output to ensure we get real-time logs/progress
-            cmd_args = ["-u"] + args
-            proc = await asyncio.create_subprocess_exec(
-                sys.executable, *cmd_args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT
-            )
-            # stream lines to UI
-            assert proc.stdout is not None
-            while True:
-                line = await proc.stdout.readline()
-                if not line:
-                    break
-                text = line.decode().rstrip()
-
-                # Intercepta protocolo de progresso
-                if text.startswith("PROGRESS:"):
-                    try:
-                        current, total = map(int, text.split(":")[1].split("/"))
-                        percentage = (current / total) * 100
-                        self.update_progress(percentage)
-                        continue # Não loga a linha de progresso crua
-                    except ValueError:
-                        pass
-
-                self.write_ui_log(text)
-            rc = await proc.wait()
-            self.write_ui_log(f"{title}: Processo finalizado (rc={rc})")
-            try:
-                self.query_one(RichLog).write(f"{title}: Processo finalizado (rc={rc})")
-            except Exception:
-                pass
-        except Exception as e:
-            self.write_ui_log(f"{title}: erro ao executar: {e}")
-        finally:
-            self.finish_progress()
-
-    async def _ask_elevate_and_relaunch(self, reason: str) -> bool:
-        """Stub para tests - simula elevação."""
-        self.notify(f"Elevação para {reason}", severity="warning")
-        return True  # Simula confirm
-
-
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+from rich import box
+
+console = Console()
+
+
+def show_menu():
+    """Display the main menu."""
+    console.clear()
+
+    # Header
+    header = Table.grid(expand=True)
+    header.add_column(justify="center")
+    header.add_row("[bold cyan]🐳 Docker-Clennear v2.0[/]")
+    header.add_row("[dim]System Monitor & Docker Cleanup Tool[/]")
+    console.print(Panel(header, style="blue"))
+    console.print()
+
+    # Menu options
+    menu = Table(box=box.ROUNDED, expand=True, show_header=False)
+    menu.add_column("Key", style="bold yellow", width=5)
+    menu.add_column("Option", style="white")
+    menu.add_column("Description", style="dim")
+
+    menu.add_row("1", "Network Stalker", "Monitor network latency in real-time")
+    menu.add_row("2", "Docker Cleanup", "Quick Docker system prune")
+    menu.add_row("3", "Docker Full Cleanup", "Full cleanup with VHDX compaction")
+    menu.add_row("4", "LMArena Models", "Generate LMArena models list")
+    menu.add_row("", "", "")
+    menu.add_row("Q", "Quit", "Exit the program")
+
+    console.print(Panel(menu, title="🔧 Tools", border_style="cyan"))
+    console.print()
+
+
+def run_network_stalker():
+    """Run the network stalker monitor."""
+    try:
+        from monitor.stalker import main as stalker_main
+
+        stalker_main()
+    except KeyboardInterrupt:
+        pass
+    except ImportError as e:
+        console.print(f"[red]Error loading Network Stalker: {e}[/]")
+
+
+def run_docker_cleanup():
+    """Run quick Docker cleanup."""
+    try:
+        from docker_cleaner.core import WSLDockerCleaner
+
+        cleaner = WSLDockerCleaner()
+        cleaner.docker_cleanup()
+    except ImportError as e:
+        console.print(f"[red]Error loading Docker Cleaner: {e}[/]")
+    except Exception as e:
+        console.print(f"[red]Error during cleanup: {e}[/]")
+
+
+def run_docker_full_cleanup():
+    """Run full Docker cleanup with VHDX compaction."""
+    try:
+        from docker_cleaner.core import WSLDockerCleaner
+
+        cleaner = WSLDockerCleaner()
+        cleaner.run_full_cleanup_with_progress()
+    except ImportError as e:
+        console.print(f"[red]Error loading Docker Cleaner: {e}[/]")
+    except Exception as e:
+        console.print(f"[red]Error during cleanup: {e}[/]")
+
+
+def run_lmarena_models():
+    """Run LMArena models generator."""
+    try:
+        from lmarena.generator import main as generator_main
+
+        generator_main()
+    except ImportError as e:
+        console.print(f"[red]Error loading LMArena generator: {e}[/]")
+    except Exception as e:
+        console.print(f"[red]Error generating models: {e}[/]")
+
+
+def main():
+    """Main entry point."""
+    while True:
+        show_menu()
+
+        choice = console.input("[bold cyan]Select option: [/]").strip().lower()
+
+        if choice == "1":
+            run_network_stalker()
+        elif choice == "2":
+            console.print("\n[yellow]Starting Docker Cleanup...[/]\n")
+            run_docker_cleanup()
+            console.input("\n[dim]Press Enter to continue...[/]")
+        elif choice == "3":
+            console.print("\n[yellow]Starting Full Docker Cleanup...[/]\n")
+            run_docker_full_cleanup()
+            console.input("\n[dim]Press Enter to continue...[/]")
+        elif choice == "4":
+            console.print("\n[yellow]Starting LMArena Models Generator...[/]\n")
+            run_lmarena_models()
+            console.input("\n[dim]Press Enter to continue...[/]")
+        elif choice == "q":
+            console.print("\n[cyan]Goodbye! 👋[/]\n")
+            sys.exit(0)
+        else:
+            console.print("[red]Invalid option. Try again.[/]")
+            console.input("[dim]Press Enter...[/]")
 
 
 if __name__ == "__main__":
-    app = CommandRunnerApp()
-    app.run()
+    try:
+        main()
+    except KeyboardInterrupt:
+        console.print("\n[cyan]Goodbye! 👋[/]\n")
+        sys.exit(0)
