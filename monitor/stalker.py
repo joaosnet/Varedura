@@ -537,7 +537,7 @@ def main():
             "[yellow]Android detectado: Leitura de processos pode ser limitada.[/]"
         )
 
-    with Live(layout, refresh_per_second=4, screen=True) as live:
+    with Live(layout, refresh_per_second=4, screen=True):
         while running:
             try:
                 # Check for keyboard input
