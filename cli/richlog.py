@@ -8,9 +8,9 @@ daily rotated files under `logs/YYYY-MM-DD.log`.
 The file contains plain-text, timestamped messages. If the app is provided,
 the messages are also written to Textual `Log`/`RichLog` using the same API.
 """
+
 from __future__ import annotations
 
-import os
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
@@ -25,7 +25,11 @@ class DailyLogWriter:
     be scheduled using `app.call_from_thread` by the caller if needed.
     """
 
-    def __init__(self, logs_dir: Optional[Path | str] = None, ui_write: Optional[Callable[[str], None]] = None):
+    def __init__(
+        self,
+        logs_dir: Optional[Path | str] = None,
+        ui_write: Optional[Callable[[str], None]] = None,
+    ):
         self.logs_dir = Path(logs_dir or "logs")
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         self.ui_write = ui_write

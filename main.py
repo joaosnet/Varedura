@@ -11,7 +11,6 @@ import sys
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 from rich import box
 
 console = Console()
@@ -24,8 +23,8 @@ def show_menu():
     # Header
     header = Table.grid(expand=True)
     header.add_column(justify="center")
-    header.add_row("[bold cyan]🐳 Docker-Clennear v2.0[/]")
-    header.add_row("[dim]System Monitor & Docker Cleanup Tool[/]")
+    header.add_row("[bold cyan]🐳 Docker-Clennear v2.1[/]")
+    header.add_row("[dim]Monitor de Sistema & Ferramenta de Limpeza Docker[/]")
     console.print(Panel(header, style="blue"))
     console.print()
 
@@ -35,14 +34,17 @@ def show_menu():
     menu.add_column("Option", style="white")
     menu.add_column("Description", style="dim")
 
-    menu.add_row("1", "Network Stalker", "Monitor network latency in real-time")
-    menu.add_row("2", "Docker Cleanup", "Quick Docker system prune")
-    menu.add_row("3", "Docker Full Cleanup", "Full cleanup with VHDX compaction")
-    menu.add_row("4", "LMArena Models", "Generate LMArena models list")
+    menu.add_row(
+        "1", "Network Stalker", "Monitor de rede em tempo real com scanner de portas"
+    )
+    menu.add_row("2", "Docker Cleanup", "Limpeza rápida do Docker")
+    menu.add_row("3", "Docker Full Cleanup", "Limpeza completa com compactação VHDX")
+    menu.add_row("4", "LMArena Models", "Gerar lista de modelos LMArena")
+    menu.add_row("5", "Port Scanner", "Escaner de portas standalone")
     menu.add_row("", "", "")
-    menu.add_row("Q", "Quit", "Exit the program")
+    menu.add_row("Q", "Sair", "Encerrar o programa")
 
-    console.print(Panel(menu, title="🔧 Tools", border_style="cyan"))
+    console.print(Panel(menu, title="🔧 Ferramentas", border_style="cyan"))
     console.print()
 
 
@@ -96,33 +98,89 @@ def run_lmarena_models():
         console.print(f"[red]Error generating models: {e}[/]")
 
 
+def run_port_scanner():
+    """Executa o escaner de portas standalone."""
+    try:
+        from monitor.port_scanner import run_full_scan
+        from rich.table import Table
+        from rich.panel import Panel
+
+        console.print("\n[bold cyan]🔍 Escaneando portas...[/]\n")
+        state = run_full_scan()
+
+        # Tabela TCP
+        tcp_table = Table(
+            title=f"🔌 Portas TCP em Listening ({state.total_tcp})", border_style="cyan"
+        )
+        tcp_table.add_column("Porta", style="bold yellow", justify="center")
+        tcp_table.add_column("Processo", style="bold green")
+        tcp_table.add_column("Endereço", style="dim")
+
+        for port in state.listening_tcp[:15]:
+            tcp_table.add_row(str(port.porta), port.processo, port.endereco)
+
+        console.print(tcp_table)
+
+        # Tabela de conexões
+        conn_table = Table(
+            title=f"\n🏆 Top Processos por Conexões (Estabelecidas: {state.total_established})",
+            border_style="green",
+        )
+        conn_table.add_column("Processo", style="bold cyan")
+        conn_table.add_column("Conexões", style="bold yellow", justify="center")
+        conn_table.add_column("RAM (MB)", style="dim", justify="right")
+
+        for proc in state.top_connections:
+            ram_str = f"{proc.memoria_mb:.1f}" if proc.memoria_mb > 0 else "N/A"
+            conn_table.add_row(proc.nome, str(proc.conexoes), ram_str)
+
+        console.print(conn_table)
+
+        # Resumo
+        console.print(
+            Panel(
+                f"[bold green]📊 Resumo:[/] {state.total_tcp} TCP | {state.total_udp} UDP | {state.total_established} Estabelecidas\n"
+                f"[Último scan: {state.last_scan_time}]",
+                border_style="blue",
+            )
+        )
+
+    except ImportError as e:
+        console.print(f"[red]Erro ao carregar port scanner: {e}[/]")
+    except Exception as e:
+        console.print(f"[red]Erro durante scan: {e}[/]")
+
+
 def main():
     """Main entry point."""
     while True:
         show_menu()
 
-        choice = console.input("[bold cyan]Select option: [/]").strip().lower()
+        choice = console.input("[bold cyan]Selecione uma opção: [/]").strip().lower()
 
         if choice == "1":
             run_network_stalker()
         elif choice == "2":
-            console.print("\n[yellow]Starting Docker Cleanup...[/]\n")
+            console.print("\n[yellow]Iniciando Limpeza Docker...[/]\n")
             run_docker_cleanup()
-            console.input("\n[dim]Press Enter to continue...[/]")
+            console.input("\n[dim]Pressione Enter para continuar...[/]")
         elif choice == "3":
-            console.print("\n[yellow]Starting Full Docker Cleanup...[/]\n")
+            console.print("\n[yellow]Iniciando Limpeza Completa Docker...[/]\n")
             run_docker_full_cleanup()
-            console.input("\n[dim]Press Enter to continue...[/]")
+            console.input("\n[dim]Pressione Enter para continuar...[/]")
         elif choice == "4":
-            console.print("\n[yellow]Starting LMArena Models Generator...[/]\n")
+            console.print("\n[yellow]Iniciando Gerador de Modelos LMArena...[/]\n")
             run_lmarena_models()
-            console.input("\n[dim]Press Enter to continue...[/]")
+            console.input("\n[dim]Pressione Enter para continuar...[/]")
+        elif choice == "5":
+            run_port_scanner()
+            console.input("\n[dim]Pressione Enter para continuar...[/]")
         elif choice == "q":
-            console.print("\n[cyan]Goodbye! 👋[/]\n")
+            console.print("\n[cyan]Até logo! 👋[/]\n")
             sys.exit(0)
         else:
-            console.print("[red]Invalid option. Try again.[/]")
-            console.input("[dim]Press Enter...[/]")
+            console.print("[red]Opção inválida. Tente novamente.[/]")
+            console.input("[dim]Pressione Enter...[/]")
 
 
 if __name__ == "__main__":
