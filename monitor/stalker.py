@@ -146,7 +146,60 @@ def run_ping(host):
 
 
 def get_top_network_hogs():
-    """Identifica os processos (Top 5) com maior tráfego acumulado."""
+    """Identifica os processos (Top 5) com mais conexões de rede ativas.
+
+    NOTA: Usa conexões de rede reais em vez de I/O geral pra evitar
+    falsos positivos como o Windows Defender (que faz muito I/O de disco).
+    """
+    procs = {}
+    try:
+        # Coletar conexões de rede ativas
+        connections = psutil.net_connections(kind="inet")
+
+        for conn in connections:
+            # Só conta conexões estabelecidas ou em transferência
+            if conn.status in ("ESTABLISHED", "SYN_SENT", "SYN_RECV"):
+                pid = conn.pid
+                if pid and pid > 0:
+                    if pid not in procs:
+                        try:
+                            proc = psutil.Process(pid)
+                            procs[pid] = {
+                                "name": proc.name(),
+                                "connections": 0,
+                                "bytes": 0,
+                            }
+                            # Tentar pegar I/O do processo (complementar)
+                            try:
+                                io = proc.io_counters()
+                                if io:
+                                    procs[pid]["bytes"] = io.read_bytes + io.write_bytes
+                            except (psutil.AccessDenied, psutil.NoSuchProcess):
+                                pass
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            continue
+                    procs[pid]["connections"] += 1
+    except (psutil.AccessDenied, PermissionError):
+        # Fallback: usar método antigo se não tiver permissão
+        return _get_top_network_hogs_fallback()
+    except Exception:
+        return _get_top_network_hogs_fallback()
+
+    # Ordenar por conexões ativas, não por bytes totais
+    result = [
+        (
+            pid,
+            info["name"],
+            info["connections"] * 1024 * 1024,
+        )  # Multiplicar pra manter compatibilidade de display
+        for pid, info in procs.items()
+    ]
+    result.sort(key=lambda x: x[2], reverse=True)
+    return result[:5]
+
+
+def _get_top_network_hogs_fallback():
+    """Fallback usando I/O counters (menos preciso, usado quando sem permissão)."""
     procs = []
     try:
         for p in psutil.process_iter(["pid", "name", "io_counters"]):
@@ -168,6 +221,84 @@ def get_top_network_hogs():
 
     procs.sort(key=lambda x: x[2], reverse=True)
     return procs[:5]
+
+
+def analyze_lag_source(
+    local_ms: Optional[float], ext_ms: Optional[float], threshold: int, procs: list
+) -> tuple[str, str]:
+    """Analisa a origem provável do lag com mais inteligência.
+
+    Retorna: (suspeito, explicação)
+
+    Lógica:
+    - Se local_ms alto E ext_ms alto → Problema no roteador/rede interna
+    - Se local_ms OK mas ext_ms alto → Problema no provedor/internet externa
+    - Se local_ms alto mas ext_ms OK → Improvável (ext passa pelo local)
+    - Se ambos timeout → Problema crítico no roteador ou cabo
+    - Se tem processo com muitas conexões → Pode ser ele saturando
+    """
+    # Caso 1: Timeout total
+    if local_ms is None and ext_ms is None:
+        return (
+            "🔌 ROTEADOR/CABO",
+            "Sem resposta do gateway - verificar cabo/roteador/energia",
+        )
+
+    # Caso 2: Só gateway com timeout (crítico)
+    if local_ms is None:
+        return (
+            "🔌 ROTEADOR",
+            "Gateway não responde mas internet pode estar ok - problema no roteador",
+        )
+
+    # Caso 3: Só externo com timeout
+    if ext_ms is None:
+        return (
+            "🌐 PROVEDOR/DNS",
+            "Gateway OK mas sem internet - problema no provedor ou DNS",
+        )
+
+    # Caso 4: Ambos acima do threshold
+    local_lag = local_ms > threshold
+    ext_lag = ext_ms > threshold
+
+    if local_lag and ext_lag:
+        # Se a diferença entre local e externo é pequena, provável roteador
+        diff = abs(ext_ms - local_ms)
+        if diff < 20:  # Menos de 20ms de diferença
+            return (
+                "🔌 ROTEADOR",
+                f"Lag similar em ambos ({local_ms:.0f}ms vs {ext_ms:.0f}ms) - roteador sobrecarregado",
+            )
+        else:
+            # Grande diferença: pode ser tanto roteador quanto provedor
+            return (
+                "🔌 ROTEADOR + 🌐 PROVEDOR",
+                f"Lag composto - roteador ({local_ms:.0f}ms) + internet adicional",
+            )
+
+    # Caso 5: Só externo com lag (local ok)
+    if ext_lag and not local_lag:
+        return (
+            "🌐 PROVEDOR/ROTA",
+            f"Gateway rápido ({local_ms:.0f}ms) mas internet lenta - problema externo",
+        )
+
+    # Caso 6: Só local com lag (raro, já que ext passa por local)
+    if local_lag and not ext_lag:
+        # Isso é teoricamente estranho... ext_ms deveria incluir local_ms
+        # Pode ser flutuação ou cache
+        return (
+            "🔌 ROTEADOR (flutuação)",
+            "Padrão incomum - verificar estabilidade do roteador",
+        )
+
+    # Caso 7: Tudo OK, mas ainda assim quer info
+    if procs:
+        top_proc = procs[0][1] if procs[0][1] else "Desconhecido"
+        return f"✅ OK ({top_proc})", "Rede estável - maior uso de rede no momento"
+
+    return "✅ OK", "Rede estável"
 
 
 # --- Entrada de Teclado ---
@@ -1101,7 +1232,7 @@ def main():
                     except Exception:
                         pass  # Silently fail port scan
 
-                # 4. Lógica de Log e Alerta
+                # 4. Lógica de Log e Alerta (com análise inteligente de origem)
                 alert_triggered = False
 
                 if local_ms and local_ms > config.lag_threshold_ms:
@@ -1120,13 +1251,22 @@ def main():
                     )
                     alert_triggered = True
 
-                if alert_triggered and procs:
-                    top_hog = procs[0]
-                    mb = top_hog[2] / (1024 * 1024)
-                    hog_name = top_hog[1] if top_hog[1] else "Desconhecido"
-                    log_events.append(
-                        f"   ↳ [dim]Suspeito principal: {hog_name} ({mb:.1f} MB)[/]"
+                if alert_triggered:
+                    # Usar análise inteligente de origem do lag
+                    suspeito, explicacao = analyze_lag_source(
+                        local_ms, ext_ms, config.lag_threshold_ms, procs
                     )
+                    log_events.append(f"   ↳ [bold yellow]Diagnóstico:[/] {suspeito}")
+                    log_events.append(f"   ↳ [dim]{explicacao}[/]")
+
+                    # Mostrar processo com mais conexões se houver (como info secundária)
+                    if procs and not suspeito.startswith("🔌"):
+                        top_hog = procs[0]
+                        conns = top_hog[2] // (1024 * 1024)  # Número de conexões
+                        hog_name = top_hog[1] if top_hog[1] else "Desconhecido"
+                        log_events.append(
+                            f"   ↳ [dim]Top conexões: {hog_name} ({conns} ativas)[/]"
+                        )
 
                 # 5. Construir Layout
                 if show_help:

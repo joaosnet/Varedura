@@ -267,7 +267,6 @@ class BrasilBandaLargaProvider(SpeedTestProvider):
         try:
             from selenium import webdriver
             from selenium.webdriver.chrome.options import Options
-            from selenium.webdriver.chrome.service import Service
 
             self._webdriver = webdriver
             self._Options = Options
@@ -449,8 +448,6 @@ class SimetProvider(SpeedTestProvider):
             driver.set_page_load_timeout(90)
 
             try:
-                import re
-
                 # Navegar direto para o app com auto-measure
                 driver.get("https://simet.nic.br/app/?auto-measure=true")
                 time.sleep(5)  # Flutter precisa carregar
