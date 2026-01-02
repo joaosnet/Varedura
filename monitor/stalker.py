@@ -19,6 +19,7 @@ import datetime
 import psutil
 import re
 import os
+import threading
 
 from collections import deque
 from dataclasses import dataclass, field
@@ -202,7 +203,7 @@ def handle_key(key: str) -> Optional[str]:
     elif key == "i":
         return prompt_change_interval()
     elif key == "x":
-        return export_data()
+        return export_combined_report()
     elif key == "p":
         config.show_ports = not config.show_ports
         status = "ativado" if config.show_ports else "desativado"
@@ -215,8 +216,8 @@ def handle_key(key: str) -> Optional[str]:
         if config.show_speed:
             return "[yellow]Painel de velocidade ativado[/]"
         else:
-            # Exportar relatório ao pausar
-            export_msg = export_speed_report()
+            # Exportar relatório ao pausar velocidade
+            export_msg = export_combined_report()
             return f"[yellow]Painel de velocidade desativado[/] | {export_msg}"
     elif key == "c":
         return prompt_change_contracted_speed()
@@ -293,242 +294,311 @@ def prompt_change_contracted_speed() -> str:
     return f"[yellow]Velocidade contratada: {new_speed[0]}/{new_speed[1]} Mbps (↓/↑)[/]"
 
 
-def export_data() -> str:
-    """Exporta histórico de ping para CSV e PNG com timestamps."""
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+# --- Estado de Exportação em Background ---
+_export_status = {"running": False, "message": None, "completed": False}
+_export_lock = threading.Lock()
 
-    # Exportar CSV com timestamps
-    csv_filename = f"exports/ping_history_{timestamp}.csv"
+
+def _generate_combined_pdf_worker():
+    """Worker que gera o PDF combinado em background."""
+    global _export_status
+
     try:
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         os.makedirs("exports", exist_ok=True)
-        with open(csv_filename, "w") as f:
-            f.write("timestamp,local_ms,external_ms\n")
-            for ts, local, ext in zip(
-                local_stats.timestamps, local_stats.history, external_stats.history
-            ):
-                ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
-                local_val = f"{local:.1f}" if local is not None else ""
-                ext_val = f"{ext:.1f}" if ext is not None else ""
-                f.write(f"{ts_str},{local_val},{ext_val}\n")
-    except Exception as e:
-        return f"[red]Erro ao exportar CSV: {e}[/]"
 
-    # Exportar PNG usando matplotlib
-    try:
+        # Importar matplotlib e configurar backend não-interativo
+        import matplotlib
+
+        matplotlib.use("Agg")  # Backend não-interativo para threads
         import matplotlib.pyplot as plt
         import matplotlib.dates as mdates
+        from matplotlib.backends.backend_pdf import PdfPages
 
-        fig, ax = plt.subplots(figsize=(14, 7))
+        pdf_filename = f"exports/network_report_{timestamp}.pdf"
+        csv_ping_filename = f"exports/ping_history_{timestamp}.csv"
+        csv_speed_filename = f"exports/speed_history_{timestamp}.csv"
 
-        # Usar timestamps para eixo X
-        times = list(local_stats.timestamps)
-        local_valid = list(local_stats.history)
-        ext_valid = list(external_stats.history)
+        # Exportar CSVs primeiro (rápido)
+        # CSV de Ping
+        try:
+            with open(csv_ping_filename, "w", encoding="utf-8") as f:
+                f.write("timestamp,local_ms,external_ms\n")
+                for ts, local, ext in zip(
+                    local_stats.timestamps, local_stats.history, external_stats.history
+                ):
+                    ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
+                    local_val = f"{local:.1f}" if local is not None else ""
+                    ext_val = f"{ext:.1f}" if ext is not None else ""
+                    f.write(f"{ts_str},{local_val},{ext_val}\n")
+        except Exception:
+            pass  # Continua mesmo se CSV falhar
 
-        ax.plot(
-            times,
-            local_valid,
-            label=f"Gateway ({config.gateway_ip})",
-            color="cyan",
-            linewidth=2,
-        )
-        ax.plot(
-            times,
-            ext_valid,
-            label=f"Externo ({config.external_ip})",
-            color="orange",
-            linewidth=2,
-        )
+        # CSV de Velocidade
+        tester = get_speed_tester()
+        stats = tester.stats
 
-        # Marcar threshold
-        ax.axhline(
-            y=config.lag_threshold_ms,
-            color="red",
-            linestyle="--",
-            label=f"Limite ({config.lag_threshold_ms}ms)",
-        )
+        if stats.test_count > 0:
+            try:
+                with open(csv_speed_filename, "w", encoding="utf-8") as f:
+                    f.write(
+                        "timestamp,download_mbps,upload_mbps,contrato_down,contrato_up,pct_down,pct_up,status\n"
+                    )
+                    for ts, down, up in zip(
+                        stats.timestamps, stats.history_down, stats.history_up
+                    ):
+                        ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
+                        pct_down = (
+                            down / speed_config.velocidade_contratada_down
+                        ) * 100
+                        pct_up = (up / speed_config.velocidade_contratada_up) * 100
+                        min_pct = speed_config.percentual_minimo
+                        status = (
+                            "OK"
+                            if pct_down >= min_pct and pct_up >= min_pct
+                            else "ABAIXO"
+                        )
+                        f.write(
+                            f"{ts_str},{down:.2f},{up:.2f},"
+                            f"{speed_config.velocidade_contratada_down},{speed_config.velocidade_contratada_up},"
+                            f"{pct_down:.1f},{pct_up:.1f},{status}\n"
+                        )
+            except Exception:
+                pass
 
-        # Formatar eixo X como tempo
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
-        plt.xticks(rotation=45)
+        # Gerar PDF combinado
+        with PdfPages(pdf_filename) as pdf:
+            # === Página 1: Relatório de Ping ===
+            fig1, ax1 = plt.subplots(figsize=(14, 8))
 
-        ax.set_xlabel("Tempo")
-        ax.set_ylabel("Ping (ms)")
+            times_ping = list(local_stats.timestamps)
+            local_valid = list(local_stats.history)
+            ext_valid = list(external_stats.history)
 
-        # Título com intervalo de tempo
-        if times:
-            start_str = times[0].strftime("%Y-%m-%d %H:%M:%S")
-            end_str = times[-1].strftime("%H:%M:%S")
-            ax.set_title(
-                f"V's Network Stalker - Histórico de Ping\n{start_str} → {end_str}"
-            )
-        else:
-            ax.set_title("V's Network Stalker - Histórico de Ping")
-
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-        png_filename = f"exports/ping_graph_{timestamp}.png"
-        plt.savefig(png_filename, dpi=150, bbox_inches="tight")
-        plt.close()
-
-        return f"[green]Exportado: {csv_filename} e {png_filename}[/]"
-    except ImportError:
-        return f"[yellow]CSV exportado: {csv_filename} (matplotlib não disponível para PNG)[/]"
-    except Exception as e:
-        return f"[yellow]CSV exportado: {csv_filename} | PNG erro: {e}[/]"
-
-
-def export_speed_report() -> str:
-    """Exporta relatório de velocidade de internet para CSV e PNG."""
-    tester = get_speed_tester()
-    stats = tester.stats
-
-    if stats.test_count == 0:
-        return "[yellow]Nenhum teste de velocidade para exportar[/]"
-
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    os.makedirs("exports", exist_ok=True)
-
-    # Exportar CSV com histórico
-    csv_filename = f"exports/speed_history_{timestamp}.csv"
-    try:
-        with open(csv_filename, "w", encoding="utf-8") as f:
-            f.write(
-                "timestamp,download_mbps,upload_mbps,contrato_down,contrato_up,pct_down,pct_up,status\n"
-            )
-
-            for i, (ts, down, up) in enumerate(
-                zip(stats.timestamps, stats.history_down, stats.history_up)
-            ):
-                ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
-                pct_down = (down / speed_config.velocidade_contratada_down) * 100
-                pct_up = (up / speed_config.velocidade_contratada_up) * 100
-
-                # Status ANATEL
-                min_pct = speed_config.percentual_minimo
-                status = "OK" if pct_down >= min_pct and pct_up >= min_pct else "ABAIXO"
-
-                f.write(
-                    f"{ts_str},{down:.2f},{up:.2f},"
-                    f"{speed_config.velocidade_contratada_down},{speed_config.velocidade_contratada_up},"
-                    f"{pct_down:.1f},{pct_up:.1f},{status}\n"
+            if times_ping:
+                ax1.plot(
+                    times_ping,
+                    local_valid,
+                    label=f"Gateway ({config.gateway_ip})",
+                    color="cyan",
+                    linewidth=2,
                 )
+                ax1.plot(
+                    times_ping,
+                    ext_valid,
+                    label=f"Externo ({config.external_ip})",
+                    color="orange",
+                    linewidth=2,
+                )
+                ax1.axhline(
+                    y=config.lag_threshold_ms,
+                    color="red",
+                    linestyle="--",
+                    label=f"Limite ({config.lag_threshold_ms}ms)",
+                )
+                ax1.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+                plt.xticks(rotation=45)
+
+                start_str = times_ping[0].strftime("%Y-%m-%d %H:%M:%S")
+                end_str = times_ping[-1].strftime("%H:%M:%S")
+                ax1.set_title(
+                    f"V's Network Stalker - Histórico de Ping\n{start_str} → {end_str}",
+                    fontsize=14,
+                    fontweight="bold",
+                )
+
+                # Adicionar estatísticas
+                if local_stats.min_ms is not None:
+                    stats_text = (
+                        f"Gateway - Min: {local_stats.min_ms:.1f}ms | "
+                        f"Máx: {local_stats.max_ms:.1f}ms | Méd: {local_stats.avg_ms:.1f}ms\n"
+                        f"Externo - Min: {external_stats.min_ms:.1f}ms | "
+                        f"Máx: {external_stats.max_ms:.1f}ms | Méd: {external_stats.avg_ms:.1f}ms"
+                    )
+                    ax1.text(
+                        0.02,
+                        0.98,
+                        stats_text,
+                        transform=ax1.transAxes,
+                        fontsize=9,
+                        verticalalignment="top",
+                        bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.8),
+                    )
+            else:
+                ax1.text(
+                    0.5, 0.5, "Sem dados de ping disponíveis", ha="center", va="center"
+                )
+
+            ax1.set_xlabel("Tempo")
+            ax1.set_ylabel("Ping (ms)")
+            ax1.legend(loc="upper right")
+            ax1.grid(True, alpha=0.3)
+
+            plt.tight_layout()
+            pdf.savefig(fig1, dpi=150)
+            plt.close(fig1)
+
+            # === Página 2: Relatório de Velocidade ===
+            if stats.test_count > 0:
+                fig2, (ax2, ax3) = plt.subplots(2, 1, figsize=(14, 10))
+
+                times_speed = list(stats.timestamps)
+                down_vals = list(stats.history_down)
+                up_vals = list(stats.history_up)
+
+                # Calcular estatísticas
+                avg_down = (
+                    sum(stats.history_down) / len(stats.history_down)
+                    if stats.history_down
+                    else 0
+                )
+                avg_up = (
+                    sum(stats.history_up) / len(stats.history_up)
+                    if stats.history_up
+                    else 0
+                )
+                min_down = min(stats.history_down) if stats.history_down else 0
+                max_down = max(stats.history_down) if stats.history_down else 0
+                min_up = min(stats.history_up) if stats.history_up else 0
+                max_up = max(stats.history_up) if stats.history_up else 0
+
+                violations_down = sum(
+                    1
+                    for d in stats.history_down
+                    if (d / speed_config.velocidade_contratada_down * 100)
+                    < speed_config.percentual_minimo
+                )
+                violations_up = sum(
+                    1
+                    for u in stats.history_up
+                    if (u / speed_config.velocidade_contratada_up * 100)
+                    < speed_config.percentual_minimo
+                )
+
+                # Gráfico de Download
+                ax2.plot(
+                    times_speed,
+                    down_vals,
+                    label="Download",
+                    color="cyan",
+                    linewidth=2,
+                    marker="o",
+                    markersize=4,
+                )
+                ax2.axhline(
+                    y=speed_config.velocidade_contratada_down,
+                    color="green",
+                    linestyle="--",
+                    label=f"Contrato ({speed_config.velocidade_contratada_down} Mbps)",
+                )
+                ax2.axhline(
+                    y=speed_config.velocidade_contratada_down * 0.8,
+                    color="red",
+                    linestyle=":",
+                    label="Mínimo ANATEL (80%)",
+                )
+                ax2.set_ylabel("Download (Mbps)")
+                ax2.legend(loc="upper right")
+                ax2.grid(True, alpha=0.3)
+                ax2.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+
+                # Gráfico de Upload
+                ax3.plot(
+                    times_speed,
+                    up_vals,
+                    label="Upload",
+                    color="orange",
+                    linewidth=2,
+                    marker="o",
+                    markersize=4,
+                )
+                ax3.axhline(
+                    y=speed_config.velocidade_contratada_up,
+                    color="green",
+                    linestyle="--",
+                    label=f"Contrato ({speed_config.velocidade_contratada_up} Mbps)",
+                )
+                ax3.axhline(
+                    y=speed_config.velocidade_contratada_up * 0.8,
+                    color="red",
+                    linestyle=":",
+                    label="Mínimo ANATEL (80%)",
+                )
+                ax3.set_xlabel("Tempo")
+                ax3.set_ylabel("Upload (Mbps)")
+                ax3.legend(loc="upper right")
+                ax3.grid(True, alpha=0.3)
+                ax3.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+
+                plt.suptitle(
+                    f"V's Speed Report - {stats.test_count} testes\n"
+                    f"Download: Média {avg_down:.1f} Mbps (Min: {min_down:.1f}, Max: {max_down:.1f}) | "
+                    f"Violações ANATEL: {violations_down}\n"
+                    f"Upload: Média {avg_up:.1f} Mbps (Min: {min_up:.1f}, Max: {max_up:.1f}) | "
+                    f"Violações ANATEL: {violations_up}",
+                    fontsize=10,
+                    fontweight="bold",
+                )
+
+                plt.tight_layout()
+                pdf.savefig(fig2, dpi=150)
+                plt.close(fig2)
+
+        with _export_lock:
+            _export_status["message"] = (
+                f"[green]✅ Relatório exportado: {pdf_filename}[/]"
+            )
+            _export_status["completed"] = True
+            _export_status["running"] = False
+
+    except ImportError as e:
+        with _export_lock:
+            _export_status["message"] = f"[red]❌ matplotlib não disponível: {e}[/]"
+            _export_status["completed"] = True
+            _export_status["running"] = False
     except Exception as e:
-        return f"[red]Erro ao exportar CSV de velocidade: {e}[/]"
+        with _export_lock:
+            _export_status["message"] = (
+                f"[red]❌ Erro ao gerar relatório: {str(e)[:50]}[/]"
+            )
+            _export_status["completed"] = True
+            _export_status["running"] = False
 
-    # Calcular estatísticas
-    if stats.history_down:
-        avg_down = sum(stats.history_down) / len(stats.history_down)
-        avg_up = sum(stats.history_up) / len(stats.history_up)
-        min_down = min(stats.history_down)
-        max_down = max(stats.history_down)
-        min_up = min(stats.history_up)
-        max_up = max(stats.history_up)
 
-        # Contagem de testes abaixo do mínimo
-        violations_down = sum(
-            1
-            for d in stats.history_down
-            if (d / speed_config.velocidade_contratada_down * 100)
-            < speed_config.percentual_minimo
-        )
-        violations_up = sum(
-            1
-            for u in stats.history_up
-            if (u / speed_config.velocidade_contratada_up * 100)
-            < speed_config.percentual_minimo
-        )
-    else:
-        avg_down = avg_up = min_down = max_down = min_up = max_up = 0
-        violations_down = violations_up = 0
+def export_combined_report() -> str:
+    """Inicia exportação do relatório combinado em thread separada."""
+    global _export_status
 
-    # Exportar PNG com gráfico
-    try:
-        import matplotlib.pyplot as plt
-        import matplotlib.dates as mdates
+    with _export_lock:
+        if _export_status["running"]:
+            return "[yellow]⏳ Exportação já em andamento...[/]"
 
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+        # Verificar se há dados para exportar
+        if not local_stats.history and get_speed_tester().stats.test_count == 0:
+            return "[yellow]Nenhum dado para exportar ainda[/]"
 
-        times = list(stats.timestamps)
-        down_vals = list(stats.history_down)
-        up_vals = list(stats.history_up)
+        _export_status["running"] = True
+        _export_status["completed"] = False
+        _export_status["message"] = None
 
-        # Gráfico de Download
-        ax1.plot(
-            times,
-            down_vals,
-            label="Download",
-            color="cyan",
-            linewidth=2,
-            marker="o",
-            markersize=4,
-        )
-        ax1.axhline(
-            y=speed_config.velocidade_contratada_down,
-            color="green",
-            linestyle="--",
-            label=f"Contrato ({speed_config.velocidade_contratada_down} Mbps)",
-        )
-        ax1.axhline(
-            y=speed_config.velocidade_contratada_down * 0.8,
-            color="red",
-            linestyle=":",
-            label="Mínimo ANATEL (80%)",
-        )
-        ax1.set_ylabel("Download (Mbps)")
-        ax1.legend(loc="upper right")
-        ax1.grid(True, alpha=0.3)
-        ax1.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+    # Iniciar thread de exportação
+    export_thread = threading.Thread(target=_generate_combined_pdf_worker, daemon=True)
+    export_thread.start()
 
-        # Gráfico de Upload
-        ax2.plot(
-            times,
-            up_vals,
-            label="Upload",
-            color="orange",
-            linewidth=2,
-            marker="o",
-            markersize=4,
-        )
-        ax2.axhline(
-            y=speed_config.velocidade_contratada_up,
-            color="green",
-            linestyle="--",
-            label=f"Contrato ({speed_config.velocidade_contratada_up} Mbps)",
-        )
-        ax2.axhline(
-            y=speed_config.velocidade_contratada_up * 0.8,
-            color="red",
-            linestyle=":",
-            label="Mínimo ANATEL (80%)",
-        )
-        ax2.set_xlabel("Tempo")
-        ax2.set_ylabel("Upload (Mbps)")
-        ax2.legend(loc="upper right")
-        ax2.grid(True, alpha=0.3)
-        ax2.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+    return "[cyan]📄 Gerando relatório PDF em background...[/]"
 
-        # Título com estatísticas
-        plt.suptitle(
-            f"V's Speed Report - {stats.test_count} testes\n"
-            f"Download: Média {avg_down:.1f} Mbps (Min: {min_down:.1f}, Max: {max_down:.1f}) | "
-            f"Violações ANATEL: {violations_down}\n"
-            f"Upload: Média {avg_up:.1f} Mbps (Min: {min_up:.1f}, Max: {max_up:.1f}) | "
-            f"Violações ANATEL: {violations_up}",
-            fontsize=10,
-        )
 
-        plt.tight_layout()
-        png_filename = f"exports/speed_graph_{timestamp}.png"
-        plt.savefig(png_filename, dpi=150, bbox_inches="tight")
-        plt.close()
+def get_export_status() -> Optional[str]:
+    """Retorna status da exportação se completada."""
+    global _export_status
 
-        return f"[green]Relatório exportado: {csv_filename} e {png_filename}[/]"
-    except ImportError:
-        return f"[yellow]CSV exportado: {csv_filename} (matplotlib não disponível para gráfico)[/]"
-    except Exception as e:
-        return f"[yellow]CSV exportado: {csv_filename} | PNG erro: {e}[/]"
+    with _export_lock:
+        if _export_status["completed"]:
+            msg = _export_status["message"]
+            _export_status["completed"] = False
+            _export_status["message"] = None
+            return msg
+    return None
 
 
 # --- Gráfico ASCII ---
@@ -879,15 +949,16 @@ def main():
             "[yellow]Android detectado: Leitura de processos pode ser limitada.[/]"
         )
 
-    # Scan inicial de portas
-    try:
-        port_scanner_state = run_full_scan()
-        log_events.append(
-            f"[green]Scan inicial: {port_scanner_state.total_tcp} portas TCP, "
-            f"{port_scanner_state.total_udp} UDP, {port_scanner_state.total_established} estabelecidas[/]"
-        )
-    except Exception as e:
-        log_events.append(f"[red]Erro no scan inicial: {e}[/]")
+    # Scan inicial de portas em background (não trava a inicialização)
+    def _initial_port_scan():
+        global port_scanner_state
+        try:
+            port_scanner_state = run_full_scan()
+        except Exception:
+            pass  # Silently fail, will show empty state
+
+    threading.Thread(target=_initial_port_scan, daemon=True).start()
+    log_events.append("[dim]Scan de portas iniciando em background...[/]")
 
     # Iniciar teste de velocidade contínuo em background
     try:
@@ -909,6 +980,13 @@ def main():
                         log_events.append(
                             f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {msg}"
                         )
+
+                # Verificar status da exportação em background
+                export_msg = get_export_status()
+                if export_msg:
+                    log_events.append(
+                        f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {export_msg}"
+                    )
 
                 start_time = datetime.datetime.now().strftime("%H:%M:%S")
 
@@ -1037,12 +1115,20 @@ def main():
     # Cleanup e exportar relatório final
     stop_continuous_testing()
 
-    # Exportar relatório de velocidade ao sair
+    # Exportar relatório combinado ao sair (em background, não bloqueia)
     tester = get_speed_tester()
-    if tester.stats.test_count > 0:
-        console.print("\n[cyan]Gerando relatório de velocidade...[/]")
-        result_msg = export_speed_report()
-        console.print(result_msg)
+    if tester.stats.test_count > 0 or local_stats.history:
+        console.print("\n[cyan]📄 Gerando relatório final em background...[/]")
+        export_combined_report()
+        # Aguardar no máximo 3 segundos para o relatório ser gerado
+        import time as time_module
+
+        for _ in range(30):  # 30 x 0.1s = 3s máximo
+            time_module.sleep(0.1)
+            status = get_export_status()
+            if status:
+                console.print(status)
+                break
 
 
 if __name__ == "__main__":
