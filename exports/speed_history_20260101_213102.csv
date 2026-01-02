@@ -1,0 +1,4 @@
+timestamp,download_mbps,upload_mbps,contrato_down,contrato_up,pct_down,pct_up,status
+2026-01-01 21:30:12,174.34,161.11,500.0,100.0,34.9,161.1,ABAIXO
+2026-01-01 21:30:38,194.24,115.27,500.0,100.0,38.8,115.3,ABAIXO
+2026-01-01 21:31:00,201.75,146.17,500.0,100.0,40.3,146.2,ABAIXO

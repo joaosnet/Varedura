@@ -1,8 +1,10 @@
 """
-V's Network Stalker v3.1 - Monitor de Rede em Tempo Real com Escaner de Portas
+V's Network Stalker v3.2 - Monitor de Rede em Tempo Real com Escaner de Portas e Velocidade
 
 Funcionalidades:
     - Monitoramento de ping em tempo real (gateway local + externo)
+    - Teste de velocidade contínuo (download/upload) em background
+    - Verificação de conformidade com velocidade contratada (ANATEL 80%)
     - Gráfico ASCII ao vivo com picos e mínimos
     - Tabela de uso de rede por processo
     - Escaner de portas TCP/UDP integrado
@@ -31,6 +33,12 @@ from rich.text import Text
 from rich import box
 
 from monitor.port_scanner import run_full_scan, PortScannerState
+from monitor.speed_tester import (
+    get_speed_tester,
+    start_continuous_testing,
+    stop_continuous_testing,
+    speed_config,
+)
 
 # Windows keyboard input
 if platform.system().lower() == "windows":
@@ -54,6 +62,7 @@ class StalkerConfig:
     graph_history: int = 100  # Quantos pontos manter no histórico
     show_ports: bool = True  # Mostrar painel de portas
     port_scan_interval: int = 5  # Intervalo entre scans de porta (em ciclos)
+    show_speed: bool = True  # Mostrar painel de velocidade
 
 
 @dataclass
@@ -201,6 +210,16 @@ def handle_key(key: str) -> Optional[str]:
     elif key == "s":
         port_scanner_state = run_full_scan()
         return f"[green]Scan de portas atualizado: {port_scanner_state.total_tcp} TCP, {port_scanner_state.total_udp} UDP[/]"
+    elif key == "v":
+        config.show_speed = not config.show_speed
+        if config.show_speed:
+            return "[yellow]Painel de velocidade ativado[/]"
+        else:
+            # Exportar relatório ao pausar
+            export_msg = export_speed_report()
+            return f"[yellow]Painel de velocidade desativado[/] | {export_msg}"
+    elif key == "c":
+        return prompt_change_contracted_speed()
     return None
 
 
@@ -246,6 +265,32 @@ def prompt_change_interval() -> str:
     except ValueError:
         config.interval = intervals[0]
     return f"[yellow]Intervalo alterado para: {config.interval}s[/]"
+
+
+def prompt_change_contracted_speed() -> str:
+    """Cicla entre valores comuns de velocidade contratada no Brasil."""
+    # Valores comuns de planos de internet no Brasil (Mbps)
+    speeds = [
+        (100, 50),  # 100 Mbps down / 50 Mbps up
+        (200, 100),  # 200 Mbps down / 100 Mbps up
+        (300, 150),  # 300 Mbps down / 150 Mbps up
+        (500, 250),  # 500 Mbps down / 250 Mbps up
+        (600, 300),  # 600 Mbps down / 300 Mbps up
+        (1000, 500),  # 1 Gbps down / 500 Mbps up
+    ]
+    current = (
+        speed_config.velocidade_contratada_down,
+        speed_config.velocidade_contratada_up,
+    )
+    try:
+        current_idx = speeds.index(current)
+        new_speed = speeds[(current_idx + 1) % len(speeds)]
+    except ValueError:
+        new_speed = speeds[0]
+
+    speed_config.velocidade_contratada_down = new_speed[0]
+    speed_config.velocidade_contratada_up = new_speed[1]
+    return f"[yellow]Velocidade contratada: {new_speed[0]}/{new_speed[1]} Mbps (↓/↑)[/]"
 
 
 def export_data() -> str:
@@ -330,6 +375,158 @@ def export_data() -> str:
         return f"[green]Exportado: {csv_filename} e {png_filename}[/]"
     except ImportError:
         return f"[yellow]CSV exportado: {csv_filename} (matplotlib não disponível para PNG)[/]"
+    except Exception as e:
+        return f"[yellow]CSV exportado: {csv_filename} | PNG erro: {e}[/]"
+
+
+def export_speed_report() -> str:
+    """Exporta relatório de velocidade de internet para CSV e PNG."""
+    tester = get_speed_tester()
+    stats = tester.stats
+
+    if stats.test_count == 0:
+        return "[yellow]Nenhum teste de velocidade para exportar[/]"
+
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    os.makedirs("exports", exist_ok=True)
+
+    # Exportar CSV com histórico
+    csv_filename = f"exports/speed_history_{timestamp}.csv"
+    try:
+        with open(csv_filename, "w", encoding="utf-8") as f:
+            f.write(
+                "timestamp,download_mbps,upload_mbps,contrato_down,contrato_up,pct_down,pct_up,status\n"
+            )
+
+            for i, (ts, down, up) in enumerate(
+                zip(stats.timestamps, stats.history_down, stats.history_up)
+            ):
+                ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
+                pct_down = (down / speed_config.velocidade_contratada_down) * 100
+                pct_up = (up / speed_config.velocidade_contratada_up) * 100
+
+                # Status ANATEL
+                min_pct = speed_config.percentual_minimo
+                status = "OK" if pct_down >= min_pct and pct_up >= min_pct else "ABAIXO"
+
+                f.write(
+                    f"{ts_str},{down:.2f},{up:.2f},"
+                    f"{speed_config.velocidade_contratada_down},{speed_config.velocidade_contratada_up},"
+                    f"{pct_down:.1f},{pct_up:.1f},{status}\n"
+                )
+    except Exception as e:
+        return f"[red]Erro ao exportar CSV de velocidade: {e}[/]"
+
+    # Calcular estatísticas
+    if stats.history_down:
+        avg_down = sum(stats.history_down) / len(stats.history_down)
+        avg_up = sum(stats.history_up) / len(stats.history_up)
+        min_down = min(stats.history_down)
+        max_down = max(stats.history_down)
+        min_up = min(stats.history_up)
+        max_up = max(stats.history_up)
+
+        # Contagem de testes abaixo do mínimo
+        violations_down = sum(
+            1
+            for d in stats.history_down
+            if (d / speed_config.velocidade_contratada_down * 100)
+            < speed_config.percentual_minimo
+        )
+        violations_up = sum(
+            1
+            for u in stats.history_up
+            if (u / speed_config.velocidade_contratada_up * 100)
+            < speed_config.percentual_minimo
+        )
+    else:
+        avg_down = avg_up = min_down = max_down = min_up = max_up = 0
+        violations_down = violations_up = 0
+
+    # Exportar PNG com gráfico
+    try:
+        import matplotlib.pyplot as plt
+        import matplotlib.dates as mdates
+
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+
+        times = list(stats.timestamps)
+        down_vals = list(stats.history_down)
+        up_vals = list(stats.history_up)
+
+        # Gráfico de Download
+        ax1.plot(
+            times,
+            down_vals,
+            label="Download",
+            color="cyan",
+            linewidth=2,
+            marker="o",
+            markersize=4,
+        )
+        ax1.axhline(
+            y=speed_config.velocidade_contratada_down,
+            color="green",
+            linestyle="--",
+            label=f"Contrato ({speed_config.velocidade_contratada_down} Mbps)",
+        )
+        ax1.axhline(
+            y=speed_config.velocidade_contratada_down * 0.8,
+            color="red",
+            linestyle=":",
+            label="Mínimo ANATEL (80%)",
+        )
+        ax1.set_ylabel("Download (Mbps)")
+        ax1.legend(loc="upper right")
+        ax1.grid(True, alpha=0.3)
+        ax1.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+
+        # Gráfico de Upload
+        ax2.plot(
+            times,
+            up_vals,
+            label="Upload",
+            color="orange",
+            linewidth=2,
+            marker="o",
+            markersize=4,
+        )
+        ax2.axhline(
+            y=speed_config.velocidade_contratada_up,
+            color="green",
+            linestyle="--",
+            label=f"Contrato ({speed_config.velocidade_contratada_up} Mbps)",
+        )
+        ax2.axhline(
+            y=speed_config.velocidade_contratada_up * 0.8,
+            color="red",
+            linestyle=":",
+            label="Mínimo ANATEL (80%)",
+        )
+        ax2.set_xlabel("Tempo")
+        ax2.set_ylabel("Upload (Mbps)")
+        ax2.legend(loc="upper right")
+        ax2.grid(True, alpha=0.3)
+        ax2.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+
+        # Título com estatísticas
+        plt.suptitle(
+            f"V's Speed Report - {stats.test_count} testes\n"
+            f"Download: Média {avg_down:.1f} Mbps (Min: {min_down:.1f}, Max: {max_down:.1f}) | "
+            f"Violações ANATEL: {violations_down}\n"
+            f"Upload: Média {avg_up:.1f} Mbps (Min: {min_up:.1f}, Max: {max_up:.1f}) | "
+            f"Violações ANATEL: {violations_up}",
+            fontsize=10,
+        )
+
+        plt.tight_layout()
+        png_filename = f"exports/speed_graph_{timestamp}.png"
+        plt.savefig(png_filename, dpi=150, bbox_inches="tight")
+        plt.close()
+
+        return f"[green]Relatório exportado: {csv_filename} e {png_filename}[/]"
+    except ImportError:
+        return f"[yellow]CSV exportado: {csv_filename} (matplotlib não disponível para gráfico)[/]"
     except Exception as e:
         return f"[yellow]CSV exportado: {csv_filename} | PNG erro: {e}[/]"
 
@@ -559,6 +756,74 @@ def make_connections_panel():
     )
 
 
+def make_speed_panel():
+    """Cria painel de velocidade de internet."""
+    tester = get_speed_tester()
+    stats = tester.stats
+
+    table = Table(expand=True, box=box.ROUNDED)
+    table.add_column("Métrica", style="bold", width=12)
+    table.add_column("Velocidade", justify="center", width=12)
+    table.add_column("Contrato", justify="center", width=10)
+    table.add_column("Status", justify="center", width=10)
+
+    if stats.last_result:
+        result = stats.last_result
+        down_ok, up_ok = tester.check_compliance()
+        down_pct, up_pct = tester.get_percentage()
+
+        # Download
+        down_style = "green" if down_ok else "bold red"
+        down_status = "✅ OK" if down_ok else "⚠️ BAIXO"
+        table.add_row(
+            "⬇️ Download",
+            f"[{down_style}]{result.download_mbps:.1f} Mbps[/]",
+            f"{speed_config.velocidade_contratada_down:.0f} Mbps",
+            f"[{down_style}]{down_pct:.0f}% {down_status}[/]",
+        )
+
+        # Upload
+        up_style = "green" if up_ok else "bold red"
+        up_status = "✅ OK" if up_ok else "⚠️ BAIXO"
+        table.add_row(
+            "⬆️ Upload",
+            f"[{up_style}]{result.upload_mbps:.1f} Mbps[/]",
+            f"{speed_config.velocidade_contratada_up:.0f} Mbps",
+            f"[{up_style}]{up_pct:.0f}% {up_status}[/]",
+        )
+
+        # Ping do speed test
+        table.add_row(
+            "📶 Ping",
+            f"{result.ping_ms:.1f} ms",
+            "-",
+            f"[dim]{result.servidor[:15]}[/]",
+        )
+
+        last_time = result.timestamp.strftime("%H:%M:%S")
+        title_extra = f" [dim]({last_time})[/]"
+    elif stats.is_testing:
+        table.add_row("⏳", "[yellow]Testando...[/]", "-", "[dim]Aguarde 10-20s[/]")
+        title_extra = " [yellow]⏳[/]"
+    elif stats.last_error:
+        table.add_row("❌", f"[red]{stats.last_error[:30]}[/]", "-", "-")
+        title_extra = " [red]Erro[/]"
+    else:
+        table.add_row("...", "[dim]Iniciando...[/]", "-", "-")
+        title_extra = ""
+
+    # Info de histórico
+    test_count = stats.test_count
+    min_pct = speed_config.percentual_minimo
+
+    return Panel(
+        table,
+        title=f"🚀 Velocidade Internet (Testes: {test_count}){title_extra if stats.last_result else ''}",
+        subtitle=f"[dim]ANATEL: mínimo {min_pct:.0f}% da velocidade contratada[/]",
+        border_style="magenta",
+    )
+
+
 def make_log_panel(log_events):
     """Cria o painel de histórico de alertas."""
     lines = []
@@ -588,11 +853,14 @@ def make_help_panel():
   [yellow]T[/] - Ciclar limite de lag (50, 100, 150, 200, 300ms)
   [yellow]I[/] - Ciclar intervalo de refresh (0.5, 1, 2, 5s)
   [yellow]P[/] - Mostrar/esconder painel de portas
+  [yellow]V[/] - Mostrar/esconder painel de velocidade
+  [yellow]C[/] - Ciclar velocidade contratada (100, 200, 300, 500, 600, 1000 Mbps)
   [yellow]S[/] - Atualizar scan de portas manualmente
   [yellow]X[/] - Exportar dados para CSV e gráfico PNG
   [yellow]Q[/] - Sair
 
 [dim]Os valores ciclam automaticamente entre opções comuns.[/]
+[dim]Velocidade: Monitor contínuo (ANATEL exige mínimo 80% da contratada)[/]
 """
     return Panel(Text.from_markup(help_text), title="❓ Ajuda", border_style="green")
 
@@ -620,6 +888,15 @@ def main():
         )
     except Exception as e:
         log_events.append(f"[red]Erro no scan inicial: {e}[/]")
+
+    # Iniciar teste de velocidade contínuo em background
+    try:
+        start_continuous_testing()
+        log_events.append(
+            f"[cyan]Monitor de velocidade iniciado (Contrato: {speed_config.velocidade_contratada_down}/{speed_config.velocidade_contratada_up} Mbps)[/]"
+        )
+    except Exception as e:
+        log_events.append(f"[red]Erro ao iniciar speed test: {e}[/]")
 
     with Live(layout, refresh_per_second=4, screen=True):
         while running:
@@ -708,7 +985,17 @@ def main():
                             Layout(name="ping_stats", ratio=1),
                             Layout(name="graph", ratio=2),
                         )
-                        layout["center"].update(make_process_table(procs))
+                        layout["center"].split_column(
+                            Layout(name="processes", ratio=1),
+                            Layout(name="speed", ratio=1)
+                            if config.show_speed
+                            else Layout(name="processes_only", ratio=1),
+                        )
+                        if config.show_speed:
+                            layout["processes"].update(make_process_table(procs))
+                            layout["speed"].update(make_speed_panel())
+                        else:
+                            layout["center"].update(make_process_table(procs))
                         layout["right"].split_column(
                             Layout(name="ports", ratio=1),
                             Layout(name="connections", ratio=1),
@@ -725,7 +1012,15 @@ def main():
                             Layout(name="ping_stats", ratio=1),
                             Layout(name="graph", ratio=2),
                         )
-                        layout["center"].update(make_process_table(procs))
+                        if config.show_speed:
+                            layout["center"].split_column(
+                                Layout(name="processes", ratio=1),
+                                Layout(name="speed", ratio=1),
+                            )
+                            layout["processes"].update(make_process_table(procs))
+                            layout["speed"].update(make_speed_panel())
+                        else:
+                            layout["center"].update(make_process_table(procs))
 
                     layout["header"].update(make_header())
                     layout["ping_stats"].update(
@@ -738,6 +1033,16 @@ def main():
 
             except KeyboardInterrupt:
                 break
+
+    # Cleanup e exportar relatório final
+    stop_continuous_testing()
+
+    # Exportar relatório de velocidade ao sair
+    tester = get_speed_tester()
+    if tester.stats.test_count > 0:
+        console.print("\n[cyan]Gerando relatório de velocidade...[/]")
+        result_msg = export_speed_report()
+        console.print(result_msg)
 
 
 if __name__ == "__main__":
