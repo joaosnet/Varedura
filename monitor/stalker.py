@@ -171,16 +171,67 @@ def get_top_network_hogs():
 
 
 # --- Entrada de Teclado ---
+# Debounce: evita múltiplas leituras acidentais
+_last_key_time = 0.0
+_KEY_COOLDOWN = 0.3  # 300ms cooldown entre teclas
+
+
+def _flush_stdin():
+    """Limpa completamente o buffer de entrada do teclado."""
+    if platform.system().lower() == "windows":
+        # Consumir todos os bytes pendentes
+        while msvcrt.kbhit():
+            msvcrt.getch()
+
+
 def check_keyboard():
-    """Verificação não-bloqueante de teclado."""
+    """
+    Verificação não-bloqueante de teclado com:
+    - Filtragem de escape sequences
+    - Debounce para evitar glitches
+    - Flush do buffer
+    """
+    global _last_key_time
+
+    # Debounce: ignorar teclas muito próximas
+    current_time = time.time()
+    if current_time - _last_key_time < _KEY_COOLDOWN:
+        _flush_stdin()  # Limpar buffer mas não processar
+        return None
+
     if platform.system().lower() == "windows":
         if msvcrt.kbhit():
-            key = msvcrt.getch().decode("utf-8", errors="ignore").lower()
-            return key
+            # Ler apenas o primeiro byte
+            first_byte = msvcrt.getch()
+
+            # Se é uma tecla especial (setas, F-keys), o primeiro byte é 0 ou 224
+            # Precisamos consumir o segundo byte e ignorar
+            if first_byte in (b"\x00", b"\xe0"):
+                if msvcrt.kbhit():
+                    msvcrt.getch()  # Consumir segundo byte da tecla especial
+                return None
+
+            # Limpar qualquer coisa extra no buffer
+            _flush_stdin()
+
+            try:
+                key = first_byte.decode("utf-8", errors="ignore").lower()
+                # Apenas aceitar caracteres ASCII simples (a-z, 0-9)
+                if len(key) == 1 and key.isalnum():
+                    _last_key_time = current_time  # Atualizar timestamp
+                    return key
+            except Exception:
+                pass
+            return None
     else:
         # Sistemas Unix-like
         if select.select([sys.stdin], [], [], 0)[0]:
-            return sys.stdin.read(1).lower()
+            key = sys.stdin.read(1).lower()
+            # Mesmo filtro para Unix
+            if key.isalnum():
+                _last_key_time = current_time
+                return key
+            return None
     return None
 
 
@@ -827,82 +878,109 @@ def make_connections_panel():
 
 
 def make_speed_panel():
-    """Cria painel de velocidade de internet."""
+    """Cria painel de velocidade mostrando todos provedores em tempo real."""
     try:
         tester = get_speed_tester()
-
-        # Usar snapshot thread-safe pra evitar race conditions
         snapshot = tester.get_stats_snapshot()
 
         table = Table(expand=True, box=box.ROUNDED)
-        table.add_column("Métrica", style="bold", width=12)
-        table.add_column("Velocidade", justify="center", width=12)
-        table.add_column("Contrato", justify="center", width=10)
-        table.add_column("Status", justify="center", width=10)
+        table.add_column("Provedor", style="bold cyan", width=12)
+        table.add_column("Download", justify="center", width=10)
+        table.add_column("Upload", justify="center", width=10)
+        table.add_column("Ping", justify="center", width=8)
 
-        if snapshot["last_result"]:
-            result = snapshot["last_result"]
-            down_ok, up_ok = tester.check_compliance()
-            down_pct, up_pct = tester.get_percentage()
+        results_by_provider = snapshot.get("results_by_provider", {})
+        is_testing = snapshot.get("is_testing", False)
 
-            # Download
-            down_style = "green" if down_ok else "bold red"
-            down_status = "✅ OK" if down_ok else "⚠️ BAIXO"
-            table.add_row(
-                "⬇️ Download",
-                f"[{down_style}]{result.download_mbps:.1f} Mbps[/]",
-                f"{speed_config.velocidade_contratada_down:.0f} Mbps",
-                f"[{down_style}]{down_pct:.0f}% {down_status}[/]",
-            )
+        # Mostrar resultados de cada provedor
+        if results_by_provider:
+            for provider_name, result in results_by_provider.items():
+                try:
+                    down_mbps = float(result.download_mbps)
+                    up_mbps = float(result.upload_mbps)
+                    ping_ms = float(result.ping_ms)
+                except (ValueError, TypeError, AttributeError):
+                    continue
 
-            # Upload
-            up_style = "green" if up_ok else "bold red"
-            up_status = "✅ OK" if up_ok else "⚠️ BAIXO"
-            table.add_row(
-                "⬆️ Upload",
-                f"[{up_style}]{result.upload_mbps:.1f} Mbps[/]",
-                f"{speed_config.velocidade_contratada_up:.0f} Mbps",
-                f"[{up_style}]{up_pct:.0f}% {up_status}[/]",
-            )
+                # Verificar compliance
+                min_down = speed_config.velocidade_contratada_down * (
+                    speed_config.percentual_minimo / 100
+                )
+                min_up = speed_config.velocidade_contratada_up * (
+                    speed_config.percentual_minimo / 100
+                )
 
-            # Ping do speed test
-            table.add_row(
-                "📶 Ping",
-                f"{result.ping_ms:.1f} ms",
-                "-",
-                f"[dim]{result.servidor[:15]}[/]",
-            )
+                down_ok = down_mbps >= min_down
+                up_ok = up_mbps >= min_up
 
-            last_time = result.timestamp.strftime("%H:%M:%S")
-            title_extra = f" [dim]({last_time})[/]"
-        elif snapshot["is_testing"]:
-            table.add_row("⏳", "[yellow]Testando...[/]", "-", "[dim]Aguarde 10-20s[/]")
-            title_extra = " [yellow]⏳[/]"
-        elif snapshot["last_error"]:
-            error_msg = (
-                snapshot["last_error"][:30] if snapshot["last_error"] else "Erro"
-            )
-            table.add_row("❌", f"[red]{error_msg}[/]", "-", "-")
-            title_extra = " [red]Erro[/]"
-        else:
-            table.add_row("...", "[dim]Iniciando...[/]", "-", "-")
-            title_extra = ""
+                down_style = "green" if down_ok else "bold red"
+                up_style = "green" if up_ok else "bold red"
 
-        # Info de histórico
-        test_count = snapshot["test_count"]
-        min_pct = speed_config.percentual_minimo
+                # Nome curto do provedor
+                short_name = str(provider_name)[:11]
+
+                table.add_row(
+                    short_name,
+                    f"[{down_style}]{down_mbps:.0f} Mbps[/]",
+                    f"[{up_style}]{up_mbps:.0f} Mbps[/]",
+                    f"{ping_ms:.0f}ms",
+                )
+
+        # Se estiver testando, mostrar progresso em tempo real
+        if is_testing:
+            current_provider = snapshot.get("current_provider", "")
+            progress_mbps = snapshot.get("progress_mbps", 0.0)
+            progress_phase = snapshot.get("progress_phase", "")
+
+            if current_provider:
+                # Mostrar velocidade em tempo real se disponível
+                if progress_mbps > 0 and progress_phase == "download":
+                    table.add_row(
+                        f"[yellow]{current_provider[:11]}[/]",
+                        f"[yellow]{progress_mbps:.0f} Mbps[/]",
+                        "[dim]baixando...[/]",
+                        "[dim]...[/]",
+                    )
+                elif progress_phase == "upload":
+                    table.add_row(
+                        f"[yellow]{current_provider[:11]}[/]",
+                        "[dim]ok[/]",
+                        "[yellow]upload...[/]",
+                        "[dim]...[/]",
+                    )
+                else:
+                    table.add_row(
+                        f"[yellow]{current_provider[:11]}[/]",
+                        "[dim]conectando[/]",
+                        "[dim]...[/]",
+                        "[dim]...[/]",
+                    )
+            else:
+                table.add_row(
+                    "[yellow]...[/]", "[dim]iniciando[/]", "[dim]...[/]", "[dim]...[/]"
+                )
+        elif not results_by_provider:
+            if snapshot.get("last_error"):
+                error_msg = str(snapshot.get("last_error", "Erro"))[:20]
+                table.add_row("-", f"[red]{error_msg}[/]", "-", "-")
+            else:
+                table.add_row(
+                    "[dim]...[/]", "[dim]aguardando[/]", "[dim]...[/]", "[dim]...[/]"
+                )
+
+        test_count = snapshot.get("test_count", 0)
+        num_providers = len(results_by_provider)
 
         return Panel(
             table,
-            title=f"🚀 Velocidade Internet (Testes: {test_count}){title_extra if snapshot['last_result'] else ''}",
-            subtitle=f"[dim]ANATEL: mínimo {min_pct:.0f}% da velocidade contratada[/]",
+            title=f"Velocidade ({num_providers} provedores, {test_count} testes)",
+            subtitle=f"[dim]Contrato: {speed_config.velocidade_contratada_down:.0f}/{speed_config.velocidade_contratada_up:.0f} Mbps | Min: {speed_config.percentual_minimo:.0f}%[/]",
             border_style="magenta",
         )
     except Exception as e:
-        # Fallback se algo der errado - não quebra a interface
         return Panel(
-            f"[red]Erro no painel de velocidade: {str(e)[:40]}[/]",
-            title="🚀 Velocidade Internet",
+            f"[red]Erro: {str(e)[:30]}[/]",
+            title="Velocidade",
             border_style="red",
         )
 

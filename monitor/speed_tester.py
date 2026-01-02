@@ -3,6 +3,7 @@ V's Speed Tester - Monitor de Velocidade de Internet em Tempo Real
 
 Funcionalidades:
     - Teste contínuo de velocidade de download/upload em background
+    - Múltiplos provedores (Speedtest.net, Fast.com) com rotação automática
     - Comparação com velocidade contratada (regulamentação ANATEL - mínimo 80%)
     - Thread separada para não bloquear a interface
 """
@@ -23,6 +24,7 @@ class SpeedTestResult:
     ping_ms: float
     servidor: str
     timestamp: datetime.datetime
+    provider_name: str = "Desconhecido"  # Identifica qual provedor fez o teste
 
 
 @dataclass
@@ -36,7 +38,7 @@ class SpeedTestConfig:
 
 @dataclass
 class SpeedStats:
-    """Estatísticas de histórico de velocidade."""
+    """Estatísticas de histórico de velocidade com suporte a múltiplos provedores."""
 
     history_down: Deque[float] = field(default_factory=lambda: deque(maxlen=50))
     history_up: Deque[float] = field(default_factory=lambda: deque(maxlen=50))
@@ -47,6 +49,11 @@ class SpeedStats:
     is_testing: bool = False
     test_count: int = 0
     last_error: Optional[str] = None
+    current_provider: str = ""  # Provedor sendo testado atualmente
+
+    # Resultados por provedor (para exibição alternada)
+    results_by_provider: dict = field(default_factory=dict)
+    provider_names: list = field(default_factory=list)
 
     def add(self, result: SpeedTestResult):
         self.history_down.append(result.download_mbps)
@@ -55,13 +62,20 @@ class SpeedStats:
         self.last_result = result
         self.test_count += 1
 
+        # Armazenar por provedor
+        provider = getattr(result, "provider_name", "Desconhecido")
+        self.results_by_provider[provider] = result
+        if provider not in self.provider_names:
+            self.provider_names.append(provider)
+
 
 class ContinuousSpeedTester:
     """
     Testador de velocidade contínuo que roda em background.
 
     Executa testes de velocidade em loop numa thread separada,
-    sem bloquear a interface principal.
+    sem bloquear a interface principal. Usa múltiplos provedores
+    com rotação automática (Speedtest.net, Fast.com).
     """
 
     def __init__(self, config: SpeedTestConfig):
@@ -69,56 +83,58 @@ class ContinuousSpeedTester:
         self.stats = SpeedStats()
         self._running = False
         self._thread: Optional[threading.Thread] = None
-        self._speedtest_available = True
         self._lock = threading.Lock()  # Lock para thread-safety
 
-        # Verificar se speedtest está disponível
-        try:
-            import speedtest
+        # Usar sistema de múltiplos provedores
+        from monitor.speed_providers import get_multi_provider
 
-            self._speedtest = speedtest
-        except ImportError:
-            self._speedtest_available = False
-            self.stats.last_error = "speedtest-cli não instalado (uv add speedtest-cli)"
+        self._multi_provider = get_multi_provider()
+
+        # Verificar disponibilidade
+        available = self._multi_provider.get_available_providers()
+        if not available:
+            self.stats.last_error = (
+                "Nenhum provedor disponível (instale speedtest-cli ou requests)"
+            )
 
     def _run_single_test(self) -> Optional[SpeedTestResult]:
-        """Executa um único teste de velocidade."""
-        if not self._speedtest_available:
+        """Executa um único teste de velocidade usando múltiplos provedores."""
+        available = self._multi_provider.get_available_providers()
+        if not available:
             return None
 
         try:
             with self._lock:
                 self.stats.is_testing = True
                 self.stats.last_error = None
+                # Pegar o nome do próximo provedor que será testado
+                next_provider = self._multi_provider.get_next_provider()
+                if next_provider:
+                    self.stats.current_provider = next_provider.name
+                    # Voltar o índice pois get_next_provider incrementa
+                    self._multi_provider._current_index -= 1
 
-            st = self._speedtest.Speedtest()
-            st.get_best_server()
+            # Usar sistema de rotação com fallback (atualiza current_testing_provider internamente)
+            provider_result = self._multi_provider.run_test_with_fallback()
 
-            # Download
-            download_bps = st.download()
-            download_mbps = download_bps / 1_000_000
+            if provider_result:
+                # Converter para o formato local (compatibilidade)
+                result = SpeedTestResult(
+                    download_mbps=provider_result.download_mbps,
+                    upload_mbps=provider_result.upload_mbps,
+                    ping_ms=provider_result.ping_ms,
+                    servidor=provider_result.servidor,
+                    timestamp=provider_result.timestamp,
+                    provider_name=provider_result.provider_name,
+                )
 
-            # Upload
-            upload_bps = st.upload()
-            upload_mbps = upload_bps / 1_000_000
-
-            # Ping
-            ping_ms = st.results.ping
-
-            # Servidor
-            servidor = st.results.server.get("sponsor", "Desconhecido")
-
-            result = SpeedTestResult(
-                download_mbps=download_mbps,
-                upload_mbps=upload_mbps,
-                ping_ms=ping_ms,
-                servidor=servidor,
-                timestamp=datetime.datetime.now(),
-            )
-
-            with self._lock:
-                self.stats.add(result)
-            return result
+                with self._lock:
+                    self.stats.add(result)
+                return result
+            else:
+                with self._lock:
+                    self.stats.last_error = "Todos os provedores falharam"
+                return None
 
         except Exception as e:
             with self._lock:
@@ -129,15 +145,15 @@ class ContinuousSpeedTester:
                 self.stats.is_testing = False
 
     def _loop(self):
-        """Loop contínuo de testes em background."""
+        """Loop contínuo de testes em background - alterna entre provedores."""
         while self._running:
             self._run_single_test()
-            # Pausa maior entre testes - cada teste demora ~20-40s
-            # então 30s de pausa dá tempo suficiente pra interface respirar
+            # Pausa menor para rotação mais rápida entre provedores
+            # Cada teste demora ~10-30s, pausa de 5s entre testes
             if self._running:
                 import time
 
-                time.sleep(30)
+                time.sleep(5)
 
     def start(self):
         """Inicia o loop de testes em background."""
@@ -198,10 +214,14 @@ class ContinuousSpeedTester:
         """
         Retorna um snapshot thread-safe dos dados atuais.
 
-        Use isso pra acessar os dados sem race conditions.
+        Inclui resultados por provedor e progresso em tempo real.
         """
         with self._lock:
             result = self.stats.last_result
+
+            # Pegar progresso em tempo real do multi_provider
+            progress = self._multi_provider.progress
+
             return {
                 "last_result": result,
                 "is_testing": self.stats.is_testing,
@@ -210,6 +230,13 @@ class ContinuousSpeedTester:
                 "history_down": list(self.stats.history_down),
                 "history_up": list(self.stats.history_up),
                 "timestamps": list(self.stats.timestamps),
+                "results_by_provider": dict(self.stats.results_by_provider),
+                "provider_names": list(self.stats.provider_names),
+                "current_provider": self.stats.current_provider,
+                # Progresso em tempo real
+                "progress_mbps": progress.current_mbps,
+                "progress_phase": progress.phase,
+                "progress_provider": progress.provider_name,
             }
 
 
