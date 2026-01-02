@@ -70,6 +70,7 @@ class ContinuousSpeedTester:
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._speedtest_available = True
+        self._lock = threading.Lock()  # Lock para thread-safety
 
         # Verificar se speedtest está disponível
         try:
@@ -86,8 +87,9 @@ class ContinuousSpeedTester:
             return None
 
         try:
-            self.stats.is_testing = True
-            self.stats.last_error = None
+            with self._lock:
+                self.stats.is_testing = True
+                self.stats.last_error = None
 
             st = self._speedtest.Speedtest()
             st.get_best_server()
@@ -114,24 +116,28 @@ class ContinuousSpeedTester:
                 timestamp=datetime.datetime.now(),
             )
 
-            self.stats.add(result)
+            with self._lock:
+                self.stats.add(result)
             return result
 
         except Exception as e:
-            self.stats.last_error = str(e)[:50]
+            with self._lock:
+                self.stats.last_error = str(e)[:50]
             return None
         finally:
-            self.stats.is_testing = False
+            with self._lock:
+                self.stats.is_testing = False
 
     def _loop(self):
         """Loop contínuo de testes em background."""
         while self._running:
             self._run_single_test()
-            # Pequena pausa entre testes pra não sobrecarregar
+            # Pausa maior entre testes - cada teste demora ~20-40s
+            # então 30s de pausa dá tempo suficiente pra interface respirar
             if self._running:
                 import time
 
-                time.sleep(2)
+                time.sleep(30)
 
     def start(self):
         """Inicia o loop de testes em background."""
@@ -155,18 +161,19 @@ class ContinuousSpeedTester:
         Retorna:
             (download_ok, upload_ok): tupla de bools
         """
-        if not self.stats.last_result:
-            return (True, True)  # Sem dados = assumir OK
+        with self._lock:
+            if not self.stats.last_result:
+                return (True, True)  # Sem dados = assumir OK
 
-        result = self.stats.last_result
-        min_down = self.config.velocidade_contratada_down * (
-            self.config.percentual_minimo / 100
-        )
-        min_up = self.config.velocidade_contratada_up * (
-            self.config.percentual_minimo / 100
-        )
+            result = self.stats.last_result
+            min_down = self.config.velocidade_contratada_down * (
+                self.config.percentual_minimo / 100
+            )
+            min_up = self.config.velocidade_contratada_up * (
+                self.config.percentual_minimo / 100
+            )
 
-        return (result.download_mbps >= min_down, result.upload_mbps >= min_up)
+            return (result.download_mbps >= min_down, result.upload_mbps >= min_up)
 
     def get_percentage(self) -> tuple[float, float]:
         """
@@ -175,14 +182,35 @@ class ContinuousSpeedTester:
         Retorna:
             (download_pct, upload_pct): porcentagens
         """
-        if not self.stats.last_result:
-            return (0.0, 0.0)
+        with self._lock:
+            if not self.stats.last_result:
+                return (0.0, 0.0)
 
-        result = self.stats.last_result
-        down_pct = (result.download_mbps / self.config.velocidade_contratada_down) * 100
-        up_pct = (result.upload_mbps / self.config.velocidade_contratada_up) * 100
+            result = self.stats.last_result
+            down_pct = (
+                result.download_mbps / self.config.velocidade_contratada_down
+            ) * 100
+            up_pct = (result.upload_mbps / self.config.velocidade_contratada_up) * 100
 
-        return (down_pct, up_pct)
+            return (down_pct, up_pct)
+
+    def get_stats_snapshot(self) -> dict:
+        """
+        Retorna um snapshot thread-safe dos dados atuais.
+
+        Use isso pra acessar os dados sem race conditions.
+        """
+        with self._lock:
+            result = self.stats.last_result
+            return {
+                "last_result": result,
+                "is_testing": self.stats.is_testing,
+                "test_count": self.stats.test_count,
+                "last_error": self.stats.last_error,
+                "history_down": list(self.stats.history_down),
+                "history_up": list(self.stats.history_up),
+                "timestamps": list(self.stats.timestamps),
+            }
 
 
 # Instância global para uso no stalker

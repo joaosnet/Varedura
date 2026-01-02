@@ -828,70 +828,83 @@ def make_connections_panel():
 
 def make_speed_panel():
     """Cria painel de velocidade de internet."""
-    tester = get_speed_tester()
-    stats = tester.stats
+    try:
+        tester = get_speed_tester()
 
-    table = Table(expand=True, box=box.ROUNDED)
-    table.add_column("Métrica", style="bold", width=12)
-    table.add_column("Velocidade", justify="center", width=12)
-    table.add_column("Contrato", justify="center", width=10)
-    table.add_column("Status", justify="center", width=10)
+        # Usar snapshot thread-safe pra evitar race conditions
+        snapshot = tester.get_stats_snapshot()
 
-    if stats.last_result:
-        result = stats.last_result
-        down_ok, up_ok = tester.check_compliance()
-        down_pct, up_pct = tester.get_percentage()
+        table = Table(expand=True, box=box.ROUNDED)
+        table.add_column("Métrica", style="bold", width=12)
+        table.add_column("Velocidade", justify="center", width=12)
+        table.add_column("Contrato", justify="center", width=10)
+        table.add_column("Status", justify="center", width=10)
 
-        # Download
-        down_style = "green" if down_ok else "bold red"
-        down_status = "✅ OK" if down_ok else "⚠️ BAIXO"
-        table.add_row(
-            "⬇️ Download",
-            f"[{down_style}]{result.download_mbps:.1f} Mbps[/]",
-            f"{speed_config.velocidade_contratada_down:.0f} Mbps",
-            f"[{down_style}]{down_pct:.0f}% {down_status}[/]",
+        if snapshot["last_result"]:
+            result = snapshot["last_result"]
+            down_ok, up_ok = tester.check_compliance()
+            down_pct, up_pct = tester.get_percentage()
+
+            # Download
+            down_style = "green" if down_ok else "bold red"
+            down_status = "✅ OK" if down_ok else "⚠️ BAIXO"
+            table.add_row(
+                "⬇️ Download",
+                f"[{down_style}]{result.download_mbps:.1f} Mbps[/]",
+                f"{speed_config.velocidade_contratada_down:.0f} Mbps",
+                f"[{down_style}]{down_pct:.0f}% {down_status}[/]",
+            )
+
+            # Upload
+            up_style = "green" if up_ok else "bold red"
+            up_status = "✅ OK" if up_ok else "⚠️ BAIXO"
+            table.add_row(
+                "⬆️ Upload",
+                f"[{up_style}]{result.upload_mbps:.1f} Mbps[/]",
+                f"{speed_config.velocidade_contratada_up:.0f} Mbps",
+                f"[{up_style}]{up_pct:.0f}% {up_status}[/]",
+            )
+
+            # Ping do speed test
+            table.add_row(
+                "📶 Ping",
+                f"{result.ping_ms:.1f} ms",
+                "-",
+                f"[dim]{result.servidor[:15]}[/]",
+            )
+
+            last_time = result.timestamp.strftime("%H:%M:%S")
+            title_extra = f" [dim]({last_time})[/]"
+        elif snapshot["is_testing"]:
+            table.add_row("⏳", "[yellow]Testando...[/]", "-", "[dim]Aguarde 10-20s[/]")
+            title_extra = " [yellow]⏳[/]"
+        elif snapshot["last_error"]:
+            error_msg = (
+                snapshot["last_error"][:30] if snapshot["last_error"] else "Erro"
+            )
+            table.add_row("❌", f"[red]{error_msg}[/]", "-", "-")
+            title_extra = " [red]Erro[/]"
+        else:
+            table.add_row("...", "[dim]Iniciando...[/]", "-", "-")
+            title_extra = ""
+
+        # Info de histórico
+        test_count = snapshot["test_count"]
+        min_pct = speed_config.percentual_minimo
+
+        return Panel(
+            table,
+            title=f"🚀 Velocidade Internet (Testes: {test_count}){title_extra if snapshot['last_result'] else ''}",
+            subtitle=f"[dim]ANATEL: mínimo {min_pct:.0f}% da velocidade contratada[/]",
+            border_style="magenta",
         )
-
-        # Upload
-        up_style = "green" if up_ok else "bold red"
-        up_status = "✅ OK" if up_ok else "⚠️ BAIXO"
-        table.add_row(
-            "⬆️ Upload",
-            f"[{up_style}]{result.upload_mbps:.1f} Mbps[/]",
-            f"{speed_config.velocidade_contratada_up:.0f} Mbps",
-            f"[{up_style}]{up_pct:.0f}% {up_status}[/]",
+    except Exception as e:
+        # Fallback se algo der errado - não quebra a interface
+        return Panel(
+            f"[red]Erro no painel de velocidade: {str(e)[:40]}[/]",
+            title="🚀 Velocidade Internet",
+            border_style="red",
         )
-
-        # Ping do speed test
-        table.add_row(
-            "📶 Ping",
-            f"{result.ping_ms:.1f} ms",
-            "-",
-            f"[dim]{result.servidor[:15]}[/]",
-        )
-
-        last_time = result.timestamp.strftime("%H:%M:%S")
-        title_extra = f" [dim]({last_time})[/]"
-    elif stats.is_testing:
-        table.add_row("⏳", "[yellow]Testando...[/]", "-", "[dim]Aguarde 10-20s[/]")
-        title_extra = " [yellow]⏳[/]"
-    elif stats.last_error:
-        table.add_row("❌", f"[red]{stats.last_error[:30]}[/]", "-", "-")
-        title_extra = " [red]Erro[/]"
-    else:
-        table.add_row("...", "[dim]Iniciando...[/]", "-", "-")
-        title_extra = ""
-
-    # Info de histórico
-    test_count = stats.test_count
-    min_pct = speed_config.percentual_minimo
-
-    return Panel(
-        table,
-        title=f"🚀 Velocidade Internet (Testes: {test_count}){title_extra if stats.last_result else ''}",
-        subtitle=f"[dim]ANATEL: mínimo {min_pct:.0f}% da velocidade contratada[/]",
-        border_style="magenta",
-    )
 
 
 def make_log_panel(log_events):
