@@ -102,6 +102,35 @@ running = True
 scan_counter = 0
 
 
+# ==============================================================================
+# INFORMAÇÕES CONTRATUAIS E HISTÓRICO COMPLETO PARA RELATÓRIO FORMAL
+# ==============================================================================
+@dataclass
+class ContractInfo:
+    """Informações do contrato de internet para relatório formal."""
+
+    operadora: str = "WLAN SISTEMAS"
+    plano: str = "PACOTE R/C SUMMER 500MB+EXITLAG"
+    velocidade_down_mbps: float = 500.0  # Mbps para cálculos
+    velocidade_up_mbps: float = 250.0  # Mbps para cálculos
+    # ANATEL Resolução 574/2011
+    percentual_medio_anatel: float = 80.0  # Média mensal mínima
+    percentual_instantaneo_anatel: float = 40.0  # Instantâneo mínimo
+    # Informações de contato
+    telefone_operadora: str = "(91) 3182-2990"
+    whatsapp_operadora: str = "(91) 98538-9877"
+    email_operadora: str = "financeiro@wlansistemas.com.br"
+
+
+contract_info = ContractInfo()
+
+# Histórico completo para relatório (sem limite de tamanho)
+# Armazena TODAS as medições desde o início do teste
+full_ping_history: list = []  # [(timestamp, local_ms, external_ms), ...]
+full_speed_history: list = []  # [(timestamp, down, up, ping, provider, servidor), ...]
+test_session_start: Optional[datetime.datetime] = None
+
+
 def is_android():
     """Detecta se está rodando no Android (Termux)."""
     return "ANDROID_ROOT" in os.environ or "TERMUX_VERSION" in os.environ
@@ -482,14 +511,14 @@ _export_lock = threading.Lock()
 
 
 def _generate_combined_pdf_worker():
-    """Worker que gera o PDF combinado em background."""
+    """Worker que gera o PDF formal completo em background."""
     global _export_status
 
     try:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         os.makedirs("exports", exist_ok=True)
 
-        # Importar matplotlib e configurar backend não-interativo
+        # Importar matplotlib e reportlab
         import matplotlib
 
         matplotlib.use("Agg")  # Backend não-interativo para threads
@@ -497,24 +526,45 @@ def _generate_combined_pdf_worker():
         import matplotlib.dates as mdates
         from matplotlib.backends.backend_pdf import PdfPages
 
-        pdf_filename = f"exports/network_report_{timestamp}.pdf"
+        pdf_filename = f"exports/relatorio_formal_{timestamp}.pdf"
         csv_ping_filename = f"exports/ping_history_{timestamp}.csv"
         csv_speed_filename = f"exports/speed_history_{timestamp}.csv"
 
-        # Exportar CSVs primeiro (rápido)
-        # CSV de Ping
-        try:
-            with open(csv_ping_filename, "w", encoding="utf-8") as f:
-                f.write("timestamp,local_ms,external_ms\n")
+        # Usar histórico completo ao invés do limitado
+        ping_data = (
+            full_ping_history
+            if full_ping_history
+            else [
+                (ts, local, ext)
                 for ts, local, ext in zip(
                     local_stats.timestamps, local_stats.history, external_stats.history
-                ):
+                )
+            ]
+        )
+
+        # Exportar CSVs primeiro (histórico completo)
+        try:
+            with open(csv_ping_filename, "w", encoding="utf-8") as f:
+                f.write("timestamp,local_ms,external_ms,status_local,status_externo\n")
+                for ts, local, ext in ping_data:
                     ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
-                    local_val = f"{local:.1f}" if local is not None else ""
-                    ext_val = f"{ext:.1f}" if ext is not None else ""
-                    f.write(f"{ts_str},{local_val},{ext_val}\n")
+                    local_val = f"{local:.1f}" if local is not None else "TIMEOUT"
+                    ext_val = f"{ext:.1f}" if ext is not None else "TIMEOUT"
+                    status_local = (
+                        "TIMEOUT"
+                        if local is None
+                        else ("ALTO" if local > config.lag_threshold_ms else "OK")
+                    )
+                    status_ext = (
+                        "TIMEOUT"
+                        if ext is None
+                        else ("ALTO" if ext > config.lag_threshold_ms else "OK")
+                    )
+                    f.write(
+                        f"{ts_str},{local_val},{ext_val},{status_local},{status_ext}\n"
+                    )
         except Exception:
-            pass  # Continua mesmo se CSV falhar
+            pass
 
         # CSV de Velocidade
         tester = get_speed_tester()
@@ -524,38 +574,245 @@ def _generate_combined_pdf_worker():
             try:
                 with open(csv_speed_filename, "w", encoding="utf-8") as f:
                     f.write(
-                        "timestamp,download_mbps,upload_mbps,contrato_down,contrato_up,pct_down,pct_up,status\n"
+                        "timestamp,download_mbps,upload_mbps,contrato_down,contrato_up,"
+                        "pct_down,pct_up,status_anatel_medio,status_anatel_instantaneo\n"
                     )
                     for ts, down, up in zip(
                         stats.timestamps, stats.history_down, stats.history_up
                     ):
                         ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
-                        pct_down = (
-                            down / speed_config.velocidade_contratada_down
-                        ) * 100
-                        pct_up = (up / speed_config.velocidade_contratada_up) * 100
-                        min_pct = speed_config.percentual_minimo
-                        status = (
+                        pct_down = (down / contract_info.velocidade_down_mbps) * 100
+                        pct_up = (up / contract_info.velocidade_up_mbps) * 100
+                        status_medio = (
                             "OK"
-                            if pct_down >= min_pct and pct_up >= min_pct
+                            if pct_down >= contract_info.percentual_medio_anatel
+                            and pct_up >= contract_info.percentual_medio_anatel
                             else "ABAIXO"
+                        )
+                        status_instant = (
+                            "OK"
+                            if pct_down >= contract_info.percentual_instantaneo_anatel
+                            and pct_up >= contract_info.percentual_instantaneo_anatel
+                            else "VIOLAÇÃO"
                         )
                         f.write(
                             f"{ts_str},{down:.2f},{up:.2f},"
-                            f"{speed_config.velocidade_contratada_down},{speed_config.velocidade_contratada_up},"
-                            f"{pct_down:.1f},{pct_up:.1f},{status}\n"
+                            f"{contract_info.velocidade_down_mbps},{contract_info.velocidade_up_mbps},"
+                            f"{pct_down:.1f},{pct_up:.1f},{status_medio},{status_instant}\n"
                         )
             except Exception:
                 pass
 
-        # Gerar PDF combinado
+        # ======================================================================
+        # GERAR PDF FORMAL COMPLETO
+        # ======================================================================
         with PdfPages(pdf_filename) as pdf:
-            # === Página 1: Relatório de Ping ===
+            # === PÁGINA 1: CAPA ===
+            fig_capa = plt.figure(figsize=(8.5, 11))
+            ax_capa = fig_capa.add_subplot(111)
+            ax_capa.axis("off")
+
+            # Data/hora atual
+            now = datetime.datetime.now()
+            data_str = now.strftime("%d/%m/%Y")
+            hora_str = now.strftime("%H:%M:%S")
+
+            # Período do teste
+            if test_session_start:
+                inicio_str = test_session_start.strftime("%d/%m/%Y %H:%M:%S")
+            elif ping_data:
+                inicio_str = ping_data[0][0].strftime("%d/%m/%Y %H:%M:%S")
+            else:
+                inicio_str = "N/A"
+
+            fim_str = now.strftime("%d/%m/%Y %H:%M:%S")
+
+            capa_text = f"""
+RELATÓRIO DE AUDITORIA DE QUALIDADE
+DE SERVIÇO DE INTERNET
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Data do Relatório: {data_str}
+Hora: {hora_str}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+INFORMAÇÕES CONTRATUAIS
+
+Operadora: {contract_info.operadora}
+Plano: {contract_info.plano}
+Velocidade Contratada (Download): {contract_info.velocidade_down_mbps} Mbps
+Velocidade Contratada (Upload): {contract_info.velocidade_up_mbps} Mbps
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PERÍODO DA ANÁLISE
+
+Início: {inicio_str}
+Fim: {fim_str}
+
+Total de Medições de Ping: {len(ping_data)}
+Total de Testes de Velocidade: {stats.test_count}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REGULAMENTAÇÃO APLICÁVEL
+
+• ANATEL - Resolução nº 574/2011
+• RQUAL - Regulamento de Qualidade de Serviços
+• Código de Defesa do Consumidor
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+            ax_capa.text(
+                0.5,
+                0.5,
+                capa_text,
+                transform=ax_capa.transAxes,
+                fontsize=11,
+                verticalalignment="center",
+                horizontalalignment="center",
+                family="monospace",
+            )
+            pdf.savefig(fig_capa, dpi=150)
+            plt.close(fig_capa)
+
+            # === PÁGINA 2: METODOLOGIA ===
+            fig_met = plt.figure(figsize=(8.5, 11))
+            ax_met = fig_met.add_subplot(111)
+            ax_met.axis("off")
+
+            metodologia_text = f"""
+METODOLOGIA DE AFERIÇÃO
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. BASE LEGAL
+
+Conforme a Resolução nº 574/2011 da ANATEL e o RQUAL (Regulamento 
+de Qualidade dos Serviços de Telecomunicações), as prestadoras 
+devem garantir:
+
+• Velocidade MÉDIA mensal: mínimo de {contract_info.percentual_medio_anatel:.0f}% do contratado
+• Velocidade INSTANTÂNEA: mínimo de {contract_info.percentual_instantaneo_anatel:.0f}% em cada medição
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+2. PROCEDIMENTO DE TESTE
+
+Para que a aferição seja válida conforme regulamentação:
+
+• Equipamento de teste conectado via cabo de rede (LAN)
+• Conexão direta na porta LAN da ONU/Roteador
+• Testes via Wi-Fi NÃO são considerados válidos para fins
+  de comprovação contratual
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3. PARÂMETROS DE ANÁLISE
+
+Velocidade Contratada Download: {contract_info.velocidade_down_mbps} Mbps
+Velocidade Contratada Upload: {contract_info.velocidade_up_mbps} Mbps
+
+Mínimo Aceitável Download (80%): {contract_info.velocidade_down_mbps * 0.8:.1f} Mbps
+Mínimo Aceitável Upload (80%): {contract_info.velocidade_up_mbps * 0.8:.1f} Mbps
+
+Mínimo Instantâneo Download (40%): {contract_info.velocidade_down_mbps * 0.4:.1f} Mbps
+Mínimo Instantâneo Upload (40%): {contract_info.velocidade_up_mbps * 0.4:.1f} Mbps
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+4. PONTOS DE TESTE
+
+Gateway Local: {config.gateway_ip}
+Servidor Externo: {config.external_ip}
+Limite de Latência: {config.lag_threshold_ms} ms
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+            ax_met.text(
+                0.5,
+                0.5,
+                metodologia_text,
+                transform=ax_met.transAxes,
+                fontsize=10,
+                verticalalignment="center",
+                horizontalalignment="center",
+                family="monospace",
+            )
+            pdf.savefig(fig_met, dpi=150)
+            plt.close(fig_met)
+
+            # === PÁGINAS 3+: TABELA DE MEDIÇÕES DE PING ===
+            if ping_data:
+                # Criar tabelas de ping em páginas (máximo 40 linhas por página)
+                rows_per_page = 40
+                total_pages = (len(ping_data) + rows_per_page - 1) // rows_per_page
+
+                for page_num in range(total_pages):
+                    start_idx = page_num * rows_per_page
+                    end_idx = min(start_idx + rows_per_page, len(ping_data))
+                    page_data = ping_data[start_idx:end_idx]
+
+                    fig_ping = plt.figure(figsize=(8.5, 11))
+                    ax_ping = fig_ping.add_subplot(111)
+                    ax_ping.axis("off")
+
+                    # Cabeçalho
+                    header = f"REGISTRO COMPLETO DE MEDIÇÕES DE PING\nPágina {page_num + 1} de {total_pages}\n\n"
+                    header += f"{'#':<5} {'Timestamp':<20} {'Gateway':<12} {'Externo':<12} {'Status':<15}\n"
+                    header += "─" * 70 + "\n"
+
+                    rows = []
+                    for i, (ts, local, ext) in enumerate(
+                        page_data, start=start_idx + 1
+                    ):
+                        ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
+                        local_str = f"{local:.1f}ms" if local is not None else "TIMEOUT"
+                        ext_str = f"{ext:.1f}ms" if ext is not None else "TIMEOUT"
+
+                        if local is None or ext is None:
+                            status = "CRÍTICO"
+                        elif (
+                            local > config.lag_threshold_ms
+                            or ext > config.lag_threshold_ms
+                        ):
+                            status = "ALTO"
+                        else:
+                            status = "OK"
+
+                        rows.append(
+                            f"{i:<5} {ts_str:<20} {local_str:<12} {ext_str:<12} {status:<15}"
+                        )
+
+                    table_text = header + "\n".join(rows)
+
+                    ax_ping.text(
+                        0.02,
+                        0.98,
+                        table_text,
+                        transform=ax_ping.transAxes,
+                        fontsize=8,
+                        verticalalignment="top",
+                        horizontalalignment="left",
+                        family="monospace",
+                    )
+                    pdf.savefig(fig_ping, dpi=150)
+                    plt.close(fig_ping)
+
+            # === GRÁFICO DE PING ===
             fig1, ax1 = plt.subplots(figsize=(14, 8))
 
-            times_ping = list(local_stats.timestamps)
-            local_valid = list(local_stats.history)
-            ext_valid = list(external_stats.history)
+            times_ping = (
+                [p[0] for p in ping_data] if ping_data else list(local_stats.timestamps)
+            )
+            local_valid = (
+                [p[1] for p in ping_data] if ping_data else list(local_stats.history)
+            )
+            ext_valid = (
+                [p[2] for p in ping_data] if ping_data else list(external_stats.history)
+            )
 
             if times_ping:
                 ax1.plot(
@@ -584,18 +841,20 @@ def _generate_combined_pdf_worker():
                 start_str = times_ping[0].strftime("%Y-%m-%d %H:%M:%S")
                 end_str = times_ping[-1].strftime("%H:%M:%S")
                 ax1.set_title(
-                    f"V's Network Stalker - Histórico de Ping\n{start_str} → {end_str}",
+                    f"Gráfico de Latência (Ping)\n{start_str} → {end_str}",
                     fontsize=14,
                     fontweight="bold",
                 )
 
-                # Adicionar estatísticas
-                if local_stats.min_ms is not None:
+                # Estatísticas
+                valid_local = [x for x in local_valid if x is not None]
+                valid_ext = [x for x in ext_valid if x is not None]
+                if valid_local and valid_ext:
                     stats_text = (
-                        f"Gateway - Min: {local_stats.min_ms:.1f}ms | "
-                        f"Máx: {local_stats.max_ms:.1f}ms | Méd: {local_stats.avg_ms:.1f}ms\n"
-                        f"Externo - Min: {external_stats.min_ms:.1f}ms | "
-                        f"Máx: {external_stats.max_ms:.1f}ms | Méd: {external_stats.avg_ms:.1f}ms"
+                        f"Gateway - Min: {min(valid_local):.1f}ms | "
+                        f"Máx: {max(valid_local):.1f}ms | Méd: {sum(valid_local) / len(valid_local):.1f}ms\n"
+                        f"Externo - Min: {min(valid_ext):.1f}ms | "
+                        f"Máx: {max(valid_ext):.1f}ms | Méd: {sum(valid_ext) / len(valid_ext):.1f}ms"
                     )
                     ax1.text(
                         0.02,
@@ -620,42 +879,79 @@ def _generate_combined_pdf_worker():
             pdf.savefig(fig1, dpi=150)
             plt.close(fig1)
 
-            # === Página 2: Relatório de Velocidade ===
+            # === TABELA DE TESTES DE VELOCIDADE ===
             if stats.test_count > 0:
+                # Tabela de velocidade
+                fig_speed = plt.figure(figsize=(8.5, 11))
+                ax_speed = fig_speed.add_subplot(111)
+                ax_speed.axis("off")
+
+                header = "REGISTRO COMPLETO DE TESTES DE VELOCIDADE\n\n"
+                header += f"{'#':<3} {'Timestamp':<20} {'Down':<10} {'Up':<10} {'%Down':<8} {'%Up':<8} {'Status':<12}\n"
+                header += "─" * 80 + "\n"
+
+                rows = []
+                violations_80_down = 0
+                violations_80_up = 0
+                violations_40_down = 0
+                violations_40_up = 0
+
+                for i, (ts, down, up) in enumerate(
+                    zip(stats.timestamps, stats.history_down, stats.history_up), start=1
+                ):
+                    ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
+                    pct_down = (down / contract_info.velocidade_down_mbps) * 100
+                    pct_up = (up / contract_info.velocidade_up_mbps) * 100
+
+                    # Contar violações
+                    if pct_down < contract_info.percentual_medio_anatel:
+                        violations_80_down += 1
+                    if pct_up < contract_info.percentual_medio_anatel:
+                        violations_80_up += 1
+                    if pct_down < contract_info.percentual_instantaneo_anatel:
+                        violations_40_down += 1
+                    if pct_up < contract_info.percentual_instantaneo_anatel:
+                        violations_40_up += 1
+
+                    if pct_down < 40 or pct_up < 40:
+                        status = "VIOLAÇÃO 40%"
+                    elif pct_down < 80 or pct_up < 80:
+                        status = "ABAIXO 80%"
+                    else:
+                        status = "CONFORME"
+
+                    rows.append(
+                        f"{i:<3} {ts_str:<20} {down:>7.1f}Mbps {up:>7.1f}Mbps {pct_down:>6.1f}% {pct_up:>6.1f}% {status:<12}"
+                    )
+
+                table_text = header + "\n".join(rows)
+
+                ax_speed.text(
+                    0.02,
+                    0.98,
+                    table_text,
+                    transform=ax_speed.transAxes,
+                    fontsize=8,
+                    verticalalignment="top",
+                    horizontalalignment="left",
+                    family="monospace",
+                )
+                pdf.savefig(fig_speed, dpi=150)
+                plt.close(fig_speed)
+
+                # Gráfico de velocidade
                 fig2, (ax2, ax3) = plt.subplots(2, 1, figsize=(14, 10))
 
                 times_speed = list(stats.timestamps)
                 down_vals = list(stats.history_down)
                 up_vals = list(stats.history_up)
 
-                # Calcular estatísticas
-                avg_down = (
-                    sum(stats.history_down) / len(stats.history_down)
-                    if stats.history_down
-                    else 0
-                )
-                avg_up = (
-                    sum(stats.history_up) / len(stats.history_up)
-                    if stats.history_up
-                    else 0
-                )
-                min_down = min(stats.history_down) if stats.history_down else 0
-                max_down = max(stats.history_down) if stats.history_down else 0
-                min_up = min(stats.history_up) if stats.history_up else 0
-                max_up = max(stats.history_up) if stats.history_up else 0
-
-                violations_down = sum(
-                    1
-                    for d in stats.history_down
-                    if (d / speed_config.velocidade_contratada_down * 100)
-                    < speed_config.percentual_minimo
-                )
-                violations_up = sum(
-                    1
-                    for u in stats.history_up
-                    if (u / speed_config.velocidade_contratada_up * 100)
-                    < speed_config.percentual_minimo
-                )
+                avg_down = sum(down_vals) / len(down_vals) if down_vals else 0
+                avg_up = sum(up_vals) / len(up_vals) if up_vals else 0
+                min_down = min(down_vals) if down_vals else 0
+                max_down = max(down_vals) if down_vals else 0
+                min_up = min(up_vals) if up_vals else 0
+                max_up = max(up_vals) if up_vals else 0
 
                 # Gráfico de Download
                 ax2.plot(
@@ -668,16 +964,22 @@ def _generate_combined_pdf_worker():
                     markersize=4,
                 )
                 ax2.axhline(
-                    y=speed_config.velocidade_contratada_down,
+                    y=contract_info.velocidade_down_mbps,
                     color="green",
                     linestyle="--",
-                    label=f"Contrato ({speed_config.velocidade_contratada_down} Mbps)",
+                    label=f"Contrato ({contract_info.velocidade_down_mbps} Mbps)",
                 )
                 ax2.axhline(
-                    y=speed_config.velocidade_contratada_down * 0.8,
+                    y=contract_info.velocidade_down_mbps * 0.8,
+                    color="orange",
+                    linestyle=":",
+                    label="Mínimo 80%",
+                )
+                ax2.axhline(
+                    y=contract_info.velocidade_down_mbps * 0.4,
                     color="red",
                     linestyle=":",
-                    label="Mínimo ANATEL (80%)",
+                    label="Mínimo 40%",
                 )
                 ax2.set_ylabel("Download (Mbps)")
                 ax2.legend(loc="upper right")
@@ -695,16 +997,22 @@ def _generate_combined_pdf_worker():
                     markersize=4,
                 )
                 ax3.axhline(
-                    y=speed_config.velocidade_contratada_up,
+                    y=contract_info.velocidade_up_mbps,
                     color="green",
                     linestyle="--",
-                    label=f"Contrato ({speed_config.velocidade_contratada_up} Mbps)",
+                    label=f"Contrato ({contract_info.velocidade_up_mbps} Mbps)",
                 )
                 ax3.axhline(
-                    y=speed_config.velocidade_contratada_up * 0.8,
+                    y=contract_info.velocidade_up_mbps * 0.8,
+                    color="orange",
+                    linestyle=":",
+                    label="Mínimo 80%",
+                )
+                ax3.axhline(
+                    y=contract_info.velocidade_up_mbps * 0.4,
                     color="red",
                     linestyle=":",
-                    label="Mínimo ANATEL (80%)",
+                    label="Mínimo 40%",
                 )
                 ax3.set_xlabel("Tempo")
                 ax3.set_ylabel("Upload (Mbps)")
@@ -713,11 +1021,9 @@ def _generate_combined_pdf_worker():
                 ax3.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
 
                 plt.suptitle(
-                    f"V's Speed Report - {stats.test_count} testes\n"
-                    f"Download: Média {avg_down:.1f} Mbps (Min: {min_down:.1f}, Max: {max_down:.1f}) | "
-                    f"Violações ANATEL: {violations_down}\n"
-                    f"Upload: Média {avg_up:.1f} Mbps (Min: {min_up:.1f}, Max: {max_up:.1f}) | "
-                    f"Violações ANATEL: {violations_up}",
+                    f"Gráfico de Velocidade - {stats.test_count} testes\n"
+                    f"Download: Média {avg_down:.1f} Mbps (Min: {min_down:.1f}, Max: {max_down:.1f})\n"
+                    f"Upload: Média {avg_up:.1f} Mbps (Min: {min_up:.1f}, Max: {max_up:.1f})",
                     fontsize=10,
                     fontweight="bold",
                 )
@@ -726,9 +1032,205 @@ def _generate_combined_pdf_worker():
                 pdf.savefig(fig2, dpi=150)
                 plt.close(fig2)
 
+            # === PÁGINA: ANÁLISE E DIAGNÓSTICO ===
+            fig_analise = plt.figure(figsize=(8.5, 11))
+            ax_analise = fig_analise.add_subplot(111)
+            ax_analise.axis("off")
+
+            # Calcular estatísticas gerais
+            valid_local = (
+                [p[1] for p in ping_data if p[1] is not None] if ping_data else []
+            )
+            valid_ext = (
+                [p[2] for p in ping_data if p[2] is not None] if ping_data else []
+            )
+            timeouts = (
+                len([p for p in ping_data if p[1] is None or p[2] is None])
+                if ping_data
+                else 0
+            )
+            high_latency = (
+                len(
+                    [
+                        p
+                        for p in ping_data
+                        if (p[1] and p[1] > config.lag_threshold_ms)
+                        or (p[2] and p[2] > config.lag_threshold_ms)
+                    ]
+                )
+                if ping_data
+                else 0
+            )
+
+            # Estatísticas de velocidade
+            if stats.test_count > 0:
+                avg_down = sum(stats.history_down) / len(stats.history_down)
+                avg_up = sum(stats.history_up) / len(stats.history_up)
+                pct_avg_down = (avg_down / contract_info.velocidade_down_mbps) * 100
+                pct_avg_up = (avg_up / contract_info.velocidade_up_mbps) * 100
+
+                conclusao_down = "CONFORME" if pct_avg_down >= 80 else "NÃO CONFORME"
+                conclusao_up = "CONFORME" if pct_avg_up >= 80 else "NÃO CONFORME"
+            else:
+                avg_down = avg_up = pct_avg_down = pct_avg_up = 0
+                conclusao_down = conclusao_up = "SEM DADOS"
+
+            analise_text = (
+                f"""
+ANÁLISE E DIAGNÓSTICO
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. ESTATÍSTICAS DE LATÊNCIA (PING)
+
+Total de Medições: {len(ping_data)}
+Timeouts: {timeouts} ({(timeouts / len(ping_data) * 100) if ping_data else 0:.1f}%)
+Alta Latência (>{config.lag_threshold_ms}ms): {high_latency} ({
+                    (high_latency / len(ping_data) * 100) if ping_data else 0:.1f}%)
+
+Gateway ({config.gateway_ip}):
+  • Mínimo: {min(valid_local):.1f}ms
+  • Máximo: {max(valid_local):.1f}ms
+  • Média: {sum(valid_local) / len(valid_local):.1f}ms
+
+Externo ({config.external_ip}):
+  • Mínimo: {min(valid_ext):.1f}ms
+  • Máximo: {max(valid_ext):.1f}ms
+  • Média: {sum(valid_ext) / len(valid_ext):.1f}ms
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+2. ESTATÍSTICAS DE VELOCIDADE
+
+Total de Testes: {stats.test_count}
+
+Download:
+  • Média: {avg_down:.1f} Mbps ({pct_avg_down:.1f}% do contratado)
+  • Resultado: {conclusao_down}
+
+Upload:
+  • Média: {avg_up:.1f} Mbps ({pct_avg_up:.1f}% do contratado)
+  • Resultado: {conclusao_up}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3. CONCLUSÃO
+
+{
+                    "✅ SERVIÇO CONFORME - A velocidade média está dentro dos "
+                    "parâmetros estabelecidos pela ANATEL (mínimo 80%)."
+                    if pct_avg_down >= 80 and pct_avg_up >= 80
+                    else "⚠️ SERVIÇO NÃO CONFORME - A velocidade média está ABAIXO "
+                    "dos parâmetros estabelecidos pela ANATEL (mínimo 80%)."
+                    if stats.test_count > 0
+                    else "Dados insuficientes para conclusão."
+                }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+                if valid_local and valid_ext
+                else """
+ANÁLISE E DIAGNÓSTICO
+
+Dados insuficientes para análise detalhada.
+"""
+            )
+
+            ax_analise.text(
+                0.5,
+                0.5,
+                analise_text,
+                transform=ax_analise.transAxes,
+                fontsize=10,
+                verticalalignment="center",
+                horizontalalignment="center",
+                family="monospace",
+            )
+            pdf.savefig(fig_analise, dpi=150)
+            plt.close(fig_analise)
+
+            # === PÁGINA FINAL: ASSINATURAS ===
+            fig_assin = plt.figure(figsize=(8.5, 11))
+            ax_assin = fig_assin.add_subplot(111)
+            ax_assin.axis("off")
+
+            assinatura_text = f"""
+TERMO DE VERIFICAÇÃO
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Declaro que presenciei a realização dos testes de velocidade
+e latência descritos neste relatório, realizados conforme
+procedimento técnico estabelecido pela ANATEL.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CLIENTE / CONTRATANTE
+
+
+Nome: ________________________________________________
+
+CPF/CNPJ: ____________________________________________
+
+Assinatura: __________________________________________
+
+Data: ___/___/______
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TÉCNICO RESPONSÁVEL
+
+
+Nome: ________________________________________________
+
+CPF: _________________________________________________
+
+Registro/Matrícula: __________________________________
+
+Assinatura: __________________________________________
+
+Data: ___/___/______
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OBSERVAÇÕES:
+
+__________________________________________________
+
+__________________________________________________
+
+__________________________________________________
+
+__________________________________________________
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Operadora: {contract_info.operadora}
+Contato: {contract_info.telefone_operadora}
+WhatsApp: {contract_info.whatsapp_operadora}
+E-mail: {contract_info.email_operadora}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+
+            ax_assin.text(
+                0.5,
+                0.5,
+                assinatura_text,
+                transform=ax_assin.transAxes,
+                fontsize=11,
+                verticalalignment="center",
+                horizontalalignment="center",
+                family="monospace",
+            )
+            pdf.savefig(fig_assin, dpi=150)
+            plt.close(fig_assin)
+
         with _export_lock:
             _export_status["message"] = (
-                f"[green]✅ Relatório exportado: {pdf_filename}[/]"
+                f"[green]✅ Relatório formal exportado: {pdf_filename}[/]"
             )
             _export_status["completed"] = True
             _export_status["running"] = False
@@ -1194,6 +1696,7 @@ def main():
     with Live(layout, refresh_per_second=4, screen=True):
         while running:
             try:
+                global test_session_start
                 # Verificar entrada de teclado
                 key = check_keyboard()
                 if key:
@@ -1219,6 +1722,12 @@ def main():
                 # Atualizar stats para gráfico
                 local_stats.add(local_ms)
                 external_stats.add(ext_ms)
+
+                # Registrar no histórico completo para relatório formal
+                now = datetime.datetime.now()
+                if test_session_start is None:
+                    test_session_start = now
+                full_ping_history.append((now, local_ms, ext_ms))
 
                 # 2. Verifica Processos de Rede
                 procs = get_top_network_hogs()

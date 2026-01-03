@@ -306,11 +306,49 @@ class BrasilBandaLargaProvider(SpeedTestProvider):
                 driver.get("https://www.brasilbandalarga.com.br/bbl/")
                 time.sleep(4)  # Aguardar carregamento completo
 
-                # Clicar no botão Iniciar usando ID correto
+                # CORREÇÃO: Remover overlays que bloqueiam cliques
+                # - Sticky footer de cookies (LGPD)
+                # - Widget VLibras (acessibilidade)
+                driver.execute_script("""
+                    // Remover/ocultar cookie consent footer
+                    const cookieBanners = document.querySelectorAll(
+                        '[class*="cookie"], [class*="lgpd"], [id*="cookie"], [id*="lgpd"], ' +
+                        '.footer-fixed, .sticky-footer, [class*="consent"]'
+                    );
+                    cookieBanners.forEach(el => el.style.display = 'none');
+                    
+                    // Remover widget VLibras (barra de acessibilidade)
+                    const vLibras = document.querySelectorAll(
+                        '[class*="vlibras"], [id*="vlibras"], [class*="vw-"], .vw-plugin-wrapper'
+                    );
+                    vLibras.forEach(el => el.style.display = 'none');
+                    
+                    // Remover qualquer elemento com z-index muito alto que possa sobrepor
+                    const allElements = document.querySelectorAll('*');
+                    allElements.forEach(el => {
+                        const style = window.getComputedStyle(el);
+                        const zIndex = parseInt(style.zIndex);
+                        if (zIndex > 9999 && !el.id.includes('btn')) {
+                            el.style.display = 'none';
+                        }
+                    });
+                """)
+                time.sleep(1)
+
+                # Aguardar botão e scrollar para o centro
                 start_btn = WebDriverWait(driver, 15).until(
-                    EC.element_to_be_clickable((By.ID, "btnIniciar"))
+                    EC.presence_of_element_located((By.ID, "btnIniciar"))
                 )
-                start_btn.click()
+
+                # Scrollar o botão para o centro da viewport
+                driver.execute_script(
+                    "arguments[0].scrollIntoView({block: 'center', inline: 'center'});",
+                    start_btn,
+                )
+                time.sleep(0.5)
+
+                # CORREÇÃO: Usar JavaScript click para evitar interceptação
+                driver.execute_script("arguments[0].click();", start_btn)
 
                 # Aguardar teste começar
                 if self._progress:
@@ -404,12 +442,20 @@ class BrasilBandaLargaProvider(SpeedTestProvider):
 
 
 class SimetProvider(SpeedTestProvider):
-    """Provedor NIC.br SIMET usando Selenium."""
+    """
+    Provedor NIC.br SIMET usando Selenium.
+
+    IMPORTANTE: O SIMET usa Flutter Web que renderiza em canvas.
+    Para extrair dados, precisamos habilitar o modo de acessibilidade
+    clicando no flt-semantics-placeholder, que expõe elementos via aria-label.
+    """
 
     def __init__(self, progress: Optional[ProgressState] = None):
         self._available = False
         self._error: Optional[str] = None
         self._progress = progress
+        self._webdriver = None
+        self._Options = None
 
         try:
             from selenium import webdriver
@@ -431,34 +477,56 @@ class SimetProvider(SpeedTestProvider):
     def run_test(self) -> Optional[SpeedTestResult]:
         """
         Executa teste no SIMET usando Flutter Web.
-        Requer habilitar acessibilidade e navegar pelo Shadow DOM.
+        Flutter renderiza em canvas, não no DOM tradicional.
+        Precisamos habilitar acessibilidade e buscar no Shadow DOM.
         """
         if not self._available:
             return None
 
         try:
+            from selenium.webdriver.common.keys import Keys
+            from selenium.webdriver.common.action_chains import ActionChains
+
             options = self._Options()
             options.add_argument("--headless=new")
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
             options.add_argument("--disable-gpu")
             options.add_argument("--window-size=1920,1080")
+            # Habilitar acessibilidade via flag
+            options.add_argument("--force-renderer-accessibility")
 
             driver = self._webdriver.Chrome(options=options)
-            driver.set_page_load_timeout(90)
+            driver.set_page_load_timeout(120)
 
             try:
-                # Navegar direto para o app com auto-measure
+                # Navegar para o app com auto-measure (inicia teste automaticamente)
                 driver.get("https://simet.nic.br/app/?auto-measure=true")
-                time.sleep(5)  # Flutter precisa carregar
+                time.sleep(8)  # Flutter precisa mais tempo para carregar
 
-                # Habilitar acessibilidade do Flutter (expõe DOM)
+                # CORREÇÃO: Forçar habilitação de acessibilidade do Flutter
+                # Pressionar Tab para ativar modo de acessibilidade
+                try:
+                    actions = ActionChains(driver)
+                    actions.send_keys(Keys.TAB).perform()
+                    time.sleep(1)
+                except Exception:
+                    pass
+
+                # Tentar clicar no placeholder de semântica
                 try:
                     driver.execute_script("""
+                        // Forçar modo de acessibilidade do Flutter
                         const placeholder = document.querySelector('flt-semantics-placeholder');
-                        if (placeholder) placeholder.click();
+                        if (placeholder) {
+                            placeholder.click();
+                            placeholder.focus();
+                        }
+                        // Também tentar via role
+                        const semanticsHost = document.querySelector('[role="application"]');
+                        if (semanticsHost) semanticsHost.click();
                     """)
-                    time.sleep(1)
+                    time.sleep(2)
                 except Exception:
                     pass
 
@@ -466,26 +534,8 @@ class SimetProvider(SpeedTestProvider):
                     self._progress.phase = "download"
                     self._progress.provider_name = self.name
 
-                # Tentar fechar modal de boas-vindas se existir
-                try:
-                    driver.execute_script("""
-                        const glassPane = document.querySelector('flt-glass-pane');
-                        if (glassPane && glassPane.shadowRoot) {
-                            const buttons = glassPane.shadowRoot.querySelectorAll('flt-semantics[role="button"]');
-                            for (const btn of buttons) {
-                                if (!btn.getAttribute('aria-label') || btn.getAttribute('aria-label') === '') {
-                                    btn.click();
-                                    break;
-                                }
-                            }
-                        }
-                    """)
-                    time.sleep(1)
-                except Exception:
-                    pass
-
-                # Polling para resultados
-                max_wait = 120  # SIMET pode demorar
+                # Polling para resultados - com múltiplas estratégias
+                max_wait = 150  # SIMET pode demorar bastante
                 start_time = time.time()
                 download_mbps = 0.0
                 upload_mbps = 0.0
@@ -493,50 +543,103 @@ class SimetProvider(SpeedTestProvider):
 
                 while time.time() - start_time < max_wait:
                     try:
-                        # Extrair valores do Flutter Shadow DOM via JavaScript
+                        # Estratégia 1: Buscar no Shadow DOM do flt-glass-pane
                         result = driver.execute_script("""
-                            const glassPane = document.querySelector('flt-glass-pane');
-                            if (!glassPane || !glassPane.shadowRoot) return null;
-                            
-                            const nodes = glassPane.shadowRoot.querySelectorAll('flt-semantics');
-                            let download = null, upload = null, latencia = null;
-                            
-                            nodes.forEach(node => {
-                                const text = node.textContent || node.getAttribute('aria-label') || '';
-                                const downloadMatch = text.match(/Download\\s*([\\d.,]+)\\s*Mbps/i);
-                                const uploadMatch = text.match(/Upload\\s*([\\d.,]+)\\s*Mbps/i);
-                                const latenciaMatch = text.match(/Latência\\s*([\\d.,]+)\\s*ms/i);
+                            // Função para buscar recursivamente em shadow roots
+                            function searchInShadow(root, results) {
+                                if (!root) return;
                                 
-                                if (downloadMatch) download = downloadMatch[1].replace(',', '.');
-                                if (uploadMatch) upload = uploadMatch[1].replace(',', '.');
-                                if (latenciaMatch) latencia = latenciaMatch[1].replace(',', '.');
-                            });
+                                // Buscar em elementos com texto/aria-label
+                                const elements = root.querySelectorAll ? 
+                                    root.querySelectorAll('*') : [];
+                                
+                                for (const el of elements) {
+                                    const text = (el.textContent || '') + ' ' + 
+                                                 (el.getAttribute('aria-label') || '') + ' ' +
+                                                 (el.getAttribute('aria-valuetext') || '');
+                                    
+                                    // Patterns mais flexíveis
+                                    let match;
+                                    
+                                    // Download: procurar por padrões como "Download 123.45 Mbps" ou "123.45 Mbps Download"
+                                    match = text.match(/Download[:\\s]*([\\d.,]+)\\s*M/i) ||
+                                            text.match(/([\\d.,]+)\\s*Mbps?\\s*Download/i) ||
+                                            text.match(/↓\\s*([\\d.,]+)/);
+                                    if (match && !results.download) {
+                                        results.download = match[1].replace(',', '.');
+                                    }
+                                    
+                                    // Upload
+                                    match = text.match(/Upload[:\\s]*([\\d.,]+)\\s*M/i) ||
+                                            text.match(/([\\d.,]+)\\s*Mbps?\\s*Upload/i) ||
+                                            text.match(/↑\\s*([\\d.,]+)/);
+                                    if (match && !results.upload) {
+                                        results.upload = match[1].replace(',', '.');
+                                    }
+                                    
+                                    // Latência
+                                    match = text.match(/Lat[êe]ncia[:\\s]*([\\d.,]+)\\s*ms/i) ||
+                                            text.match(/Ping[:\\s]*([\\d.,]+)\\s*ms/i) ||
+                                            text.match(/([\\d.,]+)\\s*ms/i);
+                                    if (match && !results.latencia && parseFloat(match[1].replace(',', '.')) < 1000) {
+                                        results.latencia = match[1].replace(',', '.');
+                                    }
+                                    
+                                    // Buscar em shadow roots aninhados
+                                    if (el.shadowRoot) {
+                                        searchInShadow(el.shadowRoot, results);
+                                    }
+                                }
+                            }
                             
-                            return { download, upload, latencia };
+                            const results = { download: null, upload: null, latencia: null };
+                            
+                            // Buscar em flt-glass-pane
+                            const glassPane = document.querySelector('flt-glass-pane');
+                            if (glassPane && glassPane.shadowRoot) {
+                                searchInShadow(glassPane.shadowRoot, results);
+                            }
+                            
+                            // Fallback: buscar no documento todo
+                            if (!results.download) {
+                                searchInShadow(document, results);
+                            }
+                            
+                            return results;
                         """)
 
                         if result:
                             if result.get("download"):
-                                download_mbps = float(result["download"])
-                                if self._progress:
-                                    self._progress.current_mbps = download_mbps
+                                try:
+                                    download_mbps = float(result["download"])
+                                    if self._progress:
+                                        self._progress.current_mbps = download_mbps
+                                except ValueError:
+                                    pass
                             if result.get("upload"):
-                                upload_mbps = float(result["upload"])
-                                if self._progress:
-                                    self._progress.phase = "upload"
+                                try:
+                                    upload_mbps = float(result["upload"])
+                                    if self._progress:
+                                        self._progress.phase = "upload"
+                                except ValueError:
+                                    pass
                             if result.get("latencia"):
-                                ping_ms = float(result["latencia"])
+                                try:
+                                    ping_ms = float(result["latencia"])
+                                except ValueError:
+                                    pass
 
                         if download_mbps > 0 and upload_mbps > 0:
                             break
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        self._error = str(e)[:50]
                     time.sleep(3)
 
                 if self._progress:
                     self._progress.phase = "idle"
 
                 if download_mbps == 0:
+                    self._error = "Não foi possível extrair resultados do Flutter"
                     return None
 
                 return SpeedTestResult(
@@ -594,31 +697,31 @@ class MultiProviderSpeedTester:
 
     def run_test_with_fallback(self) -> Optional[SpeedTestResult]:
         """
-        Executa teste com o próximo provedor, fallback para outros se falhar.
-        Atualiza current_testing_provider em tempo real.
+        Executa teste com o próximo provedor na rotação.
+        Cada chamada testa apenas UM provedor - a rotação é mantida entre chamadas.
+        Isso garante que todos os provedores sejam testados ao longo do tempo.
         """
         available = self.get_available_providers()
         if not available:
             self.current_testing_provider = ""
             return None
 
-        # Tentar próximo provedor na rotação
+        # Tentar próximo provedor na rotação (SEM fallback imediato)
+        # Isso garante que BrasilBandaLarga e SIMET sejam tentados na sua vez
         provider = self.get_next_provider()
         if provider:
             # Atualizar indicador de progresso
             self.current_testing_provider = provider.name
+            self.progress.provider_name = provider.name
             result = provider.run_test()
-            if result:
-                self.current_testing_provider = ""
-                return result
+            self.current_testing_provider = ""
 
-        # Fallback: tentar outros provedores
-        for provider in available:
-            self.current_testing_provider = provider.name
-            result = provider.run_test()
             if result:
-                self.current_testing_provider = ""
                 return result
+            else:
+                # Se falhou, retorna None mas o índice já avançou
+                # Na próxima chamada, o próximo provedor será tentado
+                return None
 
         self.current_testing_provider = ""
         return None
