@@ -45,6 +45,7 @@ class SpeedStats:
     timestamps: Deque[datetime.datetime] = field(
         default_factory=lambda: deque(maxlen=50)
     )
+    history_providers: Deque[str] = field(default_factory=lambda: deque(maxlen=50))
     last_result: Optional[SpeedTestResult] = None
     is_testing: bool = False
     test_count: int = 0
@@ -60,10 +61,14 @@ class SpeedStats:
         self.history_up.append(result.upload_mbps)
         self.timestamps.append(result.timestamp)
         self.last_result = result
+
+        # Armazenar provedor
+        provider = getattr(result, "provider_name", "Desconhecido")
+        self.history_providers.append(provider)
+
         self.test_count += 1
 
         # Armazenar por provedor
-        provider = getattr(result, "provider_name", "Desconhecido")
         self.results_by_provider[provider] = result
         if provider not in self.provider_names:
             self.provider_names.append(provider)

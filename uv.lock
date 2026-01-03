@@ -192,7 +192,9 @@ dependencies = [
     { name = "matplotlib" },
     { name = "plotext" },
     { name = "psutil" },
+    { name = "pypdf2" },
     { name = "pytest" },
+    { name = "reportlab" },
     { name = "requests" },
     { name = "rich" },
     { name = "scapy" },
@@ -214,7 +216,9 @@ requires-dist = [
     { name = "matplotlib", specifier = ">=3.10.0" },
     { name = "plotext", specifier = ">=5.3.2" },
     { name = "psutil", specifier = ">=7.2.1" },
+    { name = "pypdf2", specifier = ">=3.0.1" },
     { name = "pytest", specifier = ">=9.0.1" },
+    { name = "reportlab", specifier = ">=4.4.7" },
     { name = "requests", specifier = ">=2.32.0" },
     { name = "rich", specifier = ">=14.2.0" },
     { name = "scapy", specifier = ">=2.7.0" },
@@ -588,6 +592,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pypdf2"
+version = "3.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9f/bb/18dc3062d37db6c491392007dfd1a7f524bb95886eb956569ac38a23a784/PyPDF2-3.0.1.tar.gz", hash = "sha256:a74408f69ba6271f71b9352ef4ed03dc53a31aa404d29b5d31f53bfecfee1440", size = 227419, upload-time = "2022-12-31T10:36:13.13Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8e/5e/c86a5643653825d3c913719e788e41386bee415c2b87b4f955432f2de6b2/pypdf2-3.0.1-py3-none-any.whl", hash = "sha256:d16e4205cfee272fbdc0568b68d82be796540b1537508cef59388f839c191928", size = 232572, upload-time = "2022-12-31T10:36:10.327Z" },
+]
+
+[[package]]
 name = "pysocks"
 version = "1.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -648,6 +661,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/66/c0/0c8b6ad9f17a802ee498c46e004a0eb49bc148f2fd230864601a86dcf6db/python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3", size = 342432, upload-time = "2024-03-01T18:36:20.211Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427", size = 229892, upload-time = "2024-03-01T18:36:18.57Z" },
+]
+
+[[package]]
+name = "reportlab"
+version = "4.4.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "charset-normalizer" },
+    { name = "pillow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f8/a7/4600cb1cfc975a06552e8927844ddcb8fd90217e9a6068f5c7aa76c3f221/reportlab-4.4.7.tar.gz", hash = "sha256:41e8287af965e5996764933f3e75e7f363c3b6f252ba172f9429e81658d7b170", size = 3714000, upload-time = "2025-12-21T11:50:11.336Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e7/bf/a29507386366ab17306b187ad247dd78e4599be9032cb5f44c940f547fc0/reportlab-4.4.7-py3-none-any.whl", hash = "sha256:8fa05cbf468e0e76745caf2029a4770276edb3c8e86a0b71e0398926baf50673", size = 1954263, upload-time = "2025-12-21T11:50:08.93Z" },
 ]
 
 [[package]]

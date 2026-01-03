@@ -604,13 +604,57 @@ def _generate_combined_pdf_worker():
                 pass
 
         # ======================================================================
-        # GERAR PDF FORMAL COMPLETO
+        # GERAR PDF FORMAL COMPLETO - ESTILO OFICIAL ANATEL/GOV.BR
         # ======================================================================
+        # Cores oficiais inspiradas no gov.br/ANATEL
+        AZUL_GOV = "#071D41"  # Azul escuro gov.br
+        AZUL_ANATEL = "#1351B4"  # Azul ANATEL
+        AMARELO_GOV = "#FFCD07"  # Amarelo destaque
+        CINZA_CLARO = "#F8F8F8"
+
         with PdfPages(pdf_filename) as pdf:
-            # === PÁGINA 1: CAPA ===
-            fig_capa = plt.figure(figsize=(8.5, 11))
+            # === PÁGINA 1: CAPA PROFISSIONAL ===
+            fig_capa = plt.figure(figsize=(8.5, 11), facecolor="white")
             ax_capa = fig_capa.add_subplot(111)
             ax_capa.axis("off")
+            ax_capa.set_xlim(0, 1)
+            ax_capa.set_ylim(0, 1)
+
+            # Header azul institucional
+            rect_header = plt.Rectangle(
+                (0, 0.85), 1, 0.15, facecolor=AZUL_GOV, transform=ax_capa.transAxes
+            )
+            ax_capa.add_patch(rect_header)
+
+            # Linha amarela decorativa
+            rect_line = plt.Rectangle(
+                (0, 0.84), 1, 0.01, facecolor=AMARELO_GOV, transform=ax_capa.transAxes
+            )
+            ax_capa.add_patch(rect_line)
+
+            # Título principal no header
+            ax_capa.text(
+                0.5,
+                0.93,
+                "AGÊNCIA NACIONAL DE TELECOMUNICAÇÕES",
+                ha="center",
+                va="center",
+                fontsize=12,
+                color="white",
+                fontweight="bold",
+                transform=ax_capa.transAxes,
+            )
+            ax_capa.text(
+                0.5,
+                0.88,
+                "ANATEL",
+                ha="center",
+                va="center",
+                fontsize=24,
+                color="white",
+                fontweight="bold",
+                transform=ax_capa.transAxes,
+            )
 
             # Data/hora atual
             now = datetime.datetime.now()
@@ -624,130 +668,310 @@ def _generate_combined_pdf_worker():
                 inicio_str = ping_data[0][0].strftime("%d/%m/%Y %H:%M:%S")
             else:
                 inicio_str = "N/A"
-
             fim_str = now.strftime("%d/%m/%Y %H:%M:%S")
 
-            capa_text = f"""
-RELATÓRIO DE AUDITORIA DE QUALIDADE
-DE SERVIÇO DE INTERNET
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Data do Relatório: {data_str}
-Hora: {hora_str}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-INFORMAÇÕES CONTRATUAIS
-
-Operadora: {contract_info.operadora}
-Plano: {contract_info.plano}
-Velocidade Contratada (Download): {contract_info.velocidade_down_mbps} Mbps
-Velocidade Contratada (Upload): {contract_info.velocidade_up_mbps} Mbps
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-PERÍODO DA ANÁLISE
-
-Início: {inicio_str}
-Fim: {fim_str}
-
-Total de Medições de Ping: {len(ping_data)}
-Total de Testes de Velocidade: {stats.test_count}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-REGULAMENTAÇÃO APLICÁVEL
-
-• ANATEL - Resolução nº 574/2011
-• RQUAL - Regulamento de Qualidade de Serviços
-• Código de Defesa do Consumidor
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
+            # Título do documento
             ax_capa.text(
                 0.5,
-                0.5,
-                capa_text,
+                0.72,
+                "RELATÓRIO TÉCNICO DE AUDITORIA",
+                ha="center",
+                va="center",
+                fontsize=18,
+                color=AZUL_GOV,
+                fontweight="bold",
                 transform=ax_capa.transAxes,
-                fontsize=11,
-                verticalalignment="center",
-                horizontalalignment="center",
-                family="monospace",
             )
-            pdf.savefig(fig_capa, dpi=150)
+            ax_capa.text(
+                0.5,
+                0.67,
+                "Qualidade do Serviço de Comunicação Multimídia",
+                ha="center",
+                va="center",
+                fontsize=14,
+                color=AZUL_ANATEL,
+                transform=ax_capa.transAxes,
+            )
+
+            # Box de informações contratuais
+            rect_info = plt.Rectangle(
+                (0.08, 0.35),
+                0.84,
+                0.25,
+                facecolor=CINZA_CLARO,
+                transform=ax_capa.transAxes,
+                linewidth=2,
+                edgecolor=AZUL_ANATEL,
+            )
+            ax_capa.add_patch(rect_info)
+
+            ax_capa.text(
+                0.5,
+                0.57,
+                "DADOS DA PRESTADORA E CONTRATO",
+                ha="center",
+                va="center",
+                fontsize=11,
+                color=AZUL_GOV,
+                fontweight="bold",
+                transform=ax_capa.transAxes,
+            )
+
+            info_lines = [
+                f"Prestadora: {contract_info.operadora}",
+                f"Plano: {contract_info.plano}",
+                f"Velocidade Contratada: {contract_info.velocidade_down_mbps:.0f} Mbps (download) / {contract_info.velocidade_up_mbps:.0f} Mbps (upload)",
+                "",
+                f"Período de Análise: {inicio_str} até {fim_str}",
+                f"Total de Medições: {len(ping_data)} (ping) | {stats.test_count} (velocidade)",
+            ]
+
+            for i, line in enumerate(info_lines):
+                ax_capa.text(
+                    0.5,
+                    0.52 - i * 0.03,
+                    line,
+                    ha="center",
+                    va="center",
+                    fontsize=9,
+                    color="#333333",
+                    transform=ax_capa.transAxes,
+                )
+
+            # Referências legais
+            ax_capa.text(
+                0.5,
+                0.25,
+                "FUNDAMENTAÇÃO LEGAL",
+                ha="center",
+                va="center",
+                fontsize=11,
+                color=AZUL_GOV,
+                fontweight="bold",
+                transform=ax_capa.transAxes,
+            )
+
+            legal_lines = [
+                "• Resolução nº 574/2011 da ANATEL",
+                "• RQUAL - Regulamento de Qualidade dos Serviços de Telecomunicações",
+                "• Resolução nº 777/2025 - Regulamento Geral de Direitos do Consumidor",
+                "• Lei nº 8.078/1990 - Código de Defesa do Consumidor",
+            ]
+
+            for i, line in enumerate(legal_lines):
+                ax_capa.text(
+                    0.5,
+                    0.21 - i * 0.025,
+                    line,
+                    ha="center",
+                    va="center",
+                    fontsize=8,
+                    color="#555555",
+                    transform=ax_capa.transAxes,
+                )
+
+            # Footer
+            rect_footer = plt.Rectangle(
+                (0, 0), 1, 0.06, facecolor=AZUL_GOV, transform=ax_capa.transAxes
+            )
+            ax_capa.add_patch(rect_footer)
+
+            ax_capa.text(
+                0.5,
+                0.03,
+                f"Gerado em: {data_str} às {hora_str} | Conforme metodologia ANATEL Qualidade",
+                ha="center",
+                va="center",
+                fontsize=8,
+                color="white",
+                transform=ax_capa.transAxes,
+            )
+
+            pdf.savefig(fig_capa, dpi=150, facecolor="white")
             plt.close(fig_capa)
 
-            # === PÁGINA 2: METODOLOGIA ===
-            fig_met = plt.figure(figsize=(8.5, 11))
+            # === PÁGINA 2: METODOLOGIA - ESTILO PROFISSIONAL ===
+            fig_met = plt.figure(figsize=(8.5, 11), facecolor="white")
             ax_met = fig_met.add_subplot(111)
             ax_met.axis("off")
+            ax_met.set_xlim(0, 1)
+            ax_met.set_ylim(0, 1)
 
-            metodologia_text = f"""
-METODOLOGIA DE AFERIÇÃO
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. BASE LEGAL
-
-Conforme a Resolução nº 574/2011 da ANATEL e o RQUAL (Regulamento 
-de Qualidade dos Serviços de Telecomunicações), as prestadoras 
-devem garantir:
-
-• Velocidade MÉDIA mensal: mínimo de {contract_info.percentual_medio_anatel:.0f}% do contratado
-• Velocidade INSTANTÂNEA: mínimo de {contract_info.percentual_instantaneo_anatel:.0f}% em cada medição
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-2. PROCEDIMENTO DE TESTE
-
-Para que a aferição seja válida conforme regulamentação:
-
-• Equipamento de teste conectado via cabo de rede (LAN)
-• Conexão direta na porta LAN da ONU/Roteador
-• Testes via Wi-Fi NÃO são considerados válidos para fins
-  de comprovação contratual
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-3. PARÂMETROS DE ANÁLISE
-
-Velocidade Contratada Download: {contract_info.velocidade_down_mbps} Mbps
-Velocidade Contratada Upload: {contract_info.velocidade_up_mbps} Mbps
-
-Mínimo Aceitável Download (80%): {contract_info.velocidade_down_mbps * 0.8:.1f} Mbps
-Mínimo Aceitável Upload (80%): {contract_info.velocidade_up_mbps * 0.8:.1f} Mbps
-
-Mínimo Instantâneo Download (40%): {contract_info.velocidade_down_mbps * 0.4:.1f} Mbps
-Mínimo Instantâneo Upload (40%): {contract_info.velocidade_up_mbps * 0.4:.1f} Mbps
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-4. PONTOS DE TESTE
-
-Gateway Local: {config.gateway_ip}
-Servidor Externo: {config.external_ip}
-Limite de Latência: {config.lag_threshold_ms} ms
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
+            # Header azul
+            rect_header = plt.Rectangle(
+                (0, 0.92), 1, 0.08, facecolor=AZUL_GOV, transform=ax_met.transAxes
+            )
+            ax_met.add_patch(rect_header)
             ax_met.text(
                 0.5,
-                0.5,
-                metodologia_text,
+                0.96,
+                "METODOLOGIA DE AFERIÇÃO",
+                ha="center",
+                va="center",
+                fontsize=14,
+                color="white",
+                fontweight="bold",
                 transform=ax_met.transAxes,
-                fontsize=10,
-                verticalalignment="center",
-                horizontalalignment="center",
-                family="monospace",
             )
-            pdf.savefig(fig_met, dpi=150)
+
+            # Seção 1: Base Legal
+            ax_met.text(
+                0.08,
+                0.86,
+                "1. BASE LEGAL",
+                ha="left",
+                va="center",
+                fontsize=11,
+                color=AZUL_GOV,
+                fontweight="bold",
+                transform=ax_met.transAxes,
+            )
+
+            base_legal = [
+                "Conforme a Resolução nº 574/2011 da ANATEL e o RQUAL,",
+                "as prestadoras devem garantir:",
+                "",
+                f"• Velocidade MÉDIA mensal: mínimo de {contract_info.percentual_medio_anatel:.0f}% do contratado",
+                f"• Velocidade INSTANTÂNEA: mínimo de {contract_info.percentual_instantaneo_anatel:.0f}% em cada medição",
+            ]
+            for i, line in enumerate(base_legal):
+                ax_met.text(
+                    0.08,
+                    0.82 - i * 0.025,
+                    line,
+                    ha="left",
+                    va="center",
+                    fontsize=9,
+                    color="#333333",
+                    transform=ax_met.transAxes,
+                )
+
+            # Seção 2: Procedimento
+            ax_met.text(
+                0.08,
+                0.66,
+                "2. PROCEDIMENTO DE TESTE",
+                ha="left",
+                va="center",
+                fontsize=11,
+                color=AZUL_GOV,
+                fontweight="bold",
+                transform=ax_met.transAxes,
+            )
+
+            procedimento = [
+                "Para que a aferição seja válida conforme regulamentação:",
+                "",
+                "• Equipamento conectado via cabo de rede (LAN)",
+                "• Conexão direta na porta LAN da ONU/Roteador",
+                "• Testes via Wi-Fi NÃO são considerados válidos",
+            ]
+            for i, line in enumerate(procedimento):
+                ax_met.text(
+                    0.08,
+                    0.62 - i * 0.025,
+                    line,
+                    ha="left",
+                    va="center",
+                    fontsize=9,
+                    color="#333333",
+                    transform=ax_met.transAxes,
+                )
+
+            # Seção 3: Parâmetros
+            ax_met.text(
+                0.08,
+                0.46,
+                "3. PARÂMETROS DE ANÁLISE",
+                ha="left",
+                va="center",
+                fontsize=11,
+                color=AZUL_GOV,
+                fontweight="bold",
+                transform=ax_met.transAxes,
+            )
+
+            # Box de parâmetros
+            rect_params = plt.Rectangle(
+                (0.08, 0.28),
+                0.84,
+                0.16,
+                facecolor=CINZA_CLARO,
+                transform=ax_met.transAxes,
+                linewidth=1,
+                edgecolor=AZUL_ANATEL,
+            )
+            ax_met.add_patch(rect_params)
+
+            params = [
+                f"Velocidade Contratada: {contract_info.velocidade_down_mbps:.0f} Mbps (↓) / {contract_info.velocidade_up_mbps:.0f} Mbps (↑)",
+                f"Mínimo 80%: {contract_info.velocidade_down_mbps * 0.8:.0f} Mbps (↓) / {contract_info.velocidade_up_mbps * 0.8:.0f} Mbps (↑)",
+                f"Mínimo 40%: {contract_info.velocidade_down_mbps * 0.4:.0f} Mbps (↓) / {contract_info.velocidade_up_mbps * 0.4:.0f} Mbps (↑)",
+            ]
+            for i, line in enumerate(params):
+                ax_met.text(
+                    0.5,
+                    0.40 - i * 0.04,
+                    line,
+                    ha="center",
+                    va="center",
+                    fontsize=9,
+                    color="#333333",
+                    transform=ax_met.transAxes,
+                )
+
+            # Seção 4: Pontos de Teste
+            ax_met.text(
+                0.08,
+                0.22,
+                "4. PONTOS DE TESTE",
+                ha="left",
+                va="center",
+                fontsize=11,
+                color=AZUL_GOV,
+                fontweight="bold",
+                transform=ax_met.transAxes,
+            )
+
+            pontos = [
+                f"Gateway Local: {config.gateway_ip}",
+                f"Servidor Externo: {config.external_ip}",
+                f"Limite de Latência: {config.lag_threshold_ms} ms",
+            ]
+            for i, line in enumerate(pontos):
+                ax_met.text(
+                    0.08,
+                    0.18 - i * 0.025,
+                    line,
+                    ha="left",
+                    va="center",
+                    fontsize=9,
+                    color="#333333",
+                    transform=ax_met.transAxes,
+                )
+
+            # Footer
+            rect_footer = plt.Rectangle(
+                (0, 0), 1, 0.04, facecolor=AZUL_GOV, transform=ax_met.transAxes
+            )
+            ax_met.add_patch(rect_footer)
+            ax_met.text(
+                0.5,
+                0.02,
+                "ANATEL - Agência Nacional de Telecomunicações",
+                ha="center",
+                va="center",
+                fontsize=7,
+                color="white",
+                transform=ax_met.transAxes,
+            )
+
+            pdf.savefig(fig_met, dpi=150, facecolor="white")
             plt.close(fig_met)
 
-            # === PÁGINAS 3+: TABELA DE MEDIÇÕES DE PING ===
+            # === PÁGINAS 3+: TABELA DE MEDIÇÕES DE PING (ESTILO PROFISSIONAL) ===
             if ping_data:
-                # Criar tabelas de ping em páginas (máximo 40 linhas por página)
-                rows_per_page = 40
+                rows_per_page = 35  # Reduzido para caber header/footer
                 total_pages = (len(ping_data) + rows_per_page - 1) // rows_per_page
 
                 for page_num in range(total_pages):
@@ -755,54 +979,206 @@ Limite de Latência: {config.lag_threshold_ms} ms
                     end_idx = min(start_idx + rows_per_page, len(ping_data))
                     page_data = ping_data[start_idx:end_idx]
 
-                    fig_ping = plt.figure(figsize=(8.5, 11))
+                    fig_ping = plt.figure(figsize=(8.5, 11), facecolor="white")
                     ax_ping = fig_ping.add_subplot(111)
                     ax_ping.axis("off")
+                    ax_ping.set_xlim(0, 1)
+                    ax_ping.set_ylim(0, 1)
 
-                    # Cabeçalho
-                    header = f"REGISTRO COMPLETO DE MEDIÇÕES DE PING\nPágina {page_num + 1} de {total_pages}\n\n"
-                    header += f"{'#':<5} {'Timestamp':<20} {'Gateway':<12} {'Externo':<12} {'Status':<15}\n"
-                    header += "─" * 70 + "\n"
+                    # Header institucional
+                    rect_header = plt.Rectangle(
+                        (0, 0.92),
+                        1,
+                        0.08,
+                        facecolor=AZUL_GOV,
+                        transform=ax_ping.transAxes,
+                    )
+                    ax_ping.add_patch(rect_header)
+                    ax_ping.text(
+                        0.5,
+                        0.96,
+                        f"REGISTRO DE MEDIÇÕES DE PING - Página {page_num + 1}/{total_pages}",
+                        ha="center",
+                        va="center",
+                        fontsize=12,
+                        color="white",
+                        fontweight="bold",
+                        transform=ax_ping.transAxes,
+                    )
 
-                    rows = []
-                    for i, (ts, local, ext) in enumerate(
-                        page_data, start=start_idx + 1
-                    ):
+                    # Cabeçalho da tabela (fundo azul)
+                    rect_table_header = plt.Rectangle(
+                        (0.02, 0.86),
+                        0.96,
+                        0.04,
+                        color=AZUL_ANATEL,
+                        transform=ax_ping.transAxes,
+                    )
+                    ax_ping.add_patch(rect_table_header)
+                    ax_ping.text(
+                        0.04,
+                        0.88,
+                        "#",
+                        ha="left",
+                        va="center",
+                        fontsize=8,
+                        color="white",
+                        fontweight="bold",
+                        transform=ax_ping.transAxes,
+                    )
+                    ax_ping.text(
+                        0.12,
+                        0.88,
+                        "Timestamp",
+                        ha="left",
+                        va="center",
+                        fontsize=8,
+                        color="white",
+                        fontweight="bold",
+                        transform=ax_ping.transAxes,
+                    )
+                    ax_ping.text(
+                        0.45,
+                        0.88,
+                        "Gateway",
+                        ha="left",
+                        va="center",
+                        fontsize=8,
+                        color="white",
+                        fontweight="bold",
+                        transform=ax_ping.transAxes,
+                    )
+                    ax_ping.text(
+                        0.62,
+                        0.88,
+                        "Externo",
+                        ha="left",
+                        va="center",
+                        fontsize=8,
+                        color="white",
+                        fontweight="bold",
+                        transform=ax_ping.transAxes,
+                    )
+                    ax_ping.text(
+                        0.80,
+                        0.88,
+                        "Status",
+                        ha="left",
+                        va="center",
+                        fontsize=8,
+                        color="white",
+                        fontweight="bold",
+                        transform=ax_ping.transAxes,
+                    )
+
+                    # Linhas da tabela com zebra striping
+                    row_height = 0.022
+                    for row_idx, (ts, local, ext) in enumerate(page_data):
+                        y_pos = 0.84 - row_idx * row_height
+                        global_idx = start_idx + row_idx + 1
+
+                        # Zebra striping
+                        if row_idx % 2 == 0:
+                            rect_row = plt.Rectangle(
+                                (0.02, y_pos - row_height / 2),
+                                0.96,
+                                row_height,
+                                color=CINZA_CLARO,
+                                transform=ax_ping.transAxes,
+                            )
+                            ax_ping.add_patch(rect_row)
+
                         ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
                         local_str = f"{local:.1f}ms" if local is not None else "TIMEOUT"
                         ext_str = f"{ext:.1f}ms" if ext is not None else "TIMEOUT"
 
                         if local is None or ext is None:
                             status = "CRÍTICO"
+                            status_color = "#DC3545"
                         elif (
                             local > config.lag_threshold_ms
                             or ext > config.lag_threshold_ms
                         ):
                             status = "ALTO"
+                            status_color = "#FFC107"
                         else:
                             status = "OK"
+                            status_color = "#28A745"
 
-                        rows.append(
-                            f"{i:<5} {ts_str:<20} {local_str:<12} {ext_str:<12} {status:<15}"
+                        ax_ping.text(
+                            0.04,
+                            y_pos,
+                            str(global_idx),
+                            ha="left",
+                            va="center",
+                            fontsize=7,
+                            color="#333",
+                            transform=ax_ping.transAxes,
+                        )
+                        ax_ping.text(
+                            0.12,
+                            y_pos,
+                            ts_str,
+                            ha="left",
+                            va="center",
+                            fontsize=7,
+                            color="#333",
+                            transform=ax_ping.transAxes,
+                        )
+                        ax_ping.text(
+                            0.45,
+                            y_pos,
+                            local_str,
+                            ha="left",
+                            va="center",
+                            fontsize=7,
+                            color="#333",
+                            transform=ax_ping.transAxes,
+                        )
+                        ax_ping.text(
+                            0.62,
+                            y_pos,
+                            ext_str,
+                            ha="left",
+                            va="center",
+                            fontsize=7,
+                            color="#333",
+                            transform=ax_ping.transAxes,
+                        )
+                        ax_ping.text(
+                            0.80,
+                            y_pos,
+                            status,
+                            ha="left",
+                            va="center",
+                            fontsize=7,
+                            color=status_color,
+                            fontweight="bold",
+                            transform=ax_ping.transAxes,
                         )
 
-                    table_text = header + "\n".join(rows)
-
-                    ax_ping.text(
-                        0.02,
-                        0.98,
-                        table_text,
-                        transform=ax_ping.transAxes,
-                        fontsize=8,
-                        verticalalignment="top",
-                        horizontalalignment="left",
-                        family="monospace",
+                    # Footer institucional
+                    rect_footer = plt.Rectangle(
+                        (0, 0), 1, 0.04, facecolor=AZUL_GOV, transform=ax_ping.transAxes
                     )
-                    pdf.savefig(fig_ping, dpi=150)
+                    ax_ping.add_patch(rect_footer)
+                    ax_ping.text(
+                        0.5,
+                        0.02,
+                        "ANATEL - Agência Nacional de Telecomunicações",
+                        ha="center",
+                        va="center",
+                        fontsize=7,
+                        color="white",
+                        transform=ax_ping.transAxes,
+                    )
+
+                    pdf.savefig(fig_ping, dpi=150, facecolor="white")
                     plt.close(fig_ping)
 
-            # === GRÁFICO DE PING ===
-            fig1, ax1 = plt.subplots(figsize=(14, 8))
+            # === GRÁFICO DE PING (ESTILO INSTITUCIONAL) ===
+            fig1 = plt.figure(figsize=(14, 8), facecolor="white")
+            ax1 = fig1.add_subplot(111)
 
             times_ping = (
                 [p[0] for p in ping_data] if ping_data else list(local_stats.timestamps)
@@ -815,24 +1191,30 @@ Limite de Latência: {config.lag_threshold_ms} ms
             )
 
             if times_ping:
+                # Cores institucionais
                 ax1.plot(
                     times_ping,
                     local_valid,
                     label=f"Gateway ({config.gateway_ip})",
-                    color="cyan",
+                    color=AZUL_ANATEL,
                     linewidth=2,
+                    marker="o",
+                    markersize=3,
                 )
                 ax1.plot(
                     times_ping,
                     ext_valid,
                     label=f"Externo ({config.external_ip})",
-                    color="orange",
+                    color=AMARELO_GOV,
                     linewidth=2,
+                    marker="s",
+                    markersize=3,
                 )
                 ax1.axhline(
                     y=config.lag_threshold_ms,
-                    color="red",
+                    color="#DC3545",
                     linestyle="--",
+                    linewidth=2,
                     label=f"Limite ({config.lag_threshold_ms}ms)",
                 )
                 ax1.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
@@ -844,6 +1226,7 @@ Limite de Latência: {config.lag_threshold_ms} ms
                     f"Gráfico de Latência (Ping)\n{start_str} → {end_str}",
                     fontsize=14,
                     fontweight="bold",
+                    color=AZUL_GOV,
                 )
 
                 # Estatísticas
@@ -863,84 +1246,231 @@ Limite de Latência: {config.lag_threshold_ms} ms
                         transform=ax1.transAxes,
                         fontsize=9,
                         verticalalignment="top",
-                        bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.8),
+                        bbox=dict(
+                            boxstyle="round",
+                            facecolor=CINZA_CLARO,
+                            edgecolor=AZUL_ANATEL,
+                            alpha=0.9,
+                        ),
                     )
             else:
                 ax1.text(
                     0.5, 0.5, "Sem dados de ping disponíveis", ha="center", va="center"
                 )
 
-            ax1.set_xlabel("Tempo")
-            ax1.set_ylabel("Ping (ms)")
+            ax1.set_xlabel("Tempo", fontweight="bold")
+            ax1.set_ylabel("Ping (ms)", fontweight="bold")
             ax1.legend(loc="upper right")
             ax1.grid(True, alpha=0.3)
+            ax1.set_facecolor("#FAFAFA")
 
             plt.tight_layout()
-            pdf.savefig(fig1, dpi=150)
+            pdf.savefig(fig1, dpi=150, facecolor="white")
             plt.close(fig1)
 
-            # === TABELA DE TESTES DE VELOCIDADE ===
+            # === TABELA DE TESTES DE VELOCIDADE (ESTILO PROFISSIONAL) ===
             if stats.test_count > 0:
-                # Tabela de velocidade
-                fig_speed = plt.figure(figsize=(8.5, 11))
+                fig_speed = plt.figure(figsize=(8.5, 11), facecolor="white")
                 ax_speed = fig_speed.add_subplot(111)
                 ax_speed.axis("off")
+                ax_speed.set_xlim(0, 1)
+                ax_speed.set_ylim(0, 1)
 
-                header = "REGISTRO COMPLETO DE TESTES DE VELOCIDADE\n\n"
-                header += f"{'#':<3} {'Timestamp':<20} {'Down':<10} {'Up':<10} {'%Down':<8} {'%Up':<8} {'Status':<12}\n"
-                header += "─" * 80 + "\n"
+                # Header institucional
+                rect_header = plt.Rectangle(
+                    (0, 0.92), 1, 0.08, facecolor=AZUL_GOV, transform=ax_speed.transAxes
+                )
+                ax_speed.add_patch(rect_header)
+                ax_speed.text(
+                    0.5,
+                    0.96,
+                    f"REGISTRO DE TESTES DE VELOCIDADE - {stats.test_count} testes",
+                    ha="center",
+                    va="center",
+                    fontsize=12,
+                    color="white",
+                    fontweight="bold",
+                    transform=ax_speed.transAxes,
+                )
 
-                rows = []
-                violations_80_down = 0
-                violations_80_up = 0
-                violations_40_down = 0
-                violations_40_up = 0
+                # Cabeçalho da tabela (reorganizado com Provedor)
+                rect_table_header = plt.Rectangle(
+                    (0.02, 0.86),
+                    0.96,
+                    0.04,
+                    color=AZUL_ANATEL,
+                    transform=ax_speed.transAxes,
+                )
+                ax_speed.add_patch(rect_table_header)
 
-                for i, (ts, down, up) in enumerate(
-                    zip(stats.timestamps, stats.history_down, stats.history_up), start=1
-                ):
-                    ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
-                    pct_down = (down / contract_info.velocidade_down_mbps) * 100
-                    pct_up = (up / contract_info.velocidade_up_mbps) * 100
-
-                    # Contar violações
-                    if pct_down < contract_info.percentual_medio_anatel:
-                        violations_80_down += 1
-                    if pct_up < contract_info.percentual_medio_anatel:
-                        violations_80_up += 1
-                    if pct_down < contract_info.percentual_instantaneo_anatel:
-                        violations_40_down += 1
-                    if pct_up < contract_info.percentual_instantaneo_anatel:
-                        violations_40_up += 1
-
-                    if pct_down < 40 or pct_up < 40:
-                        status = "VIOLAÇÃO 40%"
-                    elif pct_down < 80 or pct_up < 80:
-                        status = "ABAIXO 80%"
-                    else:
-                        status = "CONFORME"
-
-                    rows.append(
-                        f"{i:<3} {ts_str:<20} {down:>7.1f}Mbps {up:>7.1f}Mbps {pct_down:>6.1f}% {pct_up:>6.1f}% {status:<12}"
+                # Colunas: #, Timestamp, Provedor, Down, Up, Status
+                col_positions = [0.03, 0.08, 0.28, 0.46, 0.60, 0.74, 0.88]
+                headers = [
+                    "#",
+                    "Horário",
+                    "Provedor",
+                    "Download",
+                    "Upload",
+                    "%Vel",
+                    "Status",
+                ]
+                for pos, header in zip(col_positions, headers):
+                    ax_speed.text(
+                        pos,
+                        0.88,
+                        header,
+                        ha="left",
+                        va="center",
+                        fontsize=7,
+                        color="white",
+                        fontweight="bold",
+                        transform=ax_speed.transAxes,
                     )
 
-                table_text = header + "\n".join(rows)
-
-                ax_speed.text(
-                    0.02,
-                    0.98,
-                    table_text,
-                    transform=ax_speed.transAxes,
-                    fontsize=8,
-                    verticalalignment="top",
-                    horizontalalignment="left",
-                    family="monospace",
+                # Obter lista de provedores (se disponível)
+                providers = (
+                    list(stats.history_providers)
+                    if hasattr(stats, "history_providers")
+                    else []
                 )
-                pdf.savefig(fig_speed, dpi=150)
+
+                # Linhas da tabela
+                row_height = 0.025
+                for row_idx, (ts, down, up) in enumerate(
+                    zip(stats.timestamps, stats.history_down, stats.history_up)
+                ):
+                    y_pos = 0.84 - row_idx * row_height
+
+                    # Zebra striping
+                    if row_idx % 2 == 0:
+                        rect_row = plt.Rectangle(
+                            (0.02, y_pos - row_height / 2),
+                            0.96,
+                            row_height,
+                            color=CINZA_CLARO,
+                            transform=ax_speed.transAxes,
+                        )
+                        ax_speed.add_patch(rect_row)
+
+                    ts_str = ts.strftime("%H:%M:%S")
+                    pct_down = (down / contract_info.velocidade_down_mbps) * 100
+                    pct_up = (up / contract_info.velocidade_up_mbps) * 100
+                    pct_avg = (pct_down + pct_up) / 2
+
+                    # Obter provedor
+                    provider_name = (
+                        providers[row_idx] if row_idx < len(providers) else "—"
+                    )
+                    # Abreviar nome do provedor se for muito longo
+                    if len(provider_name) > 12:
+                        provider_name = provider_name[:11] + "…"
+
+                    if pct_down < 40 or pct_up < 40:
+                        status = "VIOLAÇÃO"
+                        status_color = "#DC3545"
+                    elif pct_down < 80 or pct_up < 80:
+                        status = "ABAIXO"
+                        status_color = "#FFC107"
+                    else:
+                        status = "CONFORME"
+                        status_color = "#28A745"
+
+                    # Dados da linha
+                    ax_speed.text(
+                        col_positions[0],
+                        y_pos,
+                        str(row_idx + 1),
+                        ha="left",
+                        va="center",
+                        fontsize=6,
+                        color="#333",
+                        transform=ax_speed.transAxes,
+                    )
+                    ax_speed.text(
+                        col_positions[1],
+                        y_pos,
+                        ts_str,
+                        ha="left",
+                        va="center",
+                        fontsize=6,
+                        color="#333",
+                        transform=ax_speed.transAxes,
+                    )
+                    ax_speed.text(
+                        col_positions[2],
+                        y_pos,
+                        provider_name,
+                        ha="left",
+                        va="center",
+                        fontsize=6,
+                        color=AZUL_ANATEL,
+                        transform=ax_speed.transAxes,
+                    )
+                    ax_speed.text(
+                        col_positions[3],
+                        y_pos,
+                        f"{down:.0f}Mbps",
+                        ha="left",
+                        va="center",
+                        fontsize=6,
+                        color="#333",
+                        transform=ax_speed.transAxes,
+                    )
+                    ax_speed.text(
+                        col_positions[4],
+                        y_pos,
+                        f"{up:.0f}Mbps",
+                        ha="left",
+                        va="center",
+                        fontsize=6,
+                        color="#333",
+                        transform=ax_speed.transAxes,
+                    )
+                    ax_speed.text(
+                        col_positions[5],
+                        y_pos,
+                        f"{pct_avg:.0f}%",
+                        ha="left",
+                        va="center",
+                        fontsize=6,
+                        color="#333",
+                        transform=ax_speed.transAxes,
+                    )
+                    ax_speed.text(
+                        col_positions[6],
+                        y_pos,
+                        status,
+                        ha="left",
+                        va="center",
+                        fontsize=6,
+                        color=status_color,
+                        fontweight="bold",
+                        transform=ax_speed.transAxes,
+                    )
+
+                # Footer institucional
+                rect_footer = plt.Rectangle(
+                    (0, 0), 1, 0.04, facecolor=AZUL_GOV, transform=ax_speed.transAxes
+                )
+                ax_speed.add_patch(rect_footer)
+                ax_speed.text(
+                    0.5,
+                    0.02,
+                    "ANATEL - Agência Nacional de Telecomunicações",
+                    ha="center",
+                    va="center",
+                    fontsize=7,
+                    color="white",
+                    transform=ax_speed.transAxes,
+                )
+
+                pdf.savefig(fig_speed, dpi=150, facecolor="white")
                 plt.close(fig_speed)
 
-                # Gráfico de velocidade
-                fig2, (ax2, ax3) = plt.subplots(2, 1, figsize=(14, 10))
+                # Gráfico de velocidade (ESTILO INSTITUCIONAL)
+                fig2 = plt.figure(figsize=(14, 10), facecolor="white")
+                ax2 = fig2.add_subplot(211)
+                ax3 = fig2.add_subplot(212)
 
                 times_speed = list(stats.timestamps)
                 down_vals = list(stats.history_down)
@@ -953,71 +1483,79 @@ Limite de Latência: {config.lag_threshold_ms} ms
                 min_up = min(up_vals) if up_vals else 0
                 max_up = max(up_vals) if up_vals else 0
 
-                # Gráfico de Download
+                # Gráfico de Download (cores institucionais)
                 ax2.plot(
                     times_speed,
                     down_vals,
                     label="Download",
-                    color="cyan",
+                    color=AZUL_ANATEL,
                     linewidth=2,
                     marker="o",
-                    markersize=4,
+                    markersize=5,
                 )
                 ax2.axhline(
                     y=contract_info.velocidade_down_mbps,
-                    color="green",
+                    color="#28A745",
                     linestyle="--",
-                    label=f"Contrato ({contract_info.velocidade_down_mbps} Mbps)",
+                    linewidth=2,
+                    label=f"Contrato ({contract_info.velocidade_down_mbps:.0f} Mbps)",
                 )
                 ax2.axhline(
                     y=contract_info.velocidade_down_mbps * 0.8,
-                    color="orange",
+                    color=AMARELO_GOV,
                     linestyle=":",
+                    linewidth=2,
                     label="Mínimo 80%",
                 )
                 ax2.axhline(
                     y=contract_info.velocidade_down_mbps * 0.4,
-                    color="red",
+                    color="#DC3545",
                     linestyle=":",
+                    linewidth=2,
                     label="Mínimo 40%",
                 )
-                ax2.set_ylabel("Download (Mbps)")
+                ax2.set_ylabel("Download (Mbps)", fontweight="bold")
                 ax2.legend(loc="upper right")
                 ax2.grid(True, alpha=0.3)
+                ax2.set_facecolor("#FAFAFA")
                 ax2.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
 
-                # Gráfico de Upload
+                # Gráfico de Upload (cores institucionais)
                 ax3.plot(
                     times_speed,
                     up_vals,
                     label="Upload",
-                    color="orange",
+                    color=AMARELO_GOV,
                     linewidth=2,
-                    marker="o",
-                    markersize=4,
+                    marker="s",
+                    markersize=5,
                 )
                 ax3.axhline(
                     y=contract_info.velocidade_up_mbps,
-                    color="green",
+                    color="#28A745",
                     linestyle="--",
-                    label=f"Contrato ({contract_info.velocidade_up_mbps} Mbps)",
+                    linewidth=2,
+                    label=f"Contrato ({contract_info.velocidade_up_mbps:.0f} Mbps)",
                 )
                 ax3.axhline(
                     y=contract_info.velocidade_up_mbps * 0.8,
-                    color="orange",
+                    color=AMARELO_GOV,
                     linestyle=":",
+                    linewidth=2,
                     label="Mínimo 80%",
                 )
                 ax3.axhline(
                     y=contract_info.velocidade_up_mbps * 0.4,
-                    color="red",
+                    color="#DC3545",
                     linestyle=":",
+                    linewidth=2,
                     label="Mínimo 40%",
                 )
-                ax3.set_xlabel("Tempo")
-                ax3.set_ylabel("Upload (Mbps)")
+                ax3.set_xlabel("Tempo", fontweight="bold")
+                ax3.set_ylabel("Upload (Mbps)", fontweight="bold")
                 ax3.legend(loc="upper right")
                 ax3.grid(True, alpha=0.3)
+                ax3.set_facecolor("#FAFAFA")
                 ax3.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
 
                 plt.suptitle(
@@ -1026,16 +1564,36 @@ Limite de Latência: {config.lag_threshold_ms} ms
                     f"Upload: Média {avg_up:.1f} Mbps (Min: {min_up:.1f}, Max: {max_up:.1f})",
                     fontsize=10,
                     fontweight="bold",
+                    color=AZUL_GOV,
                 )
 
                 plt.tight_layout()
-                pdf.savefig(fig2, dpi=150)
+                pdf.savefig(fig2, dpi=150, facecolor="white")
                 plt.close(fig2)
 
-            # === PÁGINA: ANÁLISE E DIAGNÓSTICO ===
-            fig_analise = plt.figure(figsize=(8.5, 11))
+            # === PÁGINA: ANÁLISE E DIAGNÓSTICO (ESTILO PROFISSIONAL) ===
+            fig_analise = plt.figure(figsize=(8.5, 11), facecolor="white")
             ax_analise = fig_analise.add_subplot(111)
             ax_analise.axis("off")
+            ax_analise.set_xlim(0, 1)
+            ax_analise.set_ylim(0, 1)
+
+            # Header institucional
+            rect_header = plt.Rectangle(
+                (0, 0.92), 1, 0.08, facecolor=AZUL_GOV, transform=ax_analise.transAxes
+            )
+            ax_analise.add_patch(rect_header)
+            ax_analise.text(
+                0.5,
+                0.96,
+                "ANÁLISE E DIAGNÓSTICO",
+                ha="center",
+                va="center",
+                fontsize=14,
+                color="white",
+                fontweight="bold",
+                transform=ax_analise.transAxes,
+            )
 
             # Calcular estatísticas gerais
             valid_local = (
@@ -1068,165 +1626,398 @@ Limite de Latência: {config.lag_threshold_ms} ms
                 avg_up = sum(stats.history_up) / len(stats.history_up)
                 pct_avg_down = (avg_down / contract_info.velocidade_down_mbps) * 100
                 pct_avg_up = (avg_up / contract_info.velocidade_up_mbps) * 100
-
-                conclusao_down = "CONFORME" if pct_avg_down >= 80 else "NÃO CONFORME"
-                conclusao_up = "CONFORME" if pct_avg_up >= 80 else "NÃO CONFORME"
+                conclusao_down = "CONFORME" if pct_avg_down >= 80 else "NAO CONFORME"
+                conclusao_up = "CONFORME" if pct_avg_up >= 80 else "NAO CONFORME"
             else:
                 avg_down = avg_up = pct_avg_down = pct_avg_up = 0
                 conclusao_down = conclusao_up = "SEM DADOS"
 
-            analise_text = (
-                f"""
-ANÁLISE E DIAGNÓSTICO
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. ESTATÍSTICAS DE LATÊNCIA (PING)
-
-Total de Medições: {len(ping_data)}
-Timeouts: {timeouts} ({(timeouts / len(ping_data) * 100) if ping_data else 0:.1f}%)
-Alta Latência (>{config.lag_threshold_ms}ms): {high_latency} ({
-                    (high_latency / len(ping_data) * 100) if ping_data else 0:.1f}%)
-
-Gateway ({config.gateway_ip}):
-  • Mínimo: {min(valid_local):.1f}ms
-  • Máximo: {max(valid_local):.1f}ms
-  • Média: {sum(valid_local) / len(valid_local):.1f}ms
-
-Externo ({config.external_ip}):
-  • Mínimo: {min(valid_ext):.1f}ms
-  • Máximo: {max(valid_ext):.1f}ms
-  • Média: {sum(valid_ext) / len(valid_ext):.1f}ms
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-2. ESTATÍSTICAS DE VELOCIDADE
-
-Total de Testes: {stats.test_count}
-
-Download:
-  • Média: {avg_down:.1f} Mbps ({pct_avg_down:.1f}% do contratado)
-  • Resultado: {conclusao_down}
-
-Upload:
-  • Média: {avg_up:.1f} Mbps ({pct_avg_up:.1f}% do contratado)
-  • Resultado: {conclusao_up}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-3. CONCLUSÃO
-
-{
-                    "✅ SERVIÇO CONFORME - A velocidade média está dentro dos "
-                    "parâmetros estabelecidos pela ANATEL (mínimo 80%)."
-                    if pct_avg_down >= 80 and pct_avg_up >= 80
-                    else "⚠️ SERVIÇO NÃO CONFORME - A velocidade média está ABAIXO "
-                    "dos parâmetros estabelecidos pela ANATEL (mínimo 80%)."
-                    if stats.test_count > 0
-                    else "Dados insuficientes para conclusão."
-                }
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
-                if valid_local and valid_ext
-                else """
-ANÁLISE E DIAGNÓSTICO
-
-Dados insuficientes para análise detalhada.
-"""
+            # Seção 1: Latência
+            ax_analise.text(
+                0.08,
+                0.86,
+                "1. ESTATISTICAS DE LATENCIA (PING)",
+                ha="left",
+                va="center",
+                fontsize=11,
+                color=AZUL_GOV,
+                fontweight="bold",
+                transform=ax_analise.transAxes,
             )
 
+            if valid_local and valid_ext:
+                latencia_lines = [
+                    f"Total de Medições: {len(ping_data)}",
+                    f"Timeouts: {timeouts} ({(timeouts / len(ping_data) * 100) if ping_data else 0:.1f}%)",
+                    f"Alta Latência (>{config.lag_threshold_ms}ms): {high_latency}",
+                    "",
+                    f"Gateway ({config.gateway_ip}): Min {min(valid_local):.1f}ms / Max {max(valid_local):.1f}ms / Med {sum(valid_local) / len(valid_local):.1f}ms",
+                    f"Externo ({config.external_ip}): Min {min(valid_ext):.1f}ms / Max {max(valid_ext):.1f}ms / Med {sum(valid_ext) / len(valid_ext):.1f}ms",
+                ]
+            else:
+                latencia_lines = ["Dados insuficientes para análise de latência"]
+
+            for i, line in enumerate(latencia_lines):
+                ax_analise.text(
+                    0.08,
+                    0.82 - i * 0.03,
+                    line,
+                    ha="left",
+                    va="center",
+                    fontsize=9,
+                    color="#333",
+                    transform=ax_analise.transAxes,
+                )
+
+            # Seção 2: Velocidade
+            ax_analise.text(
+                0.08,
+                0.60,
+                "2. ESTATISTICAS DE VELOCIDADE",
+                ha="left",
+                va="center",
+                fontsize=11,
+                color=AZUL_GOV,
+                fontweight="bold",
+                transform=ax_analise.transAxes,
+            )
+
+            velocidade_lines = [
+                f"Total de Testes: {stats.test_count}",
+                "",
+                f"Download: Média {avg_down:.1f} Mbps ({pct_avg_down:.1f}% do contratado) - {conclusao_down}",
+                f"Upload: Média {avg_up:.1f} Mbps ({pct_avg_up:.1f}% do contratado) - {conclusao_up}",
+            ]
+            for i, line in enumerate(velocidade_lines):
+                ax_analise.text(
+                    0.08,
+                    0.56 - i * 0.03,
+                    line,
+                    ha="left",
+                    va="center",
+                    fontsize=9,
+                    color="#333",
+                    transform=ax_analise.transAxes,
+                )
+
+            # Seção 3: Conclusão (box destacado)
+            ax_analise.text(
+                0.08,
+                0.38,
+                "3. CONCLUSAO FINAL",
+                ha="left",
+                va="center",
+                fontsize=11,
+                color=AZUL_GOV,
+                fontweight="bold",
+                transform=ax_analise.transAxes,
+            )
+
+            if stats.test_count > 0 and pct_avg_down >= 80 and pct_avg_up >= 80:
+                conclusao_cor = "#28A745"  # Verde
+                conclusao_texto = "SERVIÇO CONFORME"
+                conclusao_detalhe = (
+                    "A velocidade média está dentro dos parâmetros ANATEL (mín 80%)."
+                )
+            elif stats.test_count > 0:
+                conclusao_cor = "#DC3545"  # Vermelho
+                conclusao_texto = "SERVIÇO NÃO CONFORME"
+                conclusao_detalhe = (
+                    "A velocidade média está ABAIXO dos parâmetros ANATEL (mín 80%)."
+                )
+            else:
+                conclusao_cor = "#FFC107"  # Amarelo
+                conclusao_texto = "DADOS INSUFICIENTES"
+                conclusao_detalhe = "Não há dados suficientes para conclusão."
+
+            # Box de conclusão
+            rect_conclusao = plt.Rectangle(
+                (0.08, 0.22),
+                0.84,
+                0.12,
+                facecolor=CINZA_CLARO,
+                transform=ax_analise.transAxes,
+                linewidth=2,
+                edgecolor=conclusao_cor,
+            )
+            ax_analise.add_patch(rect_conclusao)
             ax_analise.text(
                 0.5,
-                0.5,
-                analise_text,
+                0.30,
+                conclusao_texto,
+                ha="center",
+                va="center",
+                fontsize=14,
+                color=conclusao_cor,
+                fontweight="bold",
                 transform=ax_analise.transAxes,
-                fontsize=10,
-                verticalalignment="center",
-                horizontalalignment="center",
-                family="monospace",
             )
-            pdf.savefig(fig_analise, dpi=150)
+            ax_analise.text(
+                0.5,
+                0.25,
+                conclusao_detalhe,
+                ha="center",
+                va="center",
+                fontsize=9,
+                color="#333",
+                transform=ax_analise.transAxes,
+            )
+
+            # Footer institucional
+            rect_footer = plt.Rectangle(
+                (0, 0), 1, 0.04, facecolor=AZUL_GOV, transform=ax_analise.transAxes
+            )
+            ax_analise.add_patch(rect_footer)
+            ax_analise.text(
+                0.5,
+                0.02,
+                "ANATEL - Agencia Nacional de Telecomunicacoes",
+                ha="center",
+                va="center",
+                fontsize=7,
+                color="white",
+                transform=ax_analise.transAxes,
+            )
+
+            pdf.savefig(fig_analise, dpi=150, facecolor="white")
             plt.close(fig_analise)
 
-            # === PÁGINA FINAL: ASSINATURAS ===
-            fig_assin = plt.figure(figsize=(8.5, 11))
-            ax_assin = fig_assin.add_subplot(111)
-            ax_assin.axis("off")
+        # Agora criar página de assinaturas com campos editáveis usando reportlab
+        try:
+            from reportlab.pdfgen import canvas as rl_canvas
+            from reportlab.lib.pagesizes import letter
+            from reportlab.lib.colors import black, lightgrey
+            from PyPDF2 import PdfReader, PdfWriter
 
-            assinatura_text = f"""
-TERMO DE VERIFICAÇÃO
+            # Criar PDF temporário com formulário
+            form_pdf_path = f"exports/temp_form_{timestamp}.pdf"
+            c = rl_canvas.Canvas(form_pdf_path, pagesize=letter)
+            width, height = letter  # 612 x 792 points
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            # Título
+            c.setFont("Helvetica-Bold", 16)
+            c.drawCentredString(width / 2, height - 50, "TERMO DE VERIFICAÇÃO")
 
-Declaro que presenciei a realização dos testes de velocidade
-e latência descritos neste relatório, realizados conforme
-procedimento técnico estabelecido pela ANATEL.
+            # Linha decorativa
+            c.setStrokeColor(black)
+            c.setLineWidth(2)
+            c.line(50, height - 70, width - 50, height - 70)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-CLIENTE / CONTRATANTE
-
-
-Nome: ________________________________________________
-
-CPF/CNPJ: ____________________________________________
-
-Assinatura: __________________________________________
-
-Data: ___/___/______
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-TÉCNICO RESPONSÁVEL
-
-
-Nome: ________________________________________________
-
-CPF: _________________________________________________
-
-Registro/Matrícula: __________________________________
-
-Assinatura: __________________________________________
-
-Data: ___/___/______
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-OBSERVAÇÕES:
-
-__________________________________________________
-
-__________________________________________________
-
-__________________________________________________
-
-__________________________________________________
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Operadora: {contract_info.operadora}
-Contato: {contract_info.telefone_operadora}
-WhatsApp: {contract_info.whatsapp_operadora}
-E-mail: {contract_info.email_operadora}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
-
-            ax_assin.text(
-                0.5,
-                0.5,
-                assinatura_text,
-                transform=ax_assin.transAxes,
-                fontsize=11,
-                verticalalignment="center",
-                horizontalalignment="center",
-                family="monospace",
+            # Texto de declaração
+            c.setFont("Helvetica", 10)
+            c.drawCentredString(
+                width / 2,
+                height - 100,
+                "Declaro que presenciei a realização dos testes de velocidade e latência",
             )
-            pdf.savefig(fig_assin, dpi=150)
-            plt.close(fig_assin)
+            c.drawCentredString(
+                width / 2,
+                height - 115,
+                "descritos neste relatório, realizados conforme procedimento ANATEL.",
+            )
+
+            # Seção Cliente
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(50, height - 160, "CLIENTE / CONTRATANTE")
+            c.line(50, height - 165, 250, height - 165)
+
+            # Campos editáveis do Cliente
+            c.setFont("Helvetica", 10)
+            y_pos = height - 200
+
+            c.drawString(50, y_pos, "Nome:")
+            c.acroForm.textfield(
+                name="cliente_nome",
+                x=100,
+                y=y_pos - 5,
+                width=350,
+                height=20,
+                borderWidth=1,
+                borderColor=black,
+                fillColor=lightgrey,
+                textColor=black,
+                fontSize=10,
+            )
+
+            y_pos -= 35
+            c.drawString(50, y_pos, "CPF/CNPJ:")
+            c.acroForm.textfield(
+                name="cliente_cpf",
+                x=120,
+                y=y_pos - 5,
+                width=200,
+                height=20,
+                borderWidth=1,
+                borderColor=black,
+                fillColor=lightgrey,
+                textColor=black,
+                fontSize=10,
+            )
+
+            y_pos -= 35
+            c.drawString(50, y_pos, "Data:")
+            c.acroForm.textfield(
+                name="cliente_data",
+                x=100,
+                y=y_pos - 5,
+                width=100,
+                height=20,
+                borderWidth=1,
+                borderColor=black,
+                fillColor=lightgrey,
+                textColor=black,
+                fontSize=10,
+                value=datetime.datetime.now().strftime("%d/%m/%Y"),
+            )
+
+            y_pos -= 50
+            c.drawString(50, y_pos, "Assinatura: _____________________________________")
+
+            # Seção Técnico
+            y_pos -= 60
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(50, y_pos, "TÉCNICO RESPONSÁVEL")
+            c.line(50, y_pos - 5, 250, y_pos - 5)
+
+            c.setFont("Helvetica", 10)
+            y_pos -= 40
+
+            c.drawString(50, y_pos, "Nome:")
+            c.acroForm.textfield(
+                name="tecnico_nome",
+                x=100,
+                y=y_pos - 5,
+                width=350,
+                height=20,
+                borderWidth=1,
+                borderColor=black,
+                fillColor=lightgrey,
+                textColor=black,
+                fontSize=10,
+            )
+
+            y_pos -= 35
+            c.drawString(50, y_pos, "CPF:")
+            c.acroForm.textfield(
+                name="tecnico_cpf",
+                x=100,
+                y=y_pos - 5,
+                width=150,
+                height=20,
+                borderWidth=1,
+                borderColor=black,
+                fillColor=lightgrey,
+                textColor=black,
+                fontSize=10,
+            )
+
+            y_pos -= 35
+            c.drawString(50, y_pos, "Registro/Matrícula:")
+            c.acroForm.textfield(
+                name="tecnico_registro",
+                x=150,
+                y=y_pos - 5,
+                width=150,
+                height=20,
+                borderWidth=1,
+                borderColor=black,
+                fillColor=lightgrey,
+                textColor=black,
+                fontSize=10,
+            )
+
+            y_pos -= 35
+            c.drawString(50, y_pos, "Data:")
+            c.acroForm.textfield(
+                name="tecnico_data",
+                x=100,
+                y=y_pos - 5,
+                width=100,
+                height=20,
+                borderWidth=1,
+                borderColor=black,
+                fillColor=lightgrey,
+                textColor=black,
+                fontSize=10,
+                value=datetime.datetime.now().strftime("%d/%m/%Y"),
+            )
+
+            y_pos -= 50
+            c.drawString(50, y_pos, "Assinatura: _____________________________________")
+
+            # Seção Observações
+            y_pos -= 60
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(50, y_pos, "OBSERVAÇÕES")
+            c.line(50, y_pos - 5, 150, y_pos - 5)
+
+            c.setFont("Helvetica", 10)
+            y_pos -= 30
+            c.acroForm.textfield(
+                name="observacoes",
+                x=50,
+                y=y_pos - 60,
+                width=500,
+                height=70,
+                borderWidth=1,
+                borderColor=black,
+                fillColor=lightgrey,
+                textColor=black,
+                fontSize=10,
+            )
+
+            # Rodapé com informações da operadora
+            c.setFont("Helvetica", 8)
+            c.drawCentredString(
+                width / 2,
+                50,
+                f"Operadora: {contract_info.operadora} | Tel: {contract_info.telefone_operadora} | WhatsApp: {contract_info.whatsapp_operadora}",
+            )
+            c.drawCentredString(
+                width / 2, 38, f"E-mail: {contract_info.email_operadora}"
+            )
+
+            c.save()
+
+            # Mesclar PDFs: relatório + formulário de assinaturas
+            reader_main = PdfReader(pdf_filename)
+            reader_form = PdfReader(form_pdf_path)
+            writer = PdfWriter()
+
+            # Adicionar todas as páginas do relatório principal
+            for page in reader_main.pages:
+                writer.add_page(page)
+
+            # Adicionar página de formulário
+            for page in reader_form.pages:
+                writer.add_page(page)
+
+            # Salvar PDF final
+            final_pdf_path = pdf_filename.replace(".pdf", "_com_assinaturas.pdf")
+            with open(final_pdf_path, "wb") as f:
+                writer.write(f)
+
+            # Limpar temporário
+            try:
+                os.remove(form_pdf_path)
+                os.remove(pdf_filename)
+            except Exception:
+                pass
+
+            # Renomear para o nome original
+            os.rename(final_pdf_path, pdf_filename)
+
+        except ImportError as e:
+            # Se reportlab/PyPDF2 não estiverem disponíveis
+            print(f"[AVISO] Pacotes para assinaturas não disponíveis: {e}")
+        except Exception as e:
+            # Qualquer outro erro na geração da página de assinaturas
+            print(
+                f"[ERRO] Falha ao criar página de assinaturas: {type(e).__name__}: {e}"
+            )
+            import traceback
+
+            traceback.print_exc()
 
         with _export_lock:
             _export_status["message"] = (
