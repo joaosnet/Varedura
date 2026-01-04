@@ -65,6 +65,12 @@ class StalkerConfig:
     port_scan_interval: int = 5  # Intervalo entre scans de porta (em ciclos)
     show_speed: bool = True  # Mostrar painel de velocidade
 
+    # Export options
+    export_max_points: int = 5000  # Máximo de pontos a manter ao exportar (downsampling)
+    allow_full_history_export: bool = False  # Se True, permite exportar todo o histórico sem downsampling
+    export_error_log: str = "exports/export_errors.log"  # Arquivo para registrar falhas de exportação
+    prefs_file: str = "exports/stalker_prefs.json"  # Arquivo para persistir preferências de exportação
+
 
 @dataclass
 class PingStats:
@@ -129,6 +135,53 @@ contract_info = ContractInfo()
 full_ping_history: list = []  # [(timestamp, local_ms, external_ms), ...]
 full_speed_history: list = []  # [(timestamp, down, up, ping, provider, servidor), ...]
 test_session_start: Optional[datetime.datetime] = None
+
+
+def save_prefs() -> None:
+    """Persiste preferências relevantes para exportação em JSON."""
+    try:
+        prefs = {
+            "allow_full_history_export": config.allow_full_history_export,
+            "export_max_points": config.export_max_points,
+        }
+        os.makedirs(os.path.dirname(config.prefs_file), exist_ok=True)
+        with open(config.prefs_file, "w", encoding="utf-8") as f:
+            import json
+
+            json.dump(prefs, f)
+    except Exception:
+        # Não falhar criticamente; apenas log em console
+        try:
+            console.print("[red]Aviso: falha ao salvar preferências de exportação[/]")
+        except Exception:
+            pass
+
+
+def load_prefs() -> None:
+    """Carrega preferências salvas, se o arquivo existir."""
+    try:
+        if os.path.exists(config.prefs_file):
+            import json
+
+            with open(config.prefs_file, "r", encoding="utf-8") as f:
+                prefs = json.load(f)
+                if "allow_full_history_export" in prefs:
+                    config.allow_full_history_export = bool(
+                        prefs["allow_full_history_export"]
+                    )
+                if "export_max_points" in prefs:
+                    config.export_max_points = int(prefs["export_max_points"])
+    except Exception:
+        try:
+            console.print("[red]Aviso: falha ao carregar preferências de exportação[/]")
+        except Exception:
+            pass
+
+
+def set_allow_full_history_export(value: bool) -> None:
+    """Define a flag e persiste em disco."""
+    config.allow_full_history_export = bool(value)
+    save_prefs()
 
 
 def is_android():
@@ -414,7 +467,7 @@ def handle_key(key: str) -> Optional[str]:
     elif key == "i":
         return prompt_change_interval()
     elif key == "x":
-        return export_combined_report()
+        return prompt_export_report()
     elif key == "p":
         config.show_ports = not config.show_ports
         status = "ativado" if config.show_ports else "desativado"
@@ -432,6 +485,12 @@ def handle_key(key: str) -> Optional[str]:
             return f"[yellow]Painel de velocidade desativado[/] | {export_msg}"
     elif key == "c":
         return prompt_change_contracted_speed()
+    elif key == "f":
+        # Alterna a preferência de exportação completa e persiste
+        new_val = not config.allow_full_history_export
+        set_allow_full_history_export(new_val)
+        status = "ativado" if new_val else "desativado"
+        return f"[yellow]Exportação completa automática {status} (salvo em {config.prefs_file})[/]"
     return None
 
 
@@ -505,13 +564,69 @@ def prompt_change_contracted_speed() -> str:
     return f"[yellow]Velocidade contratada: {new_speed[0]}/{new_speed[1]} Mbps (↓/↑)[/]"
 
 
+def prompt_export_report(simulated_choice: str | None = None) -> str:
+    """Prompts the user whether to export a full history report.
+
+    Args:
+        simulated_choice: Optional string for tests: 's' (yes), 'n' (no), 'sa' (yes + sempre salvar).
+
+    Returns:
+        A status message string to be logged/displayed.
+    """
+    # Contagem de pontos estimada
+    total_points = len(full_ping_history) if full_ping_history else len(local_stats.timestamps)
+    # Mensagem de aviso
+    warning = (
+        "AVISO: O histórico completo pode consumir muita memória e demorar."
+        " Deseja continuar com exportação COMPLETA? (s/N): "
+    )
+
+    # Usar escolha simulada (para testes)
+    if simulated_choice is not None:
+        choice = simulated_choice.lower()
+    else:
+        # Se já está marcado como permissivo, não perguntar
+        if config.allow_full_history_export:
+            msg = export_combined_report(full_history=True)
+            return f"[cyan]Exportando com histórico completo (config permitida)...[/] | {msg}"
+
+        # Pergunta interativa simples (compatível Windows/Unix)
+        try:
+            if platform.system().lower() == "windows":
+                print(f"Exportar relatório (pontos estimados: {total_points}). {warning}", end=" ")
+                ch = msvcrt.getwch()
+                print(ch)
+                choice = ch.lower()
+            else:
+                print(f"Exportar relatório (pontos estimados: {total_points}). {warning}", end=" ")
+                choice = sys.stdin.read(1).lower()
+                print(choice)
+        except Exception:
+            choice = "n"
+
+    if choice not in ("s", "y", "sa"):
+        return "[yellow]Exportação cancelada pelo usuário[/]"
+
+    # Se o usuário escolheu 'sa', persistir preferencia
+    if choice == "sa":
+        set_allow_full_history_export(True)
+
+    # Confirmed: start export with full_history=True
+    msg = export_combined_report(full_history=True)
+    return f"[cyan]Exportando com histórico completo...[/] | {msg}"
+
+
 # --- Estado de Exportação em Background ---
 _export_status = {"running": False, "message": None, "completed": False}
 _export_lock = threading.Lock()
 
 
-def _generate_combined_pdf_worker():
-    """Worker que gera o PDF formal completo em background."""
+def _generate_combined_pdf_worker(full_history: bool = False):
+    """Worker que gera o PDF formal completo em background.
+
+    Args:
+        full_history: Se True, força exportar todo o histórico (pode consumir muita memória).
+    """
     global _export_status
 
     try:
@@ -527,6 +642,7 @@ def _generate_combined_pdf_worker():
         from matplotlib.backends.backend_pdf import PdfPages
 
         pdf_filename = f"exports/relatorio_formal_{timestamp}.pdf"
+        pdf_temp = pdf_filename + ".tmp"
         csv_ping_filename = f"exports/ping_history_{timestamp}.csv"
         csv_speed_filename = f"exports/speed_history_{timestamp}.csv"
 
@@ -541,6 +657,15 @@ def _generate_combined_pdf_worker():
                 )
             ]
         )
+
+        # Determinar se usaremos o histórico completo
+        use_full = full_history or getattr(config, "allow_full_history_export", False)
+
+        # Evitar arquivos enormes: reduzir amostragem se o histórico for muito grande
+        MAX_PTS = int(getattr(config, "export_max_points", 5000))
+        if not use_full and len(ping_data) > MAX_PTS:
+            step = max(1, len(ping_data) // MAX_PTS)
+            ping_data = ping_data[::step]
 
         # Exportar CSVs primeiro (histórico completo)
         try:
@@ -570,6 +695,16 @@ def _generate_combined_pdf_worker():
         tester = get_speed_tester()
         stats = tester.stats
 
+        # Copiar históricos para evitar mutações e reduzir se muito grandes
+        speed_ts = list(stats.timestamps)
+        speed_down = list(stats.history_down)
+        speed_up = list(stats.history_up)
+        if len(speed_ts) > MAX_PTS:
+            step = max(1, len(speed_ts) // MAX_PTS)
+            speed_ts = speed_ts[::step]
+            speed_down = speed_down[::step]
+            speed_up = speed_up[::step]
+
         if stats.test_count > 0:
             try:
                 with open(csv_speed_filename, "w", encoding="utf-8") as f:
@@ -578,7 +713,7 @@ def _generate_combined_pdf_worker():
                         "pct_down,pct_up,status_anatel_medio,status_anatel_instantaneo\n"
                     )
                     for ts, down, up in zip(
-                        stats.timestamps, stats.history_down, stats.history_up
+                        speed_ts, speed_down, speed_up
                     ):
                         ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
                         pct_down = (down / contract_info.velocidade_down_mbps) * 100
@@ -612,7 +747,7 @@ def _generate_combined_pdf_worker():
         AMARELO_GOV = "#FFCD07"  # Amarelo destaque
         CINZA_CLARO = "#F8F8F8"
 
-        with PdfPages(pdf_filename) as pdf:
+        with PdfPages(pdf_temp) as pdf:
             # === PÁGINA 1: CAPA PROFISSIONAL ===
             fig_capa = plt.figure(figsize=(8.5, 11), facecolor="white")
             ax_capa = fig_capa.add_subplot(111)
@@ -1782,6 +1917,16 @@ def _generate_combined_pdf_worker():
             pdf.savefig(fig_analise, dpi=150, facecolor="white")
             plt.close(fig_analise)
 
+        # Verificar se o arquivo temporário foi gerado corretamente
+        if not os.path.exists(pdf_temp) or os.path.getsize(pdf_temp) == 0:
+            # Remover temporários se existirem e falhar para disparar o handler
+            try:
+                if os.path.exists(pdf_temp):
+                    os.remove(pdf_temp)
+            except Exception:
+                pass
+            raise RuntimeError("Arquivo PDF gerado inválido/zerado")
+
         # Agora criar página de assinaturas com campos editáveis usando reportlab
         try:
             from reportlab.pdfgen import canvas as rl_canvas
@@ -1980,7 +2125,7 @@ def _generate_combined_pdf_worker():
             c.save()
 
             # Mesclar PDFs: relatório + formulário de assinaturas
-            reader_main = PdfReader(pdf_filename)
+            reader_main = PdfReader(pdf_temp)
             reader_form = PdfReader(form_pdf_path)
             writer = PdfWriter()
 
@@ -1992,20 +2137,21 @@ def _generate_combined_pdf_worker():
             for page in reader_form.pages:
                 writer.add_page(page)
 
-            # Salvar PDF final
-            final_pdf_path = pdf_filename.replace(".pdf", "_com_assinaturas.pdf")
-            with open(final_pdf_path, "wb") as f:
+            # Salvar PDF final em arquivo temporário
+            final_pdf_temp = pdf_temp.replace(".pdf", "_com_assinaturas.pdf.tmp")
+            with open(final_pdf_temp, "wb") as f:
                 writer.write(f)
 
-            # Limpar temporário
+            # Limpar temporários e mover arquivo final de forma atômica
             try:
-                os.remove(form_pdf_path)
-                os.remove(pdf_filename)
+                if os.path.exists(form_pdf_path):
+                    os.remove(form_pdf_path)
+                if os.path.exists(pdf_temp):
+                    os.remove(pdf_temp)
             except Exception:
                 pass
 
-            # Renomear para o nome original
-            os.rename(final_pdf_path, pdf_filename)
+            os.replace(final_pdf_temp, pdf_filename)
 
         except ImportError as e:
             # Se reportlab/PyPDF2 não estiverem disponíveis
@@ -2032,16 +2178,38 @@ def _generate_combined_pdf_worker():
             _export_status["completed"] = True
             _export_status["running"] = False
     except Exception as e:
+        # Limpar arquivos temporários caso erro
+        try:
+            if 'pdf_temp' in locals() and os.path.exists(pdf_temp):
+                os.remove(pdf_temp)
+        except Exception:
+            pass
+
+        # Registrar traceback em arquivo de log persistente
+        try:
+            os.makedirs(os.path.dirname(config.export_error_log), exist_ok=True)
+            import traceback
+
+            with open(config.export_error_log, "a", encoding="utf-8") as logf:
+                logf.write(f"\n--- {datetime.datetime.now().isoformat()} ---\n")
+                logf.write(traceback.format_exc())
+        except Exception:
+            pass
+
         with _export_lock:
             _export_status["message"] = (
-                f"[red]❌ Erro ao gerar relatório: {str(e)[:50]}[/]"
+                f"[red]❌ Erro ao gerar relatório: {str(e)[:200]}[/]"
             )
             _export_status["completed"] = True
             _export_status["running"] = False
 
 
-def export_combined_report() -> str:
-    """Inicia exportação do relatório combinado em thread separada."""
+def export_combined_report(full_history: bool = False) -> str:
+    """Inicia exportação do relatório combinado em thread separada.
+
+    Args:
+        full_history: Se True, tenta exportar todo o histórico sem downsampling.
+    """
     global _export_status
 
     with _export_lock:
@@ -2057,9 +2225,13 @@ def export_combined_report() -> str:
         _export_status["message"] = None
 
     # Iniciar thread de exportação
-    export_thread = threading.Thread(target=_generate_combined_pdf_worker, daemon=True)
+    export_thread = threading.Thread(
+        target=_generate_combined_pdf_worker, args=(full_history,), daemon=True
+    )
     export_thread.start()
 
+    if full_history:
+        return "[cyan]📄 Gerando relatório PDF (histórico COMPLETO) em background...[/]"
     return "[cyan]📄 Gerando relatório PDF em background...[/]"
 
 
@@ -2661,6 +2833,9 @@ def main():
                 console.print(status)
                 break
 
+
+# Carregar preferências salvas (se existirem)
+load_prefs()
 
 if __name__ == "__main__":
     main()

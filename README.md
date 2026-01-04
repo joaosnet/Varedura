@@ -64,6 +64,18 @@ Não há mais espera até o final - você vê cada passo sendo executado!
 - **Conteúdo:** Comandos executados, saídas, erros e tracebacks
 - **Acesso:** Botão "Abrir pasta de logs" na interface
 
+## 📄 Exportando Relatórios (PDF)
+
+- Os relatórios formais são gerados em `exports/relatorio_formal_<timestamp>.pdf`.
+- Opções de exportação disponíveis em `monitor.stalker`:
+  - `config.export_max_points` (padrão: 5000): limita a amostragem de pontos para evitar uso excessivo de memória ao gerar gráficos.
+  - `config.allow_full_history_export` (padrão: False): se True, permite exportar o histórico completo sem downsampling (pode consumir muita memória/CPU).
+- Função para iniciar exportação em background:
+  - `export_combined_report(full_history: bool = False)` — passe `full_history=True` para forçar exportar todo o histórico (se `config.allow_full_history_export` também estiver ativado, caso contrário o flag também força a exportação, mas tome cuidado com consumo de recursos).
+- Você pode alternar a preferência persistente de exportar histórico completo com a tecla `f` no monitor; isso salva em `config.prefs_file` (padrão `exports/stalker_prefs.json`).
+- Ao executar `prompt_export_report()` sem preferências ativadas, o usuário recebe a opção de confirmar e escolher `sa` para confirmar E salvar a preferência como permanente.
+- Em caso de falhas durante a geração do PDF, tracebacks e detalhes são gravados em: `exports/export_errors.log`.
+
 ### Captura de Erros
 
 O aplicativo captura automaticamente:
