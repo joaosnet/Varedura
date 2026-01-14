@@ -1,6 +1,6 @@
 # Docker Clennear
 <p align="center">
-  <img src="screenshots/Captura%20de%20tela%202025-11-19%20100122.png" alt="Imagem de destaque do Docker Clennear" />
+  <img src="screenshots/Captura de tela 2026-01-14 125838.png" alt="Imagem de destaque do Docker Clennear" />
 </p>
 Ferramentas para limpeza e compactação de WSL/Docker (Windows) e utilitários para LMArena models
 
