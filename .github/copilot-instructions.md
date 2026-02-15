@@ -2,10 +2,9 @@
 
 ## Purpose & Architecture
 
-This repo provides **cross-platform** (Windows/Linux/macOS) Docker cleanup tools, network monitoring, and LMArena model parsing utilities:
+This repo provides **cross-platform** (Windows/Linux/macOS) Docker cleanup tools and network monitoring utilities:
 
 - **Docker Cleaner** (`docker_cleaner/core.py`, `cli/`, `main.py`) — Reclaims WSL/Docker space via pruning, VHDX compaction, and temp file cleanup
-- **LMArena Generator** (`lmarena/generator.py`) — Extracts `initialModels` from raw LMArena dumps and generates Python code with model lists
 
 **Key architectural pattern**: Dual execution model (sync + async) in `WSLDockerCleaner`:
 - Sync methods (`docker_cleanup()`, `compact_vhdx_files()`) for CLI/Rich UI
@@ -30,11 +29,6 @@ This repo provides **cross-platform** (Windows/Linux/macOS) Docker cleanup tools
 - `DailyLogWriter`: File-like object that writes to `logs/YYYY-MM-DD.log` (daily rotation) + optional UI callback
 - All app logging routes through `write_ui_log()` → `DailyLogWriter` → both file and UI widget
 - Exception hooks installed in `on_mount()` capture unhandled exceptions (Python `excepthook`, `asyncio`, `threading`)
-
-**LMArena Generator** (`lmarena/generator.py`):
-- `ModelsGenerator.extract_initial_models(raw_data)` — Regex-based extraction of `initialModels: [...]` JSON arrays
-- Generates `models`, `text_models`, `image_models`, `vision_models` dicts based on capabilities
-- Output: `<input>_models.py` (e.g., `lmarena_models_models.py`)
 
 ## Developer Workflows
 
@@ -62,15 +56,9 @@ uv run python -m cli.admin_tasks compact_vhdx  # Admin helper for specific task
 ```
 
 
-**Running model generator**:
-```powershell
-uv run python -m lmarena.generator lmarena_models.txt  # Outputs lmarena_models_models.py
-```
-
 **Testing**:
 ```powershell
 pytest tests/                           # Unit tests (mock subprocess/ctypes)
-pytest tests/test_generator.py         # LMArena parser tests (pure Python)
 ```
 
 ## Project Conventions

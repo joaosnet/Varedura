@@ -185,3 +185,6 @@ roteador_creds.txt
 router_template.html
 tests/router_phishing.py
 tests/arp.py
+
+# Hidden tools
+lmarena/
