@@ -188,3 +188,8 @@ tests/arp.py
 
 # Hidden tools
 lmarena/
+
+# Generated exports and runtime data
+exports/
+recordings/
+reports/
