@@ -44,17 +44,27 @@ This repo provides **cross-platform** (Windows/Linux/macOS) Docker cleanup tools
 # Dependencies tracked in pyproject.toml: rich, textual, pytest
 ```
 
+**Preferred runtime: uv (recommended)**
+- Use `uv` for running, testing and dependency management when available.
+- Common commands:
+  - `uv run main.py` — start the Textual TUI (preferred)
+  - `uv run python -m <module>` — run module entry points (CLI/admin tasks)
+  - `uv run pytest tests/ -v` — run test suite
+  - `uv add <package>` / `uv sync` — manage dependencies when using `uv`
+
 **Running cleaners**:
 ```powershell
-python main.py                          # TUI with auto-elevation (recommended)
-python -m cli.main_cleaner              # Full cleanup CLI (elevates if needed)
-python -m cli.quick_cleanup             # Quick prune-only CLI
-python -m cli.admin_tasks compact_vhdx  # Admin helper for specific task
+# Preferred: use uv
+uv run main.py                          # TUI with auto-elevation (recommended)
+uv run python -m cli.main_cleaner       # Full cleanup CLI (elevates if needed)
+uv run python -m cli.quick_cleanup      # Quick prune-only CLI
+uv run python -m cli.admin_tasks compact_vhdx  # Admin helper for specific task
 ```
+
 
 **Running model generator**:
 ```powershell
-python -m lmarena.generator lmarena_models.txt  # Outputs lmarena_models_models.py
+uv run python -m lmarena.generator lmarena_models.txt  # Outputs lmarena_models_models.py
 ```
 
 **Testing**:
