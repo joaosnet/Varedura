@@ -13,6 +13,10 @@
 </p>
 
 <p align="center">
+  <small>Available in: <a href="README.md">English</a> • <a href="README.pt-BR.md">Português (pt-BR)</a></small>
+</p>
+
+<p align="center">
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-features">Features</a> •
   <a href="#%EF%B8%8F-cross-platform">Cross-Platform</a> •
