@@ -32,6 +32,10 @@
 ### TUI (Recommended)
 
 ```bash
+# using uv (recommended)
+uv run main.py
+
+# or without uv
 python main.py
 ```
 
@@ -40,6 +44,13 @@ The app auto-detects your system language (English/Portuguese) and requests admi
 ### CLI
 
 ```bash
+# using uv (recommended)
+uv run python -m cli.quick_cleanup             # Quick Docker prune
+uv run python -m cli.main_cleaner              # Full cleanup with progress bar
+uv run python -m cli.admin_tasks compact_vhdx  # Admin-only tasks (Windows)
+uv run python -m lmarena.generator input.txt   # LMArena model generator
+
+# or run directly with python
 python -m cli.quick_cleanup             # Quick Docker prune
 python -m cli.main_cleaner              # Full cleanup with progress bar
 python -m cli.admin_tasks compact_vhdx  # Admin-only tasks (Windows)
@@ -144,6 +155,18 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -e .
+```
+
+Using `uv` (optional, recommended for running tasks):
+
+```bash
+# add dependencies (example):
+uv add <package>
+uv sync
+
+# run app / tests via uv
+uv run main.py
+uv run pytest tests/ -v
 ```
 
 ### Requirements

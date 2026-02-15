@@ -23,6 +23,10 @@
 ### TUI (recomendado)
 
 ```bash
+# usando uv (recomendado)
+uv run main.py
+
+# ou sem uv
 python main.py
 ```
 
@@ -31,6 +35,13 @@ O aplicativo detecta automaticamente o idioma do sistema (Português/Inglês) e 
 ### CLI
 
 ```bash
+# usando uv (recomendado)
+uv run python -m cli.quick_cleanup             # Limpeza rápida do Docker
+uv run python -m cli.main_cleaner              # Limpeza completa com barra de progresso
+uv run python -m cli.admin_tasks compact_vhdx  # Tarefas que exigem admin (Windows)
+uv run python -m lmarena.generator input.txt   # Gerador de modelos LMArena
+
+# ou execute diretamente com python
 python -m cli.quick_cleanup             # Limpeza rápida do Docker
 python -m cli.main_cleaner              # Limpeza completa com barra de progresso
 python -m cli.admin_tasks compact_vhdx  # Tarefas que exigem admin (Windows)
@@ -90,6 +101,18 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -e .
+```
+
+Usando `uv` (opcional, recomendado para executar tarefas):
+
+```bash
+# adicionar dependências (exemplo):
+uv add <package>
+uv sync
+
+# executar app / testes via uv
+uv run main.py
+uv run pytest tests/ -v
 ```
 
 ### Requisitos
