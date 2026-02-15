@@ -232,5 +232,25 @@
     "cleanup.linux_overlay_cleanup": "Limpando dados Docker em {path}...",
     "cleanup.linux_overlay_cleaned": "Dados Docker limpos: {size} MB liberados",
     "cleanup.requires_root": "Este script requer privilégios de root (use sudo).",
-    "cleanup.skipping_not_available": "Pulando: {feature} (não disponível nesta plataforma)"
+    "cleanup.skipping_not_available": "Pulando: {feature} (não disponível nesta plataforma)",
+
+    "mascot.welcome": "Olá! Sou o Varedura, seu assistente de limpeza!",
+    "mascot.working": "Trabalhando... aguarde!",
+    "mascot.success": "Tudo pronto! Limpeza concluída com sucesso!",
+    "mascot.error": "Ops! Algo deu errado. Verifique os logs.",
+    "mascot.goodbye": "Até a próxima! Mantenha tudo limpo!",
+    "mascot.scanning": "Escaneando a rede... fique tranquilo!",
+    "mascot.tip_cleanup": "Dica: execute limpezas regularmente!",
+    "mascot.tip_docker": "Dica: use imagens Docker menores (alpine)!",
+
+    "recorder.recording_started": "🔴 Gravação iniciada...",
+    "recorder.recording_stopped": "⏹ Gravação finalizada.",
+    "recorder.gif_saved": "🎬 GIF salvo em: {path}",
+    "recorder.gif_error": "Erro ao gerar GIF: {error}",
+    "recorder.svg_saved": "📄 SVG salvo em: {path}",
+    "recorder.toggle_on": "Gravação automática ativada",
+    "recorder.toggle_off": "Gravação automática desativada",
+    "recorder.demo_updated": "📸 Demo atualizado: {path}",
+    "menu.option_rec": "Gravação",
+    "menu.desc_rec": "Ativar/desativar gravação GIF automática"
 }

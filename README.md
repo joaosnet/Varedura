@@ -1,7 +1,7 @@
 # 🧹 Varedura
 
 <p align="center">
-  <img src="screenshots/Captura de tela 2026-01-14 125838.png" alt="Varedura screenshot" />
+  <img src="screenshots/demo.gif" alt="Varedura demo" />
 </p>
 
 <p align="center">
@@ -118,14 +118,22 @@ Varedura/
 ├── monitor/               # Network monitoring
 │   ├── stalker.py        # Network Stalker
 │   └── port_scanner.py   # Port scanner
+├── mascot/                # Animated ASCII art mascot
+│   ├── frames.py         # ASCII art frames (idle, working, success, error, wave)
+│   └── renderer.py       # MascotRenderer (static, animated, speech bubbles)
+├── recorder/              # Terminal session recording
+│   ├── session_recorder.py  # Rich Console capture → SVG snapshots
+│   └── gif_generator.py     # SVG frames → animated GIF
 ├── i18n/                  # Translations
 │   ├── __init__.py       # t() function, auto-detection
-│   ├── pt.json           # Portuguese (170+ keys)
-│   └── en.json           # English (170+ keys)
+│   ├── pt.json           # Portuguese (190+ keys)
+│   └── en.json           # English (190+ keys)
 ├── tests/                 # Unit tests (pytest)
 ├── exports/               # Generated PDFs
+├── recordings/            # Auto-generated GIF screencasts
+├── screenshots/           # demo.gif (auto-updated)
 ├── logs/                  # Daily rotating logs
-├── main.py                # TUI entry point (Textual)
+├── main.py                # TUI entry point (Rich)
 └── pyproject.toml         # Dependencies & config
 ```
 

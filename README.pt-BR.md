@@ -1,7 +1,7 @@
 # 🧹 Varedura
 
 <p align="center">
-  <img src="screenshots/Captura de tela 2026-01-14 125838.png" alt="Varedura screenshot" />
+  <img src="screenshots/demo.gif" alt="Varedura demo" />
 </p>
 
 <p align="center">
