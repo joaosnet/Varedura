@@ -9,10 +9,11 @@ from __future__ import annotations
 import sys
 import argparse
 from docker_cleaner.core import WSLDockerCleaner
+from i18n import t
 
 
 def parse_args(argv: list[str] | None = None):
-    parser = argparse.ArgumentParser(description="Admin-only tasks for Docker-Clennear")
+    parser = argparse.ArgumentParser(description="Admin-only tasks for Varedura")
     parser.add_argument(
         "task", choices=["compact_vhdx", "configure_sparse"], help="Admin task to run"
     )
@@ -24,15 +25,15 @@ def main(argv: list[str] | None = None) -> int:
     cleaner = WSLDockerCleaner()
     if not cleaner.is_admin():
         # Guard: If we are not admin, print error and exit non-zero
-        print("This helper script must be run as administrator.")
+        print(t("admin.must_be_admin"))
         return 1
     if args.task == "compact_vhdx":
         res = cleaner.compact_vhdx_files()
-        print("Compact VHDX result:", res)
+        print(t("admin.compact_result", result=res))
         return 0 if res else 1
     if args.task == "configure_sparse":
         res = cleaner.configure_wsl_sparse()
-        print("Configure sparse result:", res)
+        print(t("admin.sparse_result", result=res))
         return 0 if res else 1
     # unreachable
     return 2

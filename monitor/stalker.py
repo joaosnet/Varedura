@@ -319,25 +319,27 @@ def analyze_lag_source(
     - Se ambos timeout → Problema crítico no roteador ou cabo
     - Se tem processo com muitas conexões → Pode ser ele saturando
     """
+    from i18n import t
+
     # Caso 1: Timeout total
     if local_ms is None and ext_ms is None:
         return (
-            "🔌 ROTEADOR/CABO",
-            "Sem resposta do gateway - verificar cabo/roteador/energia",
+            t("stalker.router_cable"),
+            t("stalker.router_cable_desc"),
         )
 
     # Caso 2: Só gateway com timeout (crítico)
     if local_ms is None:
         return (
-            "🔌 ROTEADOR",
-            "Gateway não responde mas internet pode estar ok - problema no roteador",
+            t("stalker.router"),
+            t("stalker.router_no_response"),
         )
 
     # Caso 3: Só externo com timeout
     if ext_ms is None:
         return (
-            "🌐 PROVEDOR/DNS",
-            "Gateway OK mas sem internet - problema no provedor ou DNS",
+            t("stalker.provider_dns"),
+            t("stalker.provider_dns_desc"),
         )
 
     # Caso 4: Ambos acima do threshold
@@ -349,38 +351,36 @@ def analyze_lag_source(
         diff = abs(ext_ms - local_ms)
         if diff < 20:  # Menos de 20ms de diferença
             return (
-                "🔌 ROTEADOR",
-                f"Lag similar em ambos ({local_ms:.0f}ms vs {ext_ms:.0f}ms) - roteador sobrecarregado",
+                t("stalker.router"),
+                t("stalker.router_overloaded", local=f"{local_ms:.0f}", ext=f"{ext_ms:.0f}"),
             )
         else:
             # Grande diferença: pode ser tanto roteador quanto provedor
             return (
-                "🔌 ROTEADOR + 🌐 PROVEDOR",
-                f"Lag composto - roteador ({local_ms:.0f}ms) + internet adicional",
+                t("stalker.router_provider"),
+                t("stalker.compound_lag", local=f"{local_ms:.0f}"),
             )
 
     # Caso 5: Só externo com lag (local ok)
     if ext_lag and not local_lag:
         return (
-            "🌐 PROVEDOR/ROTA",
-            f"Gateway rápido ({local_ms:.0f}ms) mas internet lenta - problema externo",
+            t("stalker.provider_route"),
+            t("stalker.external_slow", local=f"{local_ms:.0f}"),
         )
 
     # Caso 6: Só local com lag (raro, já que ext passa por local)
     if local_lag and not ext_lag:
-        # Isso é teoricamente estranho... ext_ms deveria incluir local_ms
-        # Pode ser flutuação ou cache
         return (
-            "🔌 ROTEADOR (flutuação)",
-            "Padrão incomum - verificar estabilidade do roteador",
+            t("stalker.router_fluctuation"),
+            t("stalker.check_stability"),
         )
 
     # Caso 7: Tudo OK, mas ainda assim quer info
     if procs:
-        top_proc = procs[0][1] if procs[0][1] else "Desconhecido"
-        return f"✅ OK ({top_proc})", "Rede estável - maior uso de rede no momento"
+        top_proc = procs[0][1] if procs[0][1] else t("scanner.unknown")
+        return t("stalker.ok_process", process=top_proc), t("stalker.ok_stable")
 
-    return "✅ OK", "Rede estável"
+    return t("stalker.ok"), t("stalker.network_stable")
 
 
 # --- Entrada de Teclado ---
@@ -392,9 +392,14 @@ _KEY_COOLDOWN = 0.3  # 300ms cooldown entre teclas
 def _flush_stdin():
     """Limpa completamente o buffer de entrada do teclado."""
     if platform.system().lower() == "windows":
-        # Consumir todos os bytes pendentes
         while msvcrt.kbhit():
             msvcrt.getch()
+    else:
+        import termios
+        try:
+            termios.tcflush(sys.stdin, termios.TCIFLUSH)
+        except (termios.error, OSError):
+            pass
 
 
 def check_keyboard():
@@ -451,13 +456,14 @@ def check_keyboard():
 def handle_key(key: str) -> Optional[str]:
     """Processa entrada de teclado. Retorna mensagem para log ou None."""
     global show_help, running, config, port_scanner_state
+    from i18n import t
 
     if key == "q":
         running = False
         return None
     elif key == "h":
         show_help = not show_help
-        return "[dim]Painel de ajuda alternado[/]"
+        return f"[dim]{t('stalker.help_toggled')}[/]"
     elif key == "g":
         return prompt_change_gateway()
     elif key == "e":
@@ -470,27 +476,27 @@ def handle_key(key: str) -> Optional[str]:
         return prompt_export_report()
     elif key == "p":
         config.show_ports = not config.show_ports
-        status = "ativado" if config.show_ports else "desativado"
-        return f"[yellow]Painel de portas {status}[/]"
+        status = t("stalker.ports_enabled") if config.show_ports else t("stalker.ports_disabled")
+        return f"[yellow]{t('stalker.ports_panel', status=status)}[/]"
     elif key == "s":
         port_scanner_state = run_full_scan()
-        return f"[green]Scan de portas atualizado: {port_scanner_state.total_tcp} TCP, {port_scanner_state.total_udp} UDP[/]"
+        return f"[green]{t('stalker.port_scan_updated', tcp=port_scanner_state.total_tcp, udp=port_scanner_state.total_udp)}[/]"
     elif key == "v":
         config.show_speed = not config.show_speed
         if config.show_speed:
-            return "[yellow]Painel de velocidade ativado[/]"
+            return f"[yellow]{t('stalker.speed_panel_on')}[/]"
         else:
             # Exportar relatório ao pausar velocidade
             export_msg = export_combined_report()
-            return f"[yellow]Painel de velocidade desativado[/] | {export_msg}"
+            return f"[yellow]{t('stalker.speed_panel_off')}[/] | {export_msg}"
     elif key == "c":
         return prompt_change_contracted_speed()
     elif key == "f":
         # Alterna a preferência de exportação completa e persiste
         new_val = not config.allow_full_history_export
         set_allow_full_history_export(new_val)
-        status = "ativado" if new_val else "desativado"
-        return f"[yellow]Exportação completa automática {status} (salvo em {config.prefs_file})[/]"
+        status = t("stalker.ports_enabled") if new_val else t("stalker.ports_disabled")
+        return f"[yellow]{t('stalker.export_full_toggle', status=status, path=config.prefs_file)}[/]"
     return None
 
 

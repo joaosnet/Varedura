@@ -1,0 +1,2 @@
+timestamp,download_mbps,upload_mbps,contrato_down,contrato_up,pct_down,pct_up,status_anatel_medio,status_anatel_instantaneo
+2026-02-15 13:45:36,100.00,50.00,500.0,250.0,20.0,20.0,ABAIXO,VIOLAÇÃO

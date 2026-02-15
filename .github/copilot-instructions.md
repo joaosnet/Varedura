@@ -1,8 +1,8 @@
-# Copilot Instructions — Docker-Clennear
+# Copilot Instructions — Varedura
 
 ## Purpose & Architecture
 
-This repo provides **Windows-only** WSL/Docker cleanup tools and LMArena model parsing utilities:
+This repo provides **cross-platform** (Windows/Linux/macOS) Docker cleanup tools, network monitoring, and LMArena model parsing utilities:
 
 - **Docker Cleaner** (`docker_cleaner/core.py`, `cli/`, `main.py`) — Reclaims WSL/Docker space via pruning, VHDX compaction, and temp file cleanup
 - **LMArena Generator** (`lmarena/generator.py`) — Extracts `initialModels` from raw LMArena dumps and generates Python code with model lists
@@ -22,7 +22,7 @@ This repo provides **Windows-only** WSL/Docker cleanup tools and LMArena model p
 **Textual TUI** (`main.py`):
 - `CommandRunnerApp`: Main app with sidebar buttons, `RichLog` output widget, and progress tracking
 - `CleanupOptionsScreen`: Modal with checkboxes for granular cleanup steps (containers, images, volumes, etc.)
-- Preferences saved to `~/.docker_clennear_prefs.json` (JSON dict mapping `opt_*` checkbox IDs to bool)
+- Preferences saved to `~/.varedura_prefs.json` (JSON dict mapping `opt_*` checkbox IDs to bool)
 - `@work` decorated methods (`_run_prune_*`, `_run_compact_vhdx`) execute async operations as Textual workers
 - **Auto-elevation**: `main.py` checks admin status on startup and re-launches with UAC if needed (Windows only)
 
@@ -241,7 +241,7 @@ def compose(self) -> ComposeResult:
 - Modal screens: `Screen` subclass with `push_screen(..., wait_for_dismiss=True)`
 - Worker pattern: `@work` decorated methods + `write_ui_log()` via `call_from_thread()`
 - Progress tracking: Custom `start_progress()`, `update_progress()`, `finish_progress()` using Rich `Progress` rendered in `Static` widget
-- Checkbox persistence: Save to `~/.docker_clennear_prefs.json`, load defaults in `CleanupOptionsScreen.on_mount()`
+- Checkbox persistence: Save to `~/.varedura_prefs.json`, load defaults in `CleanupOptionsScreen.on_mount()`
 
 ### Testing Textual components
 
@@ -388,7 +388,7 @@ async def test_responsive_layout():
 3. Add `@work` decorated worker method to `CommandRunnerApp` (e.g., `_run_new_cleanup()`)
 4. Add checkbox to `CleanupOptionsScreen.compose()` with ID `opt_new_cleanup`
 5. Handle checkbox in `on_button_pressed(event)` for "opts_exec" button
-6. Update `~/.docker_clennear_prefs.json` default in `docker_options` handler
+6. Update `~/.varedura_prefs.json` default in `docker_options` handler
 
 **Adding new tests**:
 ```python

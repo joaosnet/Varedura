@@ -1,134 +1,186 @@
-# Docker Clennear
+# 🧹 Varedura
+
 <p align="center">
-  <img src="screenshots/Captura de tela 2026-01-14 125838.png" alt="Imagem de destaque do Docker Clennear" />
+  <img src="screenshots/Captura de tela 2026-01-14 125838.png" alt="Varedura screenshot" />
 </p>
-Ferramentas para limpeza e compactação de WSL/Docker (Windows) e utilitários para LMArena models
 
-## 🚀 Início Rápido
+<p align="center">
+  <strong>Cross-platform Docker cleanup toolkit, network monitor & AI model generator</strong>
+</p>
 
-### Interface Gráfica (Recomendado)
+<p align="center">
+  <em>"Varedura" — Portuguese for "sweeping clean"</em>
+</p>
+
+<p align="center">
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-features">Features</a> •
+  <a href="#%EF%B8%8F-cross-platform">Cross-Platform</a> •
+  <a href="#-internationalization">i18n</a> •
+  <a href="#-project-structure">Structure</a> •
+  <a href="#%EF%B8%8F-safety">Safety</a>
+</p>
+
+---
+
+## 🚀 Quick Start
+
+### TUI (Recommended)
 
 ```bash
 python main.py
 ```
 
-**⚠️ IMPORTANTE:** O aplicativo **solicita automaticamente privilégios de administrador** ao iniciar no Windows (via UAC). Isso é necessário para operações como compactação de VHDX e configuração WSL.
+The app auto-detects your system language (English/Portuguese) and requests admin/root privileges when needed.
 
-**Indicador visual na interface:**
-- ✅ **Status: ✓ Admin** (verde) - Privilégios elevados, todas as operações disponíveis
-- ⚠️ **Status: ⚠ Sem Admin** (amarelo) - Sem privilégios, algumas operações podem falhar
+### CLI
 
-### CLI (Linha de Comando)
-
-- Limpeza rápida: `python -m cli.quick_cleanup`
-- Limpeza completa: `python -m cli.main_cleaner`
-- Gerar modelos LMArena: `python -m lmarena.generator lmarena_models.txt`
-
-## 🎨 Interface Textual (TUI)
-
-A interface unificada oferece:
-
-### 📋 Funcionalidades
-
-- **Limpeza Docker Completa** - Executa todas as etapas automaticamente com streaming em tempo real
-- **Opções de Limpeza** - Modal com seleção granular de operações:
-  - ✅ Parar Docker e WSL
-  - ✅ Prune containers (`docker container prune -f`)
-  - ✅ Prune images (`docker image prune -af`)
-  - ✅ Prune volumes (`docker volume prune -f`)
-  - ✅ Prune networks (`docker network prune -f`)
-  - ✅ Prune builder cache (`docker builder prune -af`)
-  - ✅ Prune system (`docker system prune -af --volumes`)
-  - ✅ Configurar sparse (WSL)
-  - ✅ Compactar VHDX (requer admin)
-  - ✅ Limpar arquivos temporários
-- **LMArena Generator** - Processa dumps e gera código Python com lista de modelos
-- **Logs em Tempo Real** - Veja a saída dos comandos conforme são executados
-- **Persistência de Preferências** - Salva seleções em `~/.docker_clennear_prefs.json`
-
-### 🔥 Streaming em Tempo Real
-
-**NOVIDADE:** Todos os comandos agora exibem saída **linha por linha** em tempo real no `RichLog`:
-
-- ✅ Comandos Docker (prune, system, etc.)
-- ✅ Comandos WSL (shutdown, sparse config)
-- ✅ PowerShell (Optimize-VHD)
-- ✅ LMArena generator (parsing e processamento)
-
-Não há mais espera até o final - você vê cada passo sendo executado!
-
-## 📁 Logs
-
-- **Localização:** `logs/YYYY-MM-DD.log` (rotação diária)
-- **Formato:** Texto plano com timestamps UTF-8
-- **Conteúdo:** Comandos executados, saídas, erros e tracebacks
-- **Acesso:** Botão "Abrir pasta de logs" na interface
-
-## 📄 Exportando Relatórios (PDF)
-
-- Os relatórios formais são gerados em `exports/relatorio_formal_<timestamp>.pdf`.
-- Opções de exportação disponíveis em `monitor.stalker`:
-  - `config.export_max_points` (padrão: 5000): limita a amostragem de pontos para evitar uso excessivo de memória ao gerar gráficos.
-  - `config.allow_full_history_export` (padrão: False): se True, permite exportar o histórico completo sem downsampling (pode consumir muita memória/CPU).
-- Função para iniciar exportação em background:
-  - `export_combined_report(full_history: bool = False)` — passe `full_history=True` para forçar exportar todo o histórico (se `config.allow_full_history_export` também estiver ativado, caso contrário o flag também força a exportação, mas tome cuidado com consumo de recursos).
-- Você pode alternar a preferência persistente de exportar histórico completo com a tecla `f` no monitor; isso salva em `config.prefs_file` (padrão `exports/stalker_prefs.json`).
-- Ao executar `prompt_export_report()` sem preferências ativadas, o usuário recebe a opção de confirmar e escolher `sa` para confirmar E salvar a preferência como permanente.
-- Em caso de falhas durante a geração do PDF, tracebacks e detalhes são gravados em: `exports/export_errors.log`.
-
-### Captura de Erros
-
-O aplicativo captura automaticamente:
-- Exceções não tratadas (Python `excepthook`)
-- Erros de async workers (`asyncio` exception handler)
-- Erros de thread workers (`threading.excepthook`)
-- Mensagens de `stderr` (tracebacks, warnings)
-
-## 🏗️ Estrutura do Projeto
-
-```
-Docker-Clennear/
-├── docker_cleaner/      # Lógica de limpeza e utilitários
-│   ├── core.py         # WSLDockerCleaner com métodos sync e async
-│   └── __init__.py
-├── cli/                # Wrappers CLI
-│   ├── main_cleaner.py # Limpeza completa (CLI)
-│   ├── quick_cleanup.py # Limpeza rápida (CLI)
-│   ├── admin_tasks.py  # Helper para tarefas admin
-│   └── richlog.py      # DailyLogWriter para logs rotativos
-├── lmarena/            # Utilitários LMArena
-│   ├── generator.py    # Gerador de modelos
-│   └── __init__.py
-├── tests/              # Testes unitários (pytest)
-├── logs/               # Logs diários (YYYY-MM-DD.log)
-├── main.py             # Interface Textual (TUI)
-└── README.md
+```bash
+python -m cli.quick_cleanup             # Quick Docker prune
+python -m cli.main_cleaner              # Full cleanup with progress bar
+python -m cli.admin_tasks compact_vhdx  # Admin-only tasks (Windows)
+python -m lmarena.generator input.txt   # LMArena model generator
 ```
 
-## ⚠️ Avisos de Segurança
+## ✨ Features
 
-**OPERAÇÕES DESTRUTIVAS:** Os scripts executam comandos que **removem dados permanentemente**:
+### 🐳 Docker Cleanup
+- **Full system prune** — containers, images, volumes, networks, build cache
+- **Granular options** — pick exactly what to clean via interactive modal
+- **VHDX compaction** — reclaim disk space from WSL2 virtual disks (Windows)
+- **WSL sparse config** — optimize WSL2 memory and disk usage (Windows)
+- **Temp file cleanup** — clear system temp directories
+- **Real-time streaming** — watch every command execute line-by-line
 
-- `docker system prune -af --volumes` - Remove todos containers, imagens, volumes e redes não utilizados
-- `taskkill /F` - Força encerramento de processos Docker
-- `wsl --shutdown` - Desliga todas as distribuições WSL
-- `Optimize-VHD` - Compacta discos virtuais (requer admin)
+### 🔍 Network Stalker
+- Real-time network monitoring with latency graphs
+- Port scanning and lag source analysis
+- PDF report export with history charts
+- Persistent preferences for export settings
 
-**Recomendações:**
-1. ✅ Faça backup de dados importantes antes de executar
-2. ✅ Revise as opções selecionadas no modal antes de confirmar
-3. ✅ Execute como administrador para acesso completo às funcionalidades
-4. ✅ Monitore os logs em tempo real durante a execução
+### 🤖 LMArena Generator
+- Extracts `initialModels` from LMArena data dumps
+- Generates typed Python dicts: `models`, `text_models`, `image_models`, `vision_models`
+- Outputs ready-to-use `.py` module files
 
-## 🔧 Requisitos
+### 📊 Logging & Reports
+- Daily rotating logs in `logs/YYYY-MM-DD.log`
+- PDF export for network monitoring reports
+- Automatic exception capture (Python, asyncio, threading)
 
-- **Sistema:** Windows 10/11 com WSL2
-- **Python:** 3.8+
-- **Docker Desktop:** Instalado e configurado
-- **Privilégios:** Administrador (solicitado automaticamente)
-- **Dependências:** `rich`, `textual`
+## 🖥️ Cross-Platform
 
-## 📖 Documentação Adicional
+Varedura runs on **Windows**, **Linux**, and **macOS**:
 
-- [IMPLEMENTACAO_STREAMING.md](IMPLEMENTACAO_STREAMING.md) - Detalhes técnicos do streaming em tempo real
+| Feature | Windows | Linux | macOS |
+|---------|---------|-------|-------|
+| Docker prune/cleanup | ✅ | ✅ | ✅ |
+| Stop Docker processes | ✅ `taskkill` | ✅ `systemctl`/`killall` | ✅ `killall`/`open` |
+| VHDX compaction | ✅ `Optimize-VHD` | ⬜ N/A | ⬜ N/A |
+| WSL sparse config | ✅ | ⬜ N/A | ⬜ N/A |
+| Temp file cleanup | ✅ `%TEMP%` | ✅ `/tmp` | ✅ `/tmp` |
+| Recycle bin cleanup | ✅ PowerShell | ⬜ Skipped | ⬜ Skipped |
+| Admin elevation | ✅ UAC | ✅ `sudo` | ✅ `sudo` |
+| Network Stalker | ✅ | ✅ | ✅ |
+| LMArena Generator | ✅ | ✅ | ✅ |
+
+> Windows-only features (VHDX, WSL sparse) are gracefully skipped on other platforms with an informational message.
+
+## 🌍 Internationalization
+
+Varedura supports **Portuguese** and **English** with automatic language detection:
+
+1. **Auto-detects** your system locale on first run
+2. **Switch anytime** by pressing `L` in the main menu
+3. **Persists** your choice to `~/.varedura_lang.json`
+
+The i18n system uses flat JSON files (`i18n/pt.json`, `i18n/en.json`) with `t("key")` lookups and `.format()` interpolation.
+
+## 🏗️ Project Structure
+
+```
+Varedura/
+├── docker_cleaner/        # Core cleanup logic (sync + async)
+│   ├── core.py           # WSLDockerCleaner class
+│   └── __init__.py
+├── cli/                   # CLI entry points
+│   ├── main_cleaner.py   # Full cleanup CLI
+│   ├── quick_cleanup.py  # Quick prune CLI
+│   ├── admin_tasks.py    # Admin helper
+│   └── richlog.py        # Daily log writer
+├── monitor/               # Network monitoring
+│   ├── stalker.py        # Network Stalker
+│   └── port_scanner.py   # Port scanner
+├── lmarena/               # LMArena utilities
+│   ├── generator.py      # Model list generator
+│   └── __init__.py
+├── i18n/                  # Translations
+│   ├── __init__.py       # t() function, auto-detection
+│   ├── pt.json           # Portuguese (170+ keys)
+│   └── en.json           # English (170+ keys)
+├── tests/                 # Unit tests (pytest)
+├── exports/               # Generated PDFs
+├── logs/                  # Daily rotating logs
+├── main.py                # TUI entry point (Textual)
+└── pyproject.toml         # Dependencies & config
+```
+
+## ⚙️ Installation
+
+```bash
+# Clone
+git clone https://github.com/joaod/Varedura.git
+cd Varedura
+
+# Create venv & install
+python -m venv .venv
+# Windows:
+.\.venv\Scripts\activate
+# Linux/macOS:
+source .venv/bin/activate
+
+pip install -e .
+```
+
+### Requirements
+
+- **Python** 3.10+
+- **Docker** installed and in PATH
+- **Admin/root** for VHDX compaction and WSL configuration (Windows)
+- **Dependencies:** `rich`, `textual`, `psutil`, `matplotlib`, `reportlab`
+
+## ⚠️ Safety
+
+**Destructive operations** — always require explicit user confirmation:
+
+| Command | Effect |
+|---------|--------|
+| `docker system prune -af --volumes` | Removes ALL unused containers, images, volumes, networks |
+| `taskkill /F` / `killall` | Force-kills Docker processes |
+| `wsl --shutdown` | Stops all WSL distributions (Windows) |
+| `Optimize-VHD` | Compacts VHDX files (Windows, requires admin) |
+
+**Recommendations:**
+1. ✅ Back up important data before running cleanup
+2. ✅ Review selected options in the modal before confirming
+3. ✅ Run as admin/root for full functionality
+4. ✅ Monitor real-time logs during execution
+
+## 🧪 Testing
+
+```bash
+pytest tests/ -v
+```
+
+All destructive operations are mocked in tests — no Docker commands are actually executed.
+
+## 📄 License
+
+See [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  Built with ❤️ using <a href="https://github.com/features/copilot/cli">GitHub Copilot CLI</a>
+</p>
 

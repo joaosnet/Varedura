@@ -85,7 +85,7 @@ def get_listening_ports() -> Tuple[List[PortInfo], List[PortInfo], int]:
                 proc = psutil.Process(conn.pid)
                 processo = proc.name()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
-                processo = "Acesso Negado"
+                processo = "Acesso Negado"  # Internal label, translated at display time
 
         info = PortInfo(
             porta=porta,

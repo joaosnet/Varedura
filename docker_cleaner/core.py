@@ -7,6 +7,7 @@ import subprocess
 import os
 import sys
 import time
+import shutil
 from datetime import datetime
 from typing import Optional, Callable
 import logging
@@ -21,7 +22,12 @@ from rich.progress import (
 from rich.table import Table
 from rich.panel import Panel
 from rich.live import Live
-import ctypes
+from i18n import t
+
+IS_WINDOWS = sys.platform.startswith("win")
+
+if IS_WINDOWS:
+    import ctypes
 
 
 class WSLDockerCleaner:
@@ -50,7 +56,7 @@ class WSLDockerCleaner:
     def run_command(self, command, capture_output=True, shell=True):
         """Executa um comando e retorna o resultado"""
         try:
-            self.log(f"Executando: {command}")
+            self.log(t("cleanup.executing", cmd=command))
             result = subprocess.run(
                 command,
                 capture_output=capture_output,
@@ -59,13 +65,13 @@ class WSLDockerCleaner:
                 timeout=300,  # 5 minutos timeout
             )
             if result.returncode != 0 and result.stderr:
-                self.log(f"Erro: {result.stderr}", "ERROR")
+                self.log(t("cleanup.error", error=result.stderr), "ERROR")
             return result
         except subprocess.TimeoutExpired:
-            self.log(f"Timeout ao executar: {command}", "ERROR")
+            self.log(t("cleanup.timeout", cmd=command), "ERROR")
             return None
         except Exception as e:
-            self.log(f"Erro ao executar comando: {str(e)}", "ERROR")
+            self.log(t("cleanup.error_executing", error=str(e)), "ERROR")
             return None
 
     async def run_command_async(
@@ -86,9 +92,9 @@ class WSLDockerCleaner:
         """
         try:
             if stream_callback:
-                stream_callback(f"Executando: {command}\n")
+                stream_callback(f"{t('cleanup.executing', cmd=command)}\n")
             else:
-                self.log(f"Executando: {command}")
+                self.log(t("cleanup.executing", cmd=command))
 
             # Criar subprocess baseado no tipo (shell ou exec)
             if shell:
@@ -137,9 +143,9 @@ class WSLDockerCleaner:
             if returncode != 0 and stderr_lines:
                 error_msg = "\n".join(stderr_lines)
                 if stream_callback:
-                    stream_callback(f"Erro (código {returncode}): {error_msg}\n")
+                    stream_callback(f"{t('cleanup.error_code', code=returncode, error=error_msg)}\n")
                 else:
-                    self.log(f"Erro: {error_msg}", "ERROR")
+                    self.log(t("cleanup.error", error=error_msg), "ERROR")
 
             # Retornar CompletedProcess compatível
             return subprocess.CompletedProcess(
@@ -150,28 +156,33 @@ class WSLDockerCleaner:
             )
 
         except asyncio.TimeoutError:
-            msg = f"Timeout ao executar: {command}\n"
+            msg = f"{t('cleanup.timeout', cmd=command)}\n"
             if stream_callback:
                 stream_callback(msg)
             else:
-                self.log(f"Timeout ao executar: {command}", "ERROR")
+                self.log(t("cleanup.timeout", cmd=command), "ERROR")
             return subprocess.CompletedProcess(command, -1, "", "Timeout")
         except Exception as e:
-            msg = f"Erro ao executar comando: {str(e)}\n"
+            msg = f"{t('cleanup.error_executing', error=str(e))}\n"
             if stream_callback:
                 stream_callback(msg)
             else:
-                self.log(f"Erro ao executar comando: {str(e)}", "ERROR")
+                self.log(t("cleanup.error_executing", error=str(e)), "ERROR")
             return subprocess.CompletedProcess(command, -1, "", str(e))
 
     async def run_elevated_command_async(
         self, command: str, stream_callback: Optional[Callable[[str], None]] = None
     ) -> subprocess.CompletedProcess:
-        """Executa comando elevated (admin) via PowerShell Start-Process RunAs hidden, sem janela visível."""
+        """Executa comando elevated (admin/root)."""
         if stream_callback:
-            stream_callback("Solicitando privilégios admin (UAC)...\n")
+            stream_callback(f"{t('cleanup.requesting_admin')}\n")
 
-        # Escape para PS
+        if not IS_WINDOWS:
+            return await self.run_command_async(
+                f"sudo bash -c '{command}'", shell=True, stream_callback=stream_callback
+            )
+
+        # Windows: PowerShell Start-Process RunAs
         escaped_cmd = (
             command.replace("'", "'\"'\"'").replace('"', '\\"').replace("\n", "`n")
         )
@@ -198,6 +209,10 @@ try {{
 
     def run_elevated_command(self, command: str) -> subprocess.CompletedProcess | None:
         """Versão sync para CLI."""
+        if not IS_WINDOWS:
+            self.log(t("cleanup.executing_elevated", cmd=command))
+            return self.run_command(f"sudo bash -c '{command}'")
+
         escaped_cmd = command.replace("'", "'\"'\"'").replace('"', '\\"')
 
         ps_script = f'''
@@ -215,30 +230,40 @@ try {{
             f'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "{ps_script}"'
         )
 
-        self.log(f"Executando elevated: {command}")
+        self.log(t("cleanup.executing_elevated", cmd=command))
         return self.run_command(ps_cmd)
 
     def is_docker_running(self):
         """Verifica se o Docker está rodando"""
-        result = self.run_command(
-            'tasklist /FI "IMAGENAME eq Docker Desktop.exe" 2>NUL | find /I "Docker Desktop.exe" >NUL',
-            capture_output=True,
-        )
-        if result and result.returncode != 0:
-            return False
+        if IS_WINDOWS:
+            result = self.run_command(
+                'tasklist /FI "IMAGENAME eq Docker Desktop.exe" 2>NUL | find /I "Docker Desktop.exe" >NUL',
+                capture_output=True,
+            )
+            if result and result.returncode != 0:
+                return False
 
         result = self.run_command("docker ps", capture_output=True)
         return result and result.returncode == 0
 
     def is_admin(self):
-        """Verifica se o script está rodando como administrador"""
-        try:
-            return ctypes.windll.shell32.IsUserAnAdmin()
-        except Exception:
-            return False
+        """Verifica se o script está rodando como administrador/root"""
+        if IS_WINDOWS:
+            try:
+                return ctypes.windll.shell32.IsUserAnAdmin()
+            except Exception:
+                return False
+        else:
+            return os.geteuid() == 0
 
     def run_as_admin(self):
-        """Reinicia o script com privilégios de administrador"""
+        """Reinicia o script com privilégios de administrador/root"""
+        if not IS_WINDOWS:
+            self.console.print(
+                f"\n[yellow]{t('cleanup.requires_root')}[/yellow]"
+            )
+            sys.exit(1)
+
         try:
             python_exe = sys.executable
             # Tenta usar argv[0] para preservar o script que foi invocado
@@ -250,10 +275,10 @@ try {{
             params = f'"{script_path}"'
 
             self.console.print(
-                "\n[yellow]Este script requer privilégios de administrador.[/yellow]"
+                f"\n[yellow]{t('cleanup.requires_admin')}[/yellow]"
             )
             self.console.print(
-                "[yellow]Solicitando elevação de privilégios...[/yellow]\n"
+                f"[yellow]{t('cleanup.requesting_elevation')}[/yellow]\n"
             )
 
             ctypes.windll.shell32.ShellExecuteW(
@@ -269,10 +294,10 @@ try {{
 
         except Exception as e:
             self.console.print(
-                f"[bold red]Erro ao solicitar privilégios de administrador: {str(e)}[/bold red]"
+                f"[bold red]{t('cleanup.admin_error', error=str(e))}[/bold red]"
             )
             self.console.print(
-                "[bold red]Execute o script manualmente como administrador.[/bold red]"
+                f"[bold red]{t('cleanup.run_as_admin_manual')}[/bold red]"
             )
             sys.exit(1)
 
@@ -319,6 +344,8 @@ try {{
         return "0B"
 
     def get_docker_vhdx_size(self):
+        if not IS_WINDOWS:
+            return 0, []
         # Include all known Docker VHDX locations (varies by Docker Desktop version)
         vhdx_paths = [
             # Newer Docker Desktop versions use 'main' subfolder
@@ -346,49 +373,63 @@ try {{
                 total_size += size
                 existing_files.append((path, size))
                 size_gb = size / (1024**3)
-                self.log(f"VHDX encontrado: {path} ({size_gb:.2f} GB)")
+                self.log(t("cleanup.vhdx_found", path=path, size=f"{size_gb:.2f}"))
         return total_size, existing_files
 
     def docker_cleanup(self):
         if not self.is_docker_running():
-            self.log("Docker não está rodando. Iniciando Docker Desktop...", "WARNING")
+            self.log(t("cleanup.docker_not_running"), "WARNING")
             try:
-                docker_path = r"C:\Program Files\Docker\Docker\Docker Desktop.exe"
-                if not os.path.exists(docker_path):
-                    self.log(
-                        f"Docker Desktop não encontrado em: {docker_path}", "ERROR"
-                    )
-                    self.log(
-                        "Pulando limpeza do Docker. Execute o Docker Desktop manualmente e tente novamente.",
-                        "WARNING",
-                    )
-                    return False
+                if IS_WINDOWS:
+                    docker_path = r"C:\Program Files\Docker\Docker\Docker Desktop.exe"
+                    if not os.path.exists(docker_path):
+                        self.log(
+                            t("cleanup.docker_not_found", path=docker_path), "ERROR"
+                        )
+                        self.log(
+                            t("cleanup.skip_docker"),
+                            "WARNING",
+                        )
+                        return False
+                    subprocess.Popen([docker_path], shell=True)
+                else:
+                    # Linux/macOS: try to start Docker daemon
+                    if shutil.which("docker") is None:
+                        self.log(t("cleanup.docker_not_installed"), "ERROR")
+                        return False
+                    # Try systemctl first (Linux), then open (macOS)
+                    if shutil.which("systemctl"):
+                        subprocess.Popen(["sudo", "systemctl", "start", "docker"])
+                    elif sys.platform == "darwin" and os.path.exists("/Applications/Docker.app"):
+                        subprocess.Popen(["open", "/Applications/Docker.app"])
+                    else:
+                        self.log(t("cleanup.skip_docker"), "WARNING")
+                        return False
 
-                subprocess.Popen([docker_path], shell=True)
-                self.log("Aguardando Docker Desktop inicializar (60 segundos)...")
+                self.log(t("cleanup.waiting_docker"))
                 max_wait = 60
                 wait_interval = 5
                 for i in range(0, max_wait, wait_interval):
                     time.sleep(wait_interval)
                     if self.is_docker_running():
                         self.log(
-                            f"Docker iniciado com sucesso após {i + wait_interval} segundos"
+                            t("cleanup.docker_started", seconds=i + wait_interval)
                         )
                         time.sleep(5)
                         break
-                    self.log(f"Aguardando... ({i + wait_interval}/{max_wait}s)")
+                    self.log(t("cleanup.waiting_progress", current=i + wait_interval, max=max_wait))
                 else:
                     self.log(
-                        "Timeout ao iniciar Docker. Pulando limpeza Docker.", "ERROR"
+                        t("cleanup.docker_timeout"), "ERROR"
                     )
                     return False
             except Exception as e:
-                self.log(f"Erro ao iniciar Docker: {str(e)}", "ERROR")
+                self.log(t("cleanup.docker_start_error", error=str(e)), "ERROR")
                 return False
 
-        self.log("=== INICIANDO LIMPEZA DO DOCKER ===")
+        self.log(t("cleanup.starting_docker_cleanup"))
 
-        self.log("Parando todos os containers...")
+        self.log(t("cleanup.stopping_containers"))
         containers_result = self.run_command("docker ps -q", capture_output=True)
         if containers_result and containers_result.stdout.strip():
             container_ids = containers_result.stdout.strip().split("\n")
@@ -397,75 +438,90 @@ try {{
                     self.run_command(
                         f"docker stop {container_id.strip()}", capture_output=True
                     )
-                    self.log(f"Container {container_id.strip()} parado")
+                    self.log(t("cleanup.container_stopped", id=container_id.strip()))
         else:
-            self.log("Nenhum container em execução")
+            self.log(t("cleanup.no_containers"))
 
-        self.log("Removendo containers parados...")
+        self.log(t("cleanup.removing_containers"))
         result = self.run_command("docker container prune -f")
         space = self._parse_reclaimed_space(result)
-        self.log(f"Espaço recuperado (containers): {space}")
+        self.log(t("cleanup.space_containers", space=space))
 
-        self.log("Removendo imagens não utilizadas...")
+        self.log(t("cleanup.removing_images"))
         result = self.run_command("docker image prune -af")
         space = self._parse_reclaimed_space(result)
-        self.log(f"Espaço recuperado (imagens): {space}")
+        self.log(t("cleanup.space_images", space=space))
 
-        self.log("Removendo volumes não utilizados...")
+        self.log(t("cleanup.removing_volumes"))
         result = self.run_command("docker volume prune -f")
         space = self._parse_reclaimed_space(result)
-        self.log(f"Espaço recuperado (volumes): {space}")
+        self.log(t("cleanup.space_volumes", space=space))
 
-        self.log("Removendo redes não utilizadas...")
+        self.log(t("cleanup.removing_networks"))
         self.run_command("docker network prune -f")
 
-        self.log("Executando limpeza completa do sistema Docker...")
+        self.log(t("cleanup.full_system_cleanup"))
         result = self.run_command("docker system prune -af --volumes")
         space = self._parse_reclaimed_space(result)
-        self.log(f"Espaço total recuperado (sistema): {space}")
+        self.log(t("cleanup.space_system", space=space))
 
-        self.log("Limpando cache de build...")
+        self.log(t("cleanup.clearing_build_cache"))
         self.run_command("docker builder prune -af")
 
         return True
 
     def stop_docker_wsl(self):
-        self.log("=== PARANDO DOCKER E WSL ===")
-        self.log("Parando Docker Desktop...")
-        docker_processes = [
-            "Docker Desktop.exe",
-            "Docker.exe",
-            "com.docker.backend.exe",
-            "com.docker.proxy.exe",
-            "dockerd.exe",
-            "vpnkit.exe",
-        ]
-        for process in docker_processes:
-            result = self.run_command(
-                f'taskkill /F /IM "{process}"', capture_output=True
-            )
-            if result and result.returncode == 0:
-                self.log(f"Processo {process} finalizado")
-        time.sleep(5)
+        self.log(t("cleanup.stopping_docker_wsl"))
+        if IS_WINDOWS:
+            self.log(t("cleanup.stopping_docker_desktop"))
+            docker_processes = [
+                "Docker Desktop.exe",
+                "Docker.exe",
+                "com.docker.backend.exe",
+                "com.docker.proxy.exe",
+                "dockerd.exe",
+                "vpnkit.exe",
+            ]
+            for process in docker_processes:
+                result = self.run_command(
+                    f'taskkill /F /IM "{process}"', capture_output=True
+                )
+                if result and result.returncode == 0:
+                    self.log(t("cleanup.process_killed", process=process))
+            time.sleep(5)
 
-        self.log("Parando WSL...")
-        result = self.run_command("wsl --shutdown", capture_output=True)
-        if result:
-            self.log("WSL desligado com sucesso")
+            self.log(t("cleanup.stopping_wsl"))
+            result = self.run_command("wsl --shutdown", capture_output=True)
+            if result:
+                self.log(t("cleanup.wsl_stopped"))
+            else:
+                self.log(t("cleanup.wsl_error"), "ERROR")
         else:
-            self.log("Erro ao desligar WSL", "ERROR")
+            # Linux/macOS: stop Docker daemon
+            self.log(t("cleanup.stopping_docker_linux"))
+            if shutil.which("systemctl"):
+                result = self.run_command("sudo systemctl stop docker", capture_output=True)
+            else:
+                result = self.run_command("sudo killall Docker com.docker.hyperkit dockerd 2>/dev/null || true", capture_output=True)
+            if result and result.returncode == 0:
+                self.log(t("cleanup.docker_stopped_linux"))
+            else:
+                self.log(t("cleanup.docker_stop_error_linux", error=""), "WARNING")
 
         time.sleep(10)
         return True
 
     def configure_wsl_sparse(self):
-        self.log("=== CONFIGURANDO MODO SPARSE ===")
+        if not IS_WINDOWS:
+            self.log(t("cleanup.sparse_windows_only"), "INFO")
+            return True
+        self.log(t("cleanup.configuring_sparse"))
         result = self.run_command("wsl -l -v")
         if not result:
             return False
         distributions = ["docker-desktop", "docker-desktop-data"]
         for distro in distributions:
-            self.log(f"Configurando sparse para {distro}...")
+            self.log(t("cleanup.sparse_distro", distro=distro))
             self.run_command(f'wsl --manage "{distro}" --set-sparse true')
         wslconfig_path = os.path.expanduser("~/.wslconfig")
         wslconfig_content = """[wsl2]
@@ -478,16 +534,19 @@ swapFile=%TEMP%\\wsl-swap.vhdx
         try:
             with open(wslconfig_path, "w", encoding="utf-8") as f:
                 f.write(wslconfig_content)
-            self.log(f"Arquivo .wslconfig atualizado: {wslconfig_path}")
+            self.log(t("cleanup.wslconfig_updated", path=wslconfig_path))
         except Exception as e:
-            self.log(f"Erro ao criar .wslconfig: {str(e)}", "ERROR")
+            self.log(t("cleanup.wslconfig_error", error=str(e)), "ERROR")
         return True
 
     def compact_vhdx_files(self):
+        if not IS_WINDOWS:
+            self.log(t("cleanup.vhdx_windows_only"), "INFO")
+            return True
         if not self.is_admin():
-            self.log("Execução como administrador recomendada", "WARNING")
+            self.log(t("cleanup.admin_recommended"), "WARNING")
             return False
-        self.log("=== COMPACTANDO ARQUIVOS VHDX ===")
+        self.log(t("cleanup.compacting_vhdx"))
         # Include all known Docker VHDX locations (varies by Docker Desktop version)
         vhdx_paths = [
             # Newer Docker Desktop versions use 'main' subfolder
@@ -501,7 +560,7 @@ swapFile=%TEMP%\\wsl-swap.vhdx
             if os.path.exists(vhdx_path):
                 size_before = os.path.getsize(vhdx_path)
                 size_before_gb = size_before / (1024**3)
-                self.log(f"Compactando {vhdx_path} ({size_before_gb:.2f} GB)...")
+                self.log(t("cleanup.compacting_file", path=vhdx_path, size=f"{size_before_gb:.2f}"))
                 ps_command = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
                 result = self.run_elevated_command(ps_command)
                 if result and result.returncode == 0:
@@ -512,33 +571,45 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                         space_saved = (size_before - size_after) / (1024**3)
                         self.total_space_saved += space_saved
                         self.log(
-                            f"Compactação concluída: {size_after_gb:.2f} GB (economizado: {space_saved:.2f} GB)"
+                            t("cleanup.compact_done", size=f"{size_after_gb:.2f}", saved=f"{space_saved:.2f}")
                         )
                         success = True
                     else:
                         self.log(
-                            f"Arquivo não encontrado após compactação: {vhdx_path}",
+                            t("cleanup.file_not_found_after", path=vhdx_path),
                             "ERROR",
                         )
                 else:
-                    self.log(f"Erro na compactação de {vhdx_path}", "ERROR")
+                    self.log(t("cleanup.compact_error", path=vhdx_path), "ERROR")
         return success
 
     def cleanup_temp_files(self):
-        self.log("=== LIMPANDO ARQUIVOS TEMPORÁRIOS ===")
-        temp_paths = [
-            os.path.expandvars(r"%TEMP%"),
-            os.path.expandvars(r"%LOCALAPPDATA%\Temp"),
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\log"),
-            r"C:\Windows\Temp",  # System temp folder
-        ]
+        self.log(t("cleanup.cleaning_temp"))
+        if IS_WINDOWS:
+            temp_paths = [
+                os.path.expandvars(r"%TEMP%"),
+                os.path.expandvars(r"%LOCALAPPDATA%\Temp"),
+                os.path.expandvars(r"%LOCALAPPDATA%\Docker\log"),
+                r"C:\Windows\Temp",
+            ]
+        else:
+            import tempfile
+            temp_paths = [
+                tempfile.gettempdir(),
+                os.path.expanduser("~/.docker"),
+                "/var/tmp",
+            ]
+            # Docker logs on Linux/macOS
+            docker_log = "/var/lib/docker/containers"
+            if os.path.exists(docker_log):
+                temp_paths.append(docker_log)
 
         total_files_deleted = 0
         total_bytes_deleted = 0
 
         for temp_path in temp_paths:
             if os.path.exists(temp_path):
-                self.log(f"Limpando: {temp_path}")
+                self.log(t("cleanup.cleaning_path", path=temp_path))
                 files_deleted = 0
                 bytes_deleted = 0
 
@@ -569,48 +640,56 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                     if files_deleted > 0:
                         bytes_mb = bytes_deleted / (1024 * 1024)
                         self.log(
-                            f"{files_deleted} arquivo(s) removido(s) de {temp_path} ({bytes_mb:.2f} MB)"
+                            t("cleanup.files_removed", count=files_deleted, path=temp_path, size=f"{bytes_mb:.2f}")
                         )
 
                     total_files_deleted += files_deleted
                     total_bytes_deleted += bytes_deleted
 
                 except Exception as e:
-                    self.log(f"Erro limpando {temp_path}: {str(e)}", "ERROR")
+                    self.log(t("cleanup.error_cleaning", path=temp_path, error=str(e)), "ERROR")
 
         if total_files_deleted > 0:
             total_mb = total_bytes_deleted / (1024 * 1024)
             self.log(
-                f"Total limpo: {total_files_deleted} arquivo(s), {total_mb:.2f} MB"
+                t("cleanup.total_cleaned", count=total_files_deleted, size=f"{total_mb:.2f}")
             )
 
         return True
 
     def cleanup_recycle_bin(self):
-        """Esvazia a lixeira do Windows."""
-        self.log("=== ESVAZIANDO LIXEIRA ===")
+        """Esvazia a lixeira."""
+        if not IS_WINDOWS:
+            self.log(t("cleanup.recycle_bin_linux"), "INFO")
+            return True
+        self.log(t("cleanup.emptying_recycle_bin"))
         try:
             # Use PowerShell to clear the recycle bin silently
             ps_command = "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"
             result = self.run_command(f'powershell -NoProfile -Command "{ps_command}"')
 
             if result and result.returncode == 0:
-                self.log("Lixeira esvaziada com sucesso")
+                self.log(t("cleanup.recycle_bin_done"))
                 return True
             else:
                 # Clear-RecycleBin might fail if bin is already empty, that's okay
-                self.log("Lixeira já estava vazia ou não pôde ser esvaziada")
+                self.log(t("cleanup.recycle_bin_empty"))
                 return True
         except Exception as e:
-            self.log(f"Erro ao esvaziar lixeira: {str(e)}", "ERROR")
+            self.log(t("cleanup.recycle_bin_error", error=str(e)), "ERROR")
             return False
 
     async def cleanup_recycle_bin_async(
         self, stream_callback: Optional[Callable[[str], None]] = None
     ):
         """Versão async de cleanup_recycle_bin com streaming."""
+        if not IS_WINDOWS:
+            if stream_callback:
+                stream_callback(f"{t('cleanup.recycle_bin_linux')}\n")
+            return True
+
         if stream_callback:
-            stream_callback("=== ESVAZIANDO LIXEIRA ===\n")
+            stream_callback(f"{t('cleanup.emptying_recycle_bin')}\n")
 
         try:
             ps_command = "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"
@@ -622,17 +701,17 @@ swapFile=%TEMP%\\wsl-swap.vhdx
 
             if result and result.returncode == 0:
                 if stream_callback:
-                    stream_callback("Lixeira esvaziada com sucesso\n")
+                    stream_callback(f"{t('cleanup.recycle_bin_done')}\n")
                 return True
             else:
                 if stream_callback:
                     stream_callback(
-                        "Lixeira já estava vazia ou não pôde ser esvaziada\n"
+                        f"{t('cleanup.recycle_bin_empty')}\n"
                     )
                 return True
         except Exception as e:
             if stream_callback:
-                stream_callback(f"Erro ao esvaziar lixeira: {str(e)}\n")
+                stream_callback(f"{t('cleanup.recycle_bin_error', error=str(e))}\n")
             return False
 
     async def cleanup_temp_files_async(
@@ -640,14 +719,22 @@ swapFile=%TEMP%\\wsl-swap.vhdx
     ):
         """Versão async de cleanup_temp_files com streaming."""
         if stream_callback:
-            stream_callback("=== LIMPANDO ARQUIVOS TEMPORÁRIOS ===\n")
+            stream_callback(f"{t('cleanup.cleaning_temp')}\n")
 
-        temp_paths = [
-            os.path.expandvars(r"%TEMP%"),
-            os.path.expandvars(r"%LOCALAPPDATA%\Temp"),
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\log"),
-            r"C:\Windows\Temp",  # System temp folder
-        ]
+        if IS_WINDOWS:
+            temp_paths = [
+                os.path.expandvars(r"%TEMP%"),
+                os.path.expandvars(r"%LOCALAPPDATA%\Temp"),
+                os.path.expandvars(r"%LOCALAPPDATA%\Docker\log"),
+                r"C:\Windows\Temp",
+            ]
+        else:
+            import tempfile
+            temp_paths = [
+                tempfile.gettempdir(),
+                os.path.expanduser("~/.docker"),
+                "/var/tmp",
+            ]
 
         total_deleted = 0
         total_bytes = 0
@@ -655,7 +742,7 @@ swapFile=%TEMP%\\wsl-swap.vhdx
         for temp_path in temp_paths:
             if os.path.exists(temp_path):
                 if stream_callback:
-                    stream_callback(f"Limpando: {temp_path}\n")
+                    stream_callback(f"{t('cleanup.cleaning_path', path=temp_path)}\n")
 
                 files_deleted = 0
                 bytes_deleted = 0
@@ -686,7 +773,7 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                     if files_deleted > 0 and stream_callback:
                         bytes_mb = bytes_deleted / (1024 * 1024)
                         stream_callback(
-                            f"{files_deleted} arquivo(s) removido(s) ({bytes_mb:.2f} MB)\n"
+                            f"{t('cleanup.files_removed_short', count=files_deleted, size=f'{bytes_mb:.2f}')}\n"
                         )
 
                     total_deleted += files_deleted
@@ -694,12 +781,12 @@ swapFile=%TEMP%\\wsl-swap.vhdx
 
                 except Exception as e:
                     if stream_callback:
-                        stream_callback(f"Erro limpando {temp_path}: {str(e)}\n")
+                        stream_callback(f"{t('cleanup.error_cleaning', path=temp_path, error=str(e))}\n")
 
         if stream_callback and total_deleted > 0:
             total_mb = total_bytes / (1024 * 1024)
             stream_callback(
-                f"Total limpo: {total_deleted} arquivo(s), {total_mb:.2f} MB\n"
+                f"{t('cleanup.total_cleaned', count=total_deleted, size=f'{total_mb:.2f}')}\n"
             )
 
         return total_deleted > 0
@@ -711,13 +798,13 @@ swapFile=%TEMP%\\wsl-swap.vhdx
     ):
         """Versão async de docker_cleanup com streaming de saída em tempo real."""
         if stream_callback:
-            stream_callback("=== INICIANDO LIMPEZA DO DOCKER ===\n")
+            stream_callback(f"{t('cleanup.starting_docker_cleanup')}\n")
         else:
-            self.log("=== INICIANDO LIMPEZA DO DOCKER ===")
+            self.log(t("cleanup.starting_docker_cleanup"))
 
         # Parar containers
         if stream_callback:
-            stream_callback("Parando todos os containers...\n")
+            stream_callback(f"{t('cleanup.stopping_containers')}\n")
 
         containers_result = await self.run_command_async(
             "docker ps -q", shell=True, stream_callback=stream_callback
@@ -734,35 +821,35 @@ swapFile=%TEMP%\\wsl-swap.vhdx
 
         # Prune containers
         if stream_callback:
-            stream_callback("Removendo containers parados...\n")
+            stream_callback(f"{t('cleanup.removing_containers')}\n")
         await self.run_command_async(
             "docker container prune -f", shell=True, stream_callback=stream_callback
         )
 
         # Prune images
         if stream_callback:
-            stream_callback("Removendo imagens não utilizadas...\n")
+            stream_callback(f"{t('cleanup.removing_images')}\n")
         await self.run_command_async(
             "docker image prune -af", shell=True, stream_callback=stream_callback
         )
 
         # Prune volumes
         if stream_callback:
-            stream_callback("Removendo volumes não utilizados...\n")
+            stream_callback(f"{t('cleanup.removing_volumes')}\n")
         await self.run_command_async(
             "docker volume prune -f", shell=True, stream_callback=stream_callback
         )
 
         # Prune networks
         if stream_callback:
-            stream_callback("Removendo redes não utilizadas...\n")
+            stream_callback(f"{t('cleanup.removing_networks')}\n")
         await self.run_command_async(
             "docker network prune -f", shell=True, stream_callback=stream_callback
         )
 
         # System prune completo
         if stream_callback:
-            stream_callback("Executando limpeza completa do sistema Docker...\n")
+            stream_callback(f"{t('cleanup.full_system_cleanup')}\n")
         await self.run_command_async(
             "docker system prune -af --volumes",
             shell=True,
@@ -771,50 +858,65 @@ swapFile=%TEMP%\\wsl-swap.vhdx
 
         # Build cache
         if stream_callback:
-            stream_callback("Limpando cache de build...\n")
+            stream_callback(f"{t('cleanup.clearing_build_cache')}\n")
         await self.run_command_async(
             "docker builder prune -af", shell=True, stream_callback=stream_callback
         )
 
         if stream_callback:
-            stream_callback("=== LIMPEZA DO DOCKER CONCLUÍDA ===\n")
+            stream_callback(f"{t('cleanup.docker_cleanup_done')}\n")
 
         return True
 
     async def stop_docker_wsl_async(
         self, stream_callback: Optional[Callable[[str], None]] = None
     ):
-        """Versão async de stop_docker_wsl com batch elevated único."""
-        if stream_callback:
-            stream_callback("=== PARANDO DOCKER E WSL (batch elevated) ===\n")
+        """Versão async de stop_docker_wsl."""
+        if IS_WINDOWS:
+            if stream_callback:
+                stream_callback(f"{t('cleanup.stopping_docker_wsl_batch')}\n")
 
-        docker_processes = [
-            "Docker Desktop.exe",
-            "Docker.exe",
-            "com.docker.backend.exe",
-            "com.docker.proxy.exe",
-            "dockerd.exe",
-            "vpnkit.exe",
-        ]
-        processes_str = " ".join([f'/IM "{p}"' for p in docker_processes])
+            docker_processes = [
+                "Docker Desktop.exe",
+                "Docker.exe",
+                "com.docker.backend.exe",
+                "com.docker.proxy.exe",
+                "dockerd.exe",
+                "vpnkit.exe",
+            ]
+            processes_str = " ".join([f'/IM "{p}"' for p in docker_processes])
 
-        ps_batch_cmd = f"""
+            ps_batch_cmd = f"""
 taskkill /F {processes_str} 2>nul; 
 wsl --shutdown
 """
 
-        if stream_callback:
-            stream_callback("Executando batch kill + wsl shutdown...\n")
-            stream_callback("Solicitando privilégios admin (UAC único)...\n")
+            if stream_callback:
+                stream_callback(f"{t('cleanup.batch_kill')}\n")
+                stream_callback(f"{t('cleanup.admin_single_uac')}\n")
 
-        result = await self.run_elevated_command_async(
-            ps_batch_cmd, stream_callback=stream_callback
-        )
+            result = await self.run_elevated_command_async(
+                ps_batch_cmd, stream_callback=stream_callback
+            )
+        else:
+            if stream_callback:
+                stream_callback(f"{t('cleanup.stopping_docker_linux')}\n")
+            if shutil.which("systemctl"):
+                result = await self.run_command_async(
+                    "sudo systemctl stop docker", shell=True, stream_callback=stream_callback
+                )
+            else:
+                result = await self.run_command_async(
+                    "sudo killall Docker com.docker.hyperkit dockerd 2>/dev/null || true",
+                    shell=True, stream_callback=stream_callback
+                )
+            if stream_callback:
+                stream_callback(f"{t('cleanup.docker_stopped_linux')}\n")
 
         await asyncio.sleep(10)
 
         if stream_callback:
-            stream_callback("=== DOCKER E WSL PARADOS ===\n")
+            stream_callback(f"{t('cleanup.docker_wsl_stopped')}\n")
 
         return result.returncode == 0 if result else False
 
@@ -822,8 +924,13 @@ wsl --shutdown
         self, stream_callback: Optional[Callable[[str], None]] = None
     ):
         """Versão async com batch elevated."""
+        if not IS_WINDOWS:
+            if stream_callback:
+                stream_callback(f"{t('cleanup.sparse_windows_only')}\n")
+            return True
+
         if stream_callback:
-            stream_callback("=== CONFIGURANDO MODO SPARSE ===\n")
+            stream_callback(f"{t('cleanup.configuring_sparse')}\n")
 
         # List distros first (non-elevated)
         result = await self.run_command_async(
@@ -831,7 +938,7 @@ wsl --shutdown
         )
         if not result or result.returncode != 0:
             if stream_callback:
-                stream_callback("Erro listando WSL distros.\n")
+                stream_callback(f"{t('cleanup.wsl_distro_error')}\n")
             return False
 
         distributions = ["docker-desktop", "docker-desktop-data"]
@@ -840,8 +947,8 @@ wsl --shutdown
         )
 
         if stream_callback:
-            stream_callback(f"Configurando sparse para {', '.join(distributions)}...\n")
-            stream_callback("Solicitando privilégios admin (UAC único)...\n")
+            stream_callback(f"{t('cleanup.sparse_distros', distros=', '.join(distributions))}\n")
+            stream_callback(f"{t('cleanup.admin_single_uac')}\n")
 
         result = await self.run_elevated_command_async(
             sparse_cmds, stream_callback=stream_callback
@@ -860,10 +967,10 @@ swapFile=%TEMP%\\wsl-swap.vhdx
             with open(wslconfig_path, "w", encoding="utf-8") as f:
                 f.write(wslconfig_content)
             if stream_callback:
-                stream_callback(f".wslconfig atualizado: {wslconfig_path}\n")
+                stream_callback(f"{t('cleanup.wslconfig_updated', path=wslconfig_path)}\n")
         except Exception as e:
             if stream_callback:
-                stream_callback(f"Erro .wslconfig: {str(e)}\n")
+                stream_callback(f"{t('cleanup.wslconfig_error', error=str(e))}\n")
 
         return True
 
@@ -871,9 +978,13 @@ swapFile=%TEMP%\\wsl-swap.vhdx
         self, stream_callback: Optional[Callable[[str], None]] = None
     ):
         """Versão async de compact_vhdx_files com streaming."""
+        if not IS_WINDOWS:
+            if stream_callback:
+                stream_callback(f"{t('cleanup.vhdx_windows_only')}\n")
+            return True
 
         if stream_callback:
-            stream_callback("=== COMPACTANDO ARQUIVOS VHDX ===\n")
+            stream_callback(f"{t('cleanup.compacting_vhdx')}\n")
 
         vhdx_paths = [
             os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx"),
@@ -888,7 +999,7 @@ swapFile=%TEMP%\\wsl-swap.vhdx
 
                 if stream_callback:
                     stream_callback(
-                        f"Compactando {vhdx_path} ({size_before_gb:.2f} GB)...\n"
+                        f"{t('cleanup.compacting_file', path=vhdx_path, size=f'{size_before_gb:.2f}')}\n"
                     )
 
                 ps_command = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
@@ -906,60 +1017,60 @@ swapFile=%TEMP%\\wsl-swap.vhdx
 
                         if stream_callback:
                             stream_callback(
-                                f"Compactação concluída: {size_after_gb:.2f} GB (economizado: {space_saved:.2f} GB)\n"
+                                f"{t('cleanup.compact_done', size=f'{size_after_gb:.2f}', saved=f'{space_saved:.2f}')}\n"
                             )
                         success = True
                     else:
                         if stream_callback:
                             stream_callback(
-                                f"Arquivo não encontrado após compactação: {vhdx_path}\n"
+                                f"{t('cleanup.file_not_found_after', path=vhdx_path)}\n"
                             )
                 else:
                     if stream_callback:
-                        stream_callback(f"Erro na compactação de {vhdx_path}\n")
+                        stream_callback(f"{t('cleanup.compact_error', path=vhdx_path)}\n")
 
         return success
 
     def generate_report(self):
-        self.log("=== RELATÓRIO FINAL ===")
+        self.log(t("cleanup.final_report"))
         current_size, files = self.get_docker_vhdx_size()
         current_size_gb = current_size / (1024**3)
         report = f"""
-RELATÓRIO DE LIMPEZA WSL DOCKER
+{t("cleanup.report_title")}
 {"=" * 50}
-Data/Hora: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
-Espaço total economizado: {self.total_space_saved:.2f} GB
-Tamanho atual dos VHDX: {current_size_gb:.2f} GB
+{t("cleanup.report_datetime", datetime=datetime.now().strftime("%d/%m/%Y %H:%M:%S"))}
+{t("cleanup.report_space_saved", size=f"{self.total_space_saved:.2f}")}
+{t("cleanup.report_current_size", size=f"{current_size_gb:.2f}")}
 
-Arquivos VHDX encontrados:
+{t("cleanup.report_vhdx_files")}
 {chr(10).join([f"  - {f[0]} ({f[1] / (1024**3):.2f} GB)" for f in files])}
 
-RECOMENDAÇÕES:
-1. Execute este script regularmente (semanal/mensal)
-2. Configure limpeza automática do Docker: docker system prune --schedule
-3. Use imagens base menores (alpine, slim)
-4. Configure .dockerignore para reduzir contexto de build
-5. Monitore uso de espaço: docker system df
+{t("cleanup.report_recommendations")}
+{t("cleanup.report_rec_1")}
+{t("cleanup.report_rec_2")}
+{t("cleanup.report_rec_3")}
+{t("cleanup.report_rec_4")}
+{t("cleanup.report_rec_5")}
 
-Log completo salvo em: wsl_docker_cleanup.log
+{t("cleanup.report_log_saved", path="wsl_docker_cleanup.log")}
         """
         print(report)
         try:
             with open("wsl_docker_cleanup.log", "w", encoding="utf-8") as f:
                 f.write("\n".join(self.log_messages))
                 f.write("\n\n" + report)
-            self.log("Log salvo em: wsl_docker_cleanup.log")
+            self.log(t("cleanup.log_saved", path="wsl_docker_cleanup.log"))
         except Exception as e:
-            self.log(f"Erro ao salvar log: {str(e)}", "ERROR")
+            self.log(t("cleanup.log_save_error", error=str(e)), "ERROR")
 
     def run_full_cleanup_with_progress(self):
-        self.log("INICIANDO LIMPEZA COMPLETA DO WSL DOCKER")
+        self.log(t("cleanup.starting_full"))
         self.log(
-            f"Executando como administrador: {'Sim' if self.is_admin() else 'Não'}"
+            t("cleanup.running_as_admin", status=t("cleanup.admin_yes") if self.is_admin() else t("cleanup.admin_no"))
         )
         initial_size, _ = self.get_docker_vhdx_size()
         initial_size_gb = initial_size / (1024**3)
-        self.log(f"Tamanho inicial dos VHDX: {initial_size_gb:.2f} GB")
+        self.log(t("cleanup.initial_vhdx_size", size=f"{initial_size_gb:.2f}"))
         overall_progress = Progress(
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
@@ -974,107 +1085,107 @@ Log completo salvo em: wsl_docker_cleanup.log
 
         progress_group = Group(Panel(Group(current_task_progress)), overall_progress)
         overall_task = overall_progress.add_task(
-            "[cyan]Executando limpeza completa...", total=100
+            f"[cyan]{t('cleanup.running_full_cleanup')}", total=100
         )
         with Live(progress_group, refresh_per_second=10, console=self.console):
             try:
-                current_task = current_task_progress.add_task("Limpando Docker...")
+                current_task = current_task_progress.add_task(t("cleanup.cleaning_docker"))
                 overall_progress.update(
-                    overall_task, description="[cyan]Limpando Docker..."
+                    overall_task, description=f"[cyan]{t('cleanup.cleaning_docker')}"
                 )
                 if self.docker_cleanup():
-                    self.log("Limpeza do Docker concluída com sucesso")
+                    self.log(t("cleanup.docker_cleanup_success"))
                 current_task_progress.remove_task(current_task)
                 overall_progress.update(overall_task, advance=30)
 
-                current_task = current_task_progress.add_task("Parando Docker e WSL...")
+                current_task = current_task_progress.add_task(t("cleanup.stopping_docker_wsl_task"))
                 overall_progress.update(
-                    overall_task, description="[cyan]Parando Docker e WSL..."
+                    overall_task, description=f"[cyan]{t('cleanup.stopping_docker_wsl_task')}"
                 )
                 self.stop_docker_wsl()
                 current_task_progress.remove_task(current_task)
                 overall_progress.update(overall_task, advance=15)
 
                 current_task = current_task_progress.add_task(
-                    "Configurando sparse mode..."
+                    t("cleanup.configuring_sparse_task")
                 )
                 overall_progress.update(
-                    overall_task, description="[cyan]Configurando sparse mode..."
+                    overall_task, description=f"[cyan]{t('cleanup.configuring_sparse_task')}"
                 )
                 self.configure_wsl_sparse()
                 current_task_progress.remove_task(current_task)
                 overall_progress.update(overall_task, advance=15)
 
                 current_task = current_task_progress.add_task(
-                    "Compactando arquivos VHDX..."
+                    t("cleanup.compacting_vhdx_task")
                 )
                 overall_progress.update(
-                    overall_task, description="[cyan]Compactando arquivos VHDX..."
+                    overall_task, description=f"[cyan]{t('cleanup.compacting_vhdx_task')}"
                 )
                 self.compact_vhdx_files()
                 current_task_progress.remove_task(current_task)
                 overall_progress.update(overall_task, advance=20)
 
                 current_task = current_task_progress.add_task(
-                    "Limpando arquivos temporários..."
+                    t("cleanup.cleaning_temp_task")
                 )
                 overall_progress.update(
-                    overall_task, description="[cyan]Limpando arquivos temporários..."
+                    overall_task, description=f"[cyan]{t('cleanup.cleaning_temp_task')}"
                 )
                 self.cleanup_temp_files()
                 current_task_progress.remove_task(current_task)
                 overall_progress.update(overall_task, advance=10)
 
-                current_task = current_task_progress.add_task("Esvaziando lixeira...")
+                current_task = current_task_progress.add_task(t("cleanup.emptying_recycle_task"))
                 overall_progress.update(
-                    overall_task, description="[cyan]Esvaziando lixeira..."
+                    overall_task, description=f"[cyan]{t('cleanup.emptying_recycle_task')}"
                 )
                 self.cleanup_recycle_bin()
                 current_task_progress.remove_task(current_task)
                 overall_progress.update(overall_task, advance=5)
 
                 overall_progress.update(
-                    overall_task, description="[green]Limpeza concluída!"
+                    overall_task, description=f"[green]{t('cleanup.cleanup_done')}"
                 )
 
                 current_size, _ = self.get_docker_vhdx_size()
                 current_size_gb = current_size / (1024**3)
                 self.display_final_report(initial_size_gb, current_size_gb)
-                self.log("LIMPEZA CONCLUÍDA COM SUCESSO!")
+                self.log(t("cleanup.cleanup_complete_success"))
                 return True
             except Exception as e:
-                self.log(f"Erro durante limpeza: {str(e)}", "ERROR")
+                self.log(t("cleanup.cleanup_error", error=str(e)), "ERROR")
                 return False
 
     def display_initial_info(self):
-        table = Table(title="Informações Iniciais")
-        table.add_column("Propriedade", style="cyan")
-        table.add_column("Valor", style="magenta")
-        table.add_row("Versão", "1.0")
-        table.add_row("Data", "Setembro 2025")
+        table = Table(title=t("cleanup.initial_info_title"))
+        table.add_column(t("cleanup.property"), style="cyan")
+        table.add_column(t("cleanup.value"), style="magenta")
+        table.add_row(t("cleanup.version_label"), "1.0")
+        table.add_row(t("cleanup.date_label"), "Setembro 2025")
         table.add_row(
-            "Executando como administrador", "Sim" if self.is_admin() else "Não"
+            t("cleanup.running_as_admin_label"), t("cleanup.admin_yes") if self.is_admin() else t("cleanup.admin_no")
         )
         self.console.print(table)
 
     def display_final_report(self, initial_size_gb, current_size_gb):
         panel = Panel(
-            f"""[bold]RELATÓRIO DE LIMPEZA WSL DOCKER[/bold]
+            f"""[bold]{t("cleanup.report_title")}[/bold]
             
-Data/Hora: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
-Espaço total economizado: {self.total_space_saved:.2f} GB
-Tamanho inicial dos VHDX: {initial_size_gb:.2f} GB
-Tamanho atual dos VHDX: {current_size_gb:.2f} GB
+{t("cleanup.report_datetime", datetime=datetime.now().strftime("%d/%m/%Y %H:%M:%S"))}
+{t("cleanup.report_space_saved", size=f"{self.total_space_saved:.2f}")}
+{t("cleanup.report_initial_size", size=f"{initial_size_gb:.2f}")}
+{t("cleanup.report_current_size", size=f"{current_size_gb:.2f}")}
 
-[bold]RECOMENDAÇÕES:[/bold]
-1. Execute este script regularmente (semanal/mensal)
-2. Configure limpeza automática do Docker: docker system prune --schedule
-3. Use imagens base menores (alpine, slim)
-4. Configure .dockerignore para reduzir contexto de build
-5. Monitore uso de espaço: docker system df
+[bold]{t("cleanup.report_recommendations")}[/bold]
+{t("cleanup.report_rec_1")}
+{t("cleanup.report_rec_2")}
+{t("cleanup.report_rec_3")}
+{t("cleanup.report_rec_4")}
+{t("cleanup.report_rec_5")}
 
-Log completo salvo em: wsl_docker_cleanup.log""",
-            title="Relatório Final",
+{t("cleanup.report_log_saved", path="wsl_docker_cleanup.log")}""",
+            title=t("cleanup.report_panel_title"),
             expand=True,
         )
         self.console.print(panel)
@@ -1082,10 +1193,7 @@ Log completo salvo em: wsl_docker_cleanup.log""",
 
 def main():
     console = Console()
-    console.print(Panel("[bold blue]WSL Docker Cleaner v1.0[/bold blue]", expand=False))
-    if not sys.platform.startswith("win"):
-        print("Este script é específico para Windows!")
-        sys.exit(1)
+    console.print(Panel(f"[bold blue]{t('cleanup.cleaner_title')}[/bold blue]", expand=False))
     cleaner = WSLDockerCleaner()
     if not cleaner.is_admin():
         cleaner.run_as_admin()
@@ -1094,13 +1202,13 @@ def main():
     success = cleaner.run_full_cleanup_with_progress()
     if success:
         console.print(
-            "\n[bold green]Limpeza concluída![/bold green] Reinicie o Docker Desktop para aplicar as alterações."
+            f"\n[bold green]{t('cleanup.cleanup_done')}[/bold green] {t('cleanup.restart_docker')}"
         )
-        console.print("[bold]Pressione qualquer tecla para continuar...[/bold]")
+        console.print(f"[bold]{t('cleanup.press_any_key')}[/bold]")
         input()
     else:
         console.print(
-            "\n[bold red]Ocorreram erros durante a limpeza. Verifique o log para detalhes.[/bold red]"
+            f"\n[bold red]{t('cleanup.errors_occurred')}[/bold red]"
         )
         sys.exit(1)
 

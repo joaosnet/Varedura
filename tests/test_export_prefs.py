@@ -58,7 +58,9 @@ def test_handle_key_toggle_writes(tmp_path):
 
     # Chamar handle_key para alternar
     msg = handle_key("f")
-    assert "ativado" in msg.lower()
+    # Check that the toggle message contains the enabled status (language-agnostic)
+    from i18n import t
+    assert t("stalker.ports_enabled") in msg.lower() or "ativado" in msg.lower() or "enabled" in msg.lower()
     # Carregar do disco
     config.allow_full_history_export = False
     load_prefs()
