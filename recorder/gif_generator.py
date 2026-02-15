@@ -23,6 +23,17 @@ def _svg_to_png_bytes(svg_content: str, width: int = 800) -> Optional[bytes]:
         )
     except ImportError:
         pass
+    except Exception:
+        # Retry with smaller width if Cairo rejects the size
+        try:
+            import cairosvg
+
+            return cairosvg.svg2png(
+                bytestring=svg_content.encode("utf-8"),
+                output_width=width // 2,
+            )
+        except Exception:
+            pass
 
     # Fallback: svglib + reportlab (already in project deps)
     try:
@@ -89,30 +100,46 @@ def generate_gif(
     if not images:
         return None
 
-    max_width = max(image.width for image in images)
-    max_height = max(image.height for image in images)
+    # Use median + 1 std deviation as max height to filter outlier frames
+    import statistics
+
+    target_width = max(image.width for image in images)
+    heights = [image.height for image in images]
+    median_h = statistics.median(heights)
+    stdev_h = statistics.stdev(heights) if len(heights) > 1 else 0
+    target_height = int(median_h + stdev_h)
     background = images[0].getpixel((0, 0))
 
     normalized_images: list[Image.Image] = []
     for image in images:
-        if image.size == (max_width, max_height):
+        if image.size == (target_width, target_height):
             normalized_images.append(image)
             continue
 
-        canvas = Image.new("RGBA", (max_width, max_height), background)
-        canvas.paste(image, (0, 0))
+        # Crop tall frames from the top, pad short/narrow frames
+        cropped = image.crop((0, 0, min(image.width, target_width), min(image.height, target_height)))
+        canvas = Image.new("RGBA", (target_width, target_height), background)
+        canvas.paste(cropped, (0, 0))
         normalized_images.append(canvas)
 
-    # Deduplicate consecutive identical frames
+    # Deduplicate consecutive identical frames using hash comparison
+    import hashlib
+
+    def _frame_hash(img: Image.Image) -> str:
+        return hashlib.md5(img.tobytes()).hexdigest()
+
     deduped: list[Image.Image] = [normalized_images[0]]
     durations: list[int] = [int(1000 / fps)]
+    prev_hash = _frame_hash(normalized_images[0])
 
     for img in normalized_images[1:]:
-        if list(img.getdata()) == list(deduped[-1].getdata()):
+        h = _frame_hash(img)
+        if h == prev_hash:
             durations[-1] += int(1000 / fps)
         else:
             deduped.append(img)
             durations.append(int(1000 / fps))
+            prev_hash = h
 
     # Extend last frame duration
     durations[-1] = max(durations[-1], int(last_frame_duration * 1000))

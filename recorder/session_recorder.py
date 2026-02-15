@@ -7,7 +7,7 @@ import threading
 from pathlib import Path
 from typing import Optional
 
-from rich.console import Console
+from rich.console import Console, RenderableType
 
 
 class SessionRecorder:
@@ -37,9 +37,11 @@ class SessionRecorder:
         self._console: Optional[Console] = console
         self._external_console = console
         self._svg_frames: list[str] = []
+        self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._snapshot_thread: Optional[threading.Thread] = None
         self._recording = False
+        self._renderable: Optional[RenderableType] = None
 
     @property
     def console(self) -> Console:
@@ -56,6 +58,15 @@ class SessionRecorder:
     @property
     def is_recording(self) -> bool:
         return self._recording
+
+    def set_renderable(self, renderable: Optional[RenderableType]) -> None:
+        """Set a live renderable to snapshot directly.
+
+        When set, each snapshot renders this object into a fresh console
+        instead of reading from the accumulated console buffer.
+        Call with None to revert to normal console-based capture.
+        """
+        self._renderable = renderable
 
     def __enter__(self) -> "SessionRecorder":
         self.start()
@@ -92,8 +103,9 @@ class SessionRecorder:
 
         if self._snapshot_thread and self._snapshot_thread.is_alive():
             self._snapshot_thread.join(timeout=2.0)
+        self._snapshot_thread = None
 
-        # Capture final state
+        # Capture final state (dedup handled inside _take_snapshot)
         self._take_snapshot()
 
     def _snapshot_loop(self) -> None:
@@ -104,11 +116,31 @@ class SessionRecorder:
 
     def _take_snapshot(self) -> None:
         """Capture current console state as SVG."""
-        if self._console is None:
-            return
         try:
-            svg = self._console.export_svg(title="Varedura", clear=False)
-            if svg and len(self._svg_frames) < self.max_frames:
+            renderable = self._renderable
+            if renderable is not None:
+                # Render the live object into a fresh console for a clean frame
+                temp = Console(
+                    record=True,
+                    width=self.width,
+                    height=self.height,
+                    force_terminal=True,
+                )
+                temp.print(renderable)
+                svg = temp.export_svg(title="Varedura")
+            elif self._console is not None:
+                svg = self._console.export_svg(title="Varedura", clear=True)
+            else:
+                return
+
+            if not svg:
+                return
+            with self._lock:
+                if len(self._svg_frames) >= self.max_frames:
+                    return
+                # Skip duplicate consecutive frames
+                if self._svg_frames and svg == self._svg_frames[-1]:
+                    return
                 self._svg_frames.append(svg)
         except Exception:
             pass
@@ -138,13 +170,3 @@ class SessionRecorder:
             fps=fps,
             last_frame_duration=last_frame_duration,
         )
-
-    def save_svg(self, output_path: str | Path) -> Optional[Path]:
-        """Save the final frame as a standalone SVG."""
-        if not self._svg_frames:
-            return None
-
-        path = Path(output_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(self._svg_frames[-1], encoding="utf-8")
-        return path

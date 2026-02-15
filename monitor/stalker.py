@@ -2603,8 +2603,11 @@ def make_help_panel():
     return Panel(Text.from_markup(help_text), title=t("stalker.help_title"), border_style="green")
 
 
-def main():
-    global running, show_help, port_scanner_state, scan_counter
+def main(external_console: Console | None = None, session_recorder=None):
+    global running, show_help, port_scanner_state, scan_counter, console
+
+    if external_console is not None:
+        console = external_console
 
     # Reset state so stalker can be re-entered from the main menu
     running = True
@@ -2642,7 +2645,11 @@ def main():
     except Exception as e:
         log_events.append(f"[red]{t('stalker.speed_start_error', error=e)}[/]")
 
-    with Live(layout, refresh_per_second=4, screen=True):
+    # Register layout with session recorder for GIF capture
+    if session_recorder is not None:
+        session_recorder.set_renderable(layout)
+
+    with Live(layout, console=console, refresh_per_second=4, screen=True):
         while running:
             try:
                 global test_session_start
@@ -2802,6 +2809,8 @@ def main():
                 break
 
     # Cleanup
+    if session_recorder is not None:
+        session_recorder.set_renderable(None)
     stop_continuous_testing()
 
     # Perguntar se usuário quer gerar relatório ao sair

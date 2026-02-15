@@ -164,12 +164,7 @@ def _stop_recording_session(recorder):
         recordings_dir = Path("recordings")
         recordings_dir.mkdir(exist_ok=True)
 
-        # Save SVG (always works)
-        svg_path = recorder.save_svg(recordings_dir / f"session_{timestamp}.svg")
-        if svg_path:
-            console.print(f"[green]{t('recorder.svg_saved', path=str(svg_path))}[/]")
-
-        # Try to save GIF
+        # Save GIF
         gif_path = recorder.save_gif(recordings_dir / f"session_{timestamp}.gif")
         if gif_path:
             console.print(f"[green]{t('recorder.gif_saved', path=str(gif_path))}[/]")
@@ -191,7 +186,7 @@ def run_network_stalker():
         mascot.show_result(True, t("mascot.scanning"))
         from monitor.stalker import main as stalker_main
 
-        stalker_main()
+        stalker_main(external_console=console, session_recorder=_session_recorder)
     except KeyboardInterrupt:
         pass
     except ImportError as e:
