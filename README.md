@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Cross-platform Docker cleanup toolkit, network monitor & AI model generator</strong>
+  <strong>Cross-platform Docker cleanup toolkit & network monitor</strong>
 </p>
 
 <p align="center">
@@ -48,13 +48,11 @@ The app auto-detects your system language (English/Portuguese) and requests admi
 uv run python -m cli.quick_cleanup             # Quick Docker prune
 uv run python -m cli.main_cleaner              # Full cleanup with progress bar
 uv run python -m cli.admin_tasks compact_vhdx  # Admin-only tasks (Windows)
-uv run python -m lmarena.generator input.txt   # LMArena model generator
 
 # or run directly with python
 python -m cli.quick_cleanup             # Quick Docker prune
 python -m cli.main_cleaner              # Full cleanup with progress bar
 python -m cli.admin_tasks compact_vhdx  # Admin-only tasks (Windows)
-python -m lmarena.generator input.txt   # LMArena model generator
 ```
 
 ## ✨ Features
@@ -72,11 +70,6 @@ python -m lmarena.generator input.txt   # LMArena model generator
 - Port scanning and lag source analysis
 - PDF report export with history charts
 - Persistent preferences for export settings
-
-### 🤖 LMArena Generator
-- Extracts `initialModels` from LMArena data dumps
-- Generates typed Python dicts: `models`, `text_models`, `image_models`, `vision_models`
-- Outputs ready-to-use `.py` module files
 
 ### 📊 Logging & Reports
 - Daily rotating logs in `logs/YYYY-MM-DD.log`
@@ -97,7 +90,6 @@ Varedura runs on **Windows**, **Linux**, and **macOS**:
 | Recycle bin cleanup | ✅ PowerShell | ⬜ Skipped | ⬜ Skipped |
 | Admin elevation | ✅ UAC | ✅ `sudo` | ✅ `sudo` |
 | Network Stalker | ✅ | ✅ | ✅ |
-| LMArena Generator | ✅ | ✅ | ✅ |
 
 > Windows-only features (VHDX, WSL sparse) are gracefully skipped on other platforms with an informational message.
 
@@ -126,9 +118,6 @@ Varedura/
 ├── monitor/               # Network monitoring
 │   ├── stalker.py        # Network Stalker
 │   └── port_scanner.py   # Port scanner
-├── lmarena/               # LMArena utilities
-│   ├── generator.py      # Model list generator
-│   └── __init__.py
 ├── i18n/                  # Translations
 │   ├── __init__.py       # t() function, auto-detection
 │   ├── pt.json           # Portuguese (170+ keys)

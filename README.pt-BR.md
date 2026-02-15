@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Ferramenta multiplataforma para limpeza de Docker, monitoramento de rede e gerador de modelos LMArena</strong>
+  <strong>Ferramenta multiplataforma para limpeza de Docker e monitoramento de rede</strong>
 </p>
 
 <p align="center">
@@ -39,13 +39,11 @@ O aplicativo detecta automaticamente o idioma do sistema (Português/Inglês) e 
 uv run python -m cli.quick_cleanup             # Limpeza rápida do Docker
 uv run python -m cli.main_cleaner              # Limpeza completa com barra de progresso
 uv run python -m cli.admin_tasks compact_vhdx  # Tarefas que exigem admin (Windows)
-uv run python -m lmarena.generator input.txt   # Gerador de modelos LMArena
 
 # ou execute diretamente com python
 python -m cli.quick_cleanup             # Limpeza rápida do Docker
 python -m cli.main_cleaner              # Limpeza completa com barra de progresso
 python -m cli.admin_tasks compact_vhdx  # Tarefas que exigem admin (Windows)
-python -m lmarena.generator input.txt   # Gerador de modelos LMArena
 ```
 
 ## ✨ Funcionalidades
@@ -63,11 +61,6 @@ python -m lmarena.generator input.txt   # Gerador de modelos LMArena
 - Scanner de portas e análise de origem de lag
 - Exportação de relatórios em PDF com históricos
 - Preferências persistentes para exportação
-
-### 🤖 Gerador LMArena
-- Extrai `initialModels` de dumps do LMArena
-- Gera `dicts` Python tipados: `models`, `text_models`, `image_models`, `vision_models`
-- Saída pronta para importação como módulo `.py`
 
 ### 📊 Logs & Relatórios
 - Logs diários em `logs/YYYY-MM-DD.log`

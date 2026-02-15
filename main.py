@@ -40,7 +40,6 @@ def show_menu():
     menu.add_row("2", t("menu.option_2"), t("menu.desc_2"))
     menu.add_row("3", t("menu.option_3"), t("menu.desc_3"))
     menu.add_row("4", t("menu.option_4"), t("menu.desc_4"))
-    menu.add_row("5", t("menu.option_5"), t("menu.desc_5"))
     menu.add_row("", "", "")
     menu.add_row("L", t("menu.option_lang"), t("menu.desc_lang"))
     menu.add_row("Q", t("menu.quit"), t("menu.quit_desc"))
@@ -190,11 +189,11 @@ def main():
             run_docker_full_cleanup()
             console.input(f"\n[dim]{t('menu.press_enter')}[/]")
         elif choice == "4":
+            run_port_scanner()
+            console.input(f"\n[dim]{t('menu.press_enter')}[/]")
+        elif choice == "lmarena":
             console.print(f"\n[yellow]{t('menu.starting_lmarena')}[/]\n")
             run_lmarena_models()
-            console.input(f"\n[dim]{t('menu.press_enter')}[/]")
-        elif choice == "5":
-            run_port_scanner()
             console.input(f"\n[dim]{t('menu.press_enter')}[/]")
         elif choice == "l":
             change_language()
