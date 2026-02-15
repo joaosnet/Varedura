@@ -20,12 +20,14 @@ from i18n import t, init as i18n_init, set_language, get_language, get_supported
 from mascot.renderer import MascotRenderer
 from mascot.frames import STATES
 
-console = Console()
+console = Console(record=True)
 i18n_init()
 mascot = MascotRenderer(console)
 
 _PREFS_FILE = Path.home() / ".varedura_prefs.json"
+_MCP_CONFIG_FILE = Path(".vscode") / "mcp.json"
 _recording_enabled = True
+_session_recorder = None
 
 
 def _load_recording_pref() -> bool:
@@ -51,6 +53,57 @@ def _save_recording_pref(enabled: bool) -> None:
         pass
 
 
+def _is_mcp_configured() -> bool:
+    """Check if the MCP server config exists for this workspace."""
+    try:
+        if _MCP_CONFIG_FILE.exists():
+            data = json.loads(_MCP_CONFIG_FILE.read_text(encoding="utf-8"))
+            return "varedura" in data.get("servers", {})
+    except Exception:
+        pass
+    return False
+
+
+def _toggle_mcp_config() -> None:
+    """Add or remove the Varedura MCP server from .vscode/mcp.json."""
+    try:
+        if _is_mcp_configured():
+            # Remove config
+            data = json.loads(_MCP_CONFIG_FILE.read_text(encoding="utf-8"))
+            data.get("servers", {}).pop("varedura", None)
+            if not data.get("servers"):
+                _MCP_CONFIG_FILE.unlink(missing_ok=True)
+            else:
+                _MCP_CONFIG_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+            console.print(f"\n[yellow]{t('mcp.removed')}[/]")
+        else:
+            # Add config
+            console.print(f"\n[cyan]{t('mcp.installing')}[/]")
+            _MCP_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+            data = {}
+            if _MCP_CONFIG_FILE.exists():
+                try:
+                    data = json.loads(_MCP_CONFIG_FILE.read_text(encoding="utf-8"))
+                except Exception:
+                    data = {}
+
+            data.setdefault("servers", {})
+            data["servers"]["varedura"] = {
+                "type": "stdio",
+                "command": "uv",
+                "args": ["run", "python", "-m", "mcp_server"],
+            }
+            _MCP_CONFIG_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+            console.print(f"[green]{t('mcp.installed')}[/]")
+            console.print(f"[dim]{t('mcp.config_path', path=str(_MCP_CONFIG_FILE.resolve()))}[/]")
+            console.print(f"[dim]{t('mcp.usage_hint')}[/]")
+            console.print(f"[dim]{t('mcp.run_hint')}[/]")
+    except Exception as e:
+        console.print(f"[red]{t('mcp.error', error=str(e))}[/]")
+
+
 def show_menu():
     """Display the main menu with mascot."""
     console.clear()
@@ -74,9 +127,7 @@ def show_menu():
     menu.add_row("3", t("menu.option_3"), t("menu.desc_3"))
     menu.add_row("4", t("menu.option_4"), t("menu.desc_4"))
     menu.add_row("", "", "")
-    rec_status = "🔴" if _recording_enabled else "⚫"
-    menu.add_row("R", f"{rec_status} {t('menu.option_rec')}", t("menu.desc_rec"))
-    menu.add_row("L", t("menu.option_lang"), t("menu.desc_lang"))
+    menu.add_row("S", t("menu.option_settings"), t("menu.desc_settings"))
     menu.add_row("Q", t("menu.quit"), t("menu.quit_desc"))
 
     menu_panel = Panel(menu, title=t("menu.tools"), border_style="cyan")
@@ -87,13 +138,13 @@ def show_menu():
     console.print()
 
 
-def _start_recording(tool_name: str):
-    """Start recording a tool session if enabled."""
+def _start_recording_session():
+    """Start recording the current user session if enabled."""
     if not _recording_enabled:
         return None
     try:
         from recorder.session_recorder import SessionRecorder
-        recorder = SessionRecorder()
+        recorder = SessionRecorder(console=console, width=console.width)
         recorder.start()
         console.print(f"[dim]{t('recorder.recording_started')}[/]")
         return recorder
@@ -101,8 +152,8 @@ def _start_recording(tool_name: str):
         return None
 
 
-def _stop_recording(recorder, tool_name: str):
-    """Stop recording and save GIF. Also updates screenshots/demo.gif for README."""
+def _stop_recording_session(recorder):
+    """Stop session recording and save a single GIF for the whole run."""
     if recorder is None:
         return
     try:
@@ -114,12 +165,12 @@ def _stop_recording(recorder, tool_name: str):
         recordings_dir.mkdir(exist_ok=True)
 
         # Save SVG (always works)
-        svg_path = recorder.save_svg(recordings_dir / f"{tool_name}_{timestamp}.svg")
+        svg_path = recorder.save_svg(recordings_dir / f"session_{timestamp}.svg")
         if svg_path:
             console.print(f"[green]{t('recorder.svg_saved', path=str(svg_path))}[/]")
 
         # Try to save GIF
-        gif_path = recorder.save_gif(recordings_dir / f"{tool_name}_{timestamp}.gif")
+        gif_path = recorder.save_gif(recordings_dir / f"session_{timestamp}.gif")
         if gif_path:
             console.print(f"[green]{t('recorder.gif_saved', path=str(gif_path))}[/]")
 
@@ -136,7 +187,6 @@ def _stop_recording(recorder, tool_name: str):
 
 def run_network_stalker():
     """Run the network stalker monitor."""
-    recorder = _start_recording("network_stalker")
     try:
         mascot.show_result(True, t("mascot.scanning"))
         from monitor.stalker import main as stalker_main
@@ -147,13 +197,10 @@ def run_network_stalker():
     except ImportError as e:
         console.print(f"[red]{t('menu.error_loading_stalker', error=e)}[/]")
         mascot.show_result(False, t("mascot.error"))
-    finally:
-        _stop_recording(recorder, "network_stalker")
 
 
 def run_docker_cleanup():
     """Run quick Docker cleanup."""
-    recorder = _start_recording("docker_cleanup")
     success = False
     try:
         from docker_cleaner.core import WSLDockerCleaner
@@ -167,12 +214,10 @@ def run_docker_cleanup():
         console.print(f"[red]{t('menu.error_during_cleanup', error=e)}[/]")
     finally:
         mascot.show_result(success, t("mascot.success") if success else t("mascot.error"))
-        _stop_recording(recorder, "docker_cleanup")
 
 
 def run_docker_full_cleanup():
     """Run full Docker cleanup with VHDX compaction."""
-    recorder = _start_recording("docker_full_cleanup")
     success = False
     try:
         from docker_cleaner.core import WSLDockerCleaner
@@ -186,12 +231,10 @@ def run_docker_full_cleanup():
         console.print(f"[red]{t('menu.error_during_cleanup', error=e)}[/]")
     finally:
         mascot.show_result(success, t("mascot.success") if success else t("mascot.error"))
-        _stop_recording(recorder, "docker_full_cleanup")
 
 
 def run_lmarena_models():
     """Run LMArena models generator."""
-    recorder = _start_recording("lmarena")
     success = False
     try:
         from lmarena.generator import main as generator_main
@@ -204,12 +247,10 @@ def run_lmarena_models():
         console.print(f"[red]{t('menu.error_generating_models', error=e)}[/]")
     finally:
         mascot.show_result(success, t("mascot.success") if success else t("mascot.error"))
-        _stop_recording(recorder, "lmarena")
 
 
 def run_port_scanner():
     """Executa o escaner de portas standalone."""
-    recorder = _start_recording("port_scanner")
     success = False
     try:
         from monitor.port_scanner import run_full_scan
@@ -263,17 +304,21 @@ def run_port_scanner():
         console.print(f"[red]{t('menu.error_during_scan', error=e)}[/]")
     finally:
         mascot.show_result(success, t("mascot.success") if success else t("mascot.error"))
-        _stop_recording(recorder, "port_scanner")
 
 
 def toggle_recording():
     """Toggle automatic GIF recording."""
-    global _recording_enabled
+    global _recording_enabled, _session_recorder
     _recording_enabled = not _recording_enabled
     _save_recording_pref(_recording_enabled)
     if _recording_enabled:
+        if _session_recorder is None:
+            _session_recorder = _start_recording_session()
         console.print(f"\n[green]{t('recorder.toggle_on')}[/]")
     else:
+        if _session_recorder is not None:
+            _stop_recording_session(_session_recorder)
+            _session_recorder = None
         console.print(f"\n[yellow]{t('recorder.toggle_off')}[/]")
 
 
@@ -297,45 +342,111 @@ def change_language():
         pass
 
 
-def main():
-    """Main entry point."""
-    global _recording_enabled
-    _recording_enabled = _load_recording_pref()
-
+def show_settings():
+    """Show the settings menu with all configurable options."""
     while True:
-        show_menu()
+        console.clear()
+
+        # Header
+        header = Table.grid(expand=True)
+        header.add_column(justify="center")
+        header.add_row(f"[bold cyan]{t('settings.title')}[/]")
+        console.print(Panel(header, style="blue"))
+        console.print()
+
+        # Current status
+        rec_status_icon = "🔴" if _recording_enabled else "⚫"
+        rec_status_text = t("settings.rec_on") if _recording_enabled else t("settings.rec_off")
+        lang_names = {"pt": t("lang.pt"), "en": t("lang.en")}
+        current_lang = lang_names.get(get_language(), get_language())
+        mcp_configured = _is_mcp_configured()
+        mcp_status_icon = "🟢" if mcp_configured else "⚫"
+        mcp_status_text = t("mcp.status_on") if mcp_configured else t("mcp.status_off")
+
+        status = Table(box=box.SIMPLE, show_header=True, expand=True)
+        status.add_column(t("settings.current_status"), style="bold cyan")
+        status.add_column("", style="white")
+        status.add_row(t("settings.option_rec"), f"{rec_status_icon} {rec_status_text}")
+        status.add_row(t("settings.option_lang"), f"🌐 {current_lang}")
+        status.add_row(t("mcp.option"), f"{mcp_status_icon} {mcp_status_text}")
+        console.print(Panel(status, border_style="dim"))
+        console.print()
+
+        # Options
+        menu = Table(box=box.ROUNDED, expand=True, show_header=False)
+        menu.add_column("Key", style="bold yellow", width=5)
+        menu.add_column("Option", style="white")
+        menu.add_column("Description", style="dim")
+
+        menu.add_row("1", f"{rec_status_icon} {t('settings.option_rec')}", t("settings.desc_rec"))
+        menu.add_row("2", t("settings.option_lang"), t("settings.desc_lang"))
+        menu.add_row("3", f"{mcp_status_icon} {t('mcp.option')}", t("mcp.desc"))
+        menu.add_row("", "", "")
+        menu.add_row("V", t("settings.back"), t("settings.desc_back"))
+
+        console.print(Panel(menu, border_style="cyan"))
+        console.print()
 
         choice = console.input(f"[bold cyan]{t('menu.select_option')}[/]").strip().lower()
 
         if choice == "1":
-            run_network_stalker()
-        elif choice == "2":
-            console.print(f"\n[yellow]{t('menu.starting_cleanup')}[/]\n")
-            run_docker_cleanup()
-            console.input(f"\n[dim]{t('menu.press_enter')}[/]")
-        elif choice == "3":
-            console.print(f"\n[yellow]{t('menu.starting_full_cleanup')}[/]\n")
-            run_docker_full_cleanup()
-            console.input(f"\n[dim]{t('menu.press_enter')}[/]")
-        elif choice == "4":
-            run_port_scanner()
-            console.input(f"\n[dim]{t('menu.press_enter')}[/]")
-        elif choice == "lmarena":
-            console.print(f"\n[yellow]{t('menu.starting_lmarena')}[/]\n")
-            run_lmarena_models()
-            console.input(f"\n[dim]{t('menu.press_enter')}[/]")
-        elif choice == "r":
             toggle_recording()
             console.input(f"\n[dim]{t('menu.press_enter')}[/]")
-        elif choice == "l":
+        elif choice == "2":
             change_language()
             console.input(f"\n[dim]{t('menu.press_enter')}[/]")
-        elif choice == "q":
-            mascot.show_wave(t("mascot.goodbye"))
-            sys.exit(0)
+        elif choice == "3":
+            _toggle_mcp_config()
+            console.input(f"\n[dim]{t('menu.press_enter')}[/]")
+        elif choice == "v":
+            break
         else:
             console.print(f"[red]{t('menu.invalid_option')}[/]")
             console.input(f"[dim]{t('menu.press_enter_short')}[/]")
+
+
+def main():
+    """Main entry point."""
+    global _recording_enabled, _session_recorder
+    _recording_enabled = _load_recording_pref()
+    _session_recorder = _start_recording_session()
+
+    try:
+        while True:
+            show_menu()
+
+            choice = console.input(f"[bold cyan]{t('menu.select_option')}[/]").strip().lower()
+
+            if choice == "1":
+                run_network_stalker()
+            elif choice == "2":
+                console.print(f"\n[yellow]{t('menu.starting_cleanup')}[/]\n")
+                run_docker_cleanup()
+                console.input(f"\n[dim]{t('menu.press_enter')}[/]")
+            elif choice == "3":
+                console.print(f"\n[yellow]{t('menu.starting_full_cleanup')}[/]\n")
+                run_docker_full_cleanup()
+                console.input(f"\n[dim]{t('menu.press_enter')}[/]")
+            elif choice == "4":
+                run_port_scanner()
+                console.input(f"\n[dim]{t('menu.press_enter')}[/]")
+            elif choice == "lmarena":
+                console.print(f"\n[yellow]{t('menu.starting_lmarena')}[/]\n")
+                run_lmarena_models()
+                console.input(f"\n[dim]{t('menu.press_enter')}[/]")
+            elif choice == "s":
+                show_settings()
+            elif choice == "q":
+                mascot.show_wave(t("mascot.goodbye"))
+                break
+            else:
+                console.print(f"[red]{t('menu.invalid_option')}[/]")
+                console.input(f"[dim]{t('menu.press_enter_short')}[/]")
+    finally:
+        if _session_recorder is not None:
+            _stop_recording_session(_session_recorder)
+            _session_recorder = None
+    sys.exit(0)
 
 
 if __name__ == "__main__":

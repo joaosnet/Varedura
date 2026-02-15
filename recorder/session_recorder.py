@@ -27,13 +27,15 @@ class SessionRecorder:
         height: int = 40,
         snapshot_interval: float = 1.0,
         max_frames: int = 60,
+        console: Optional[Console] = None,
     ):
         self.width = width
         self.height = height
         self.snapshot_interval = snapshot_interval
         self.max_frames = max_frames
 
-        self._console: Optional[Console] = None
+        self._console: Optional[Console] = console
+        self._external_console = console
         self._svg_frames: list[str] = []
         self._stop_event = threading.Event()
         self._snapshot_thread: Optional[threading.Thread] = None
@@ -64,10 +66,19 @@ class SessionRecorder:
 
     def start(self) -> None:
         """Begin recording with periodic snapshots."""
-        self._console = Console(record=True, width=self.width)
+        if self._external_console is not None:
+            self._console = self._external_console
+        else:
+            self._console = Console(record=True, width=self.width)
+
         self._svg_frames = []
         self._stop_event.clear()
         self._recording = True
+
+        try:
+            self._console.export_text(clear=True)
+        except Exception:
+            pass
 
         self._snapshot_thread = threading.Thread(
             target=self._snapshot_loop, daemon=True

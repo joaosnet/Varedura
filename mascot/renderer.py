@@ -30,11 +30,12 @@ class MascotRenderer:
     def render_static(self, state: str = STATES.IDLE, message: str = "") -> Panel:
         """Return a Rich Panel with the mascot in the given state."""
         frames = FRAMES.get(state, FRAMES[STATES.IDLE])
-        frame_text = Text(frames[0], style="bold cyan")
+        frame_style, border_style, title_style = self._panel_styles(state)
+        frame_text = Text(frames[0], style=frame_style)
 
         content_parts = [frame_text]
         if message:
-            bubble = self._speech_bubble(message)
+            bubble = self._speech_bubble(message, state)
             content_parts.append(Text("\n"))
             content_parts.append(bubble)
 
@@ -44,8 +45,8 @@ class MascotRenderer:
 
         return Panel(
             Align.center(group),
-            border_style="cyan",
-            title="🧹 Varedura",
+            border_style=border_style,
+            title=f"[{title_style}]✦ Varedura[/]",
             padding=(0, 1),
         )
 
@@ -64,21 +65,41 @@ class MascotRenderer:
     # ── Speech bubble ───────────────────────────────────────────────
 
     @staticmethod
-    def _speech_bubble(message: str) -> Text:
+    def _speech_bubble(message: str, state: str = STATES.IDLE) -> Text:
         """Create a speech bubble around the message."""
         lines = message.split("\n")
         max_len = max(len(line) for line in lines)
         width = max_len + 2
+        bubble_style = "dim white"
+        if state == STATES.WORKING:
+            bubble_style = "bright_cyan"
+        elif state == STATES.SUCCESS:
+            bubble_style = "bright_green"
+        elif state == STATES.ERROR:
+            bubble_style = "bright_red"
 
         parts = []
-        parts.append(f"  {'─' * width}╮\n")
+        parts.append(f"  ╭{'─' * width}╮\n")
         for line in lines:
             parts.append(f"  │ {line:<{max_len}} │\n")
-        parts.append(f"  {'─' * width}╯\n")
-        parts.append("  ╰")
+        parts.append(f"  ╰{'─' * width}╯\n")
+        parts.append("     ╲")
 
-        bubble_text = Text("".join(parts), style="dim white")
+        bubble_text = Text("".join(parts), style=bubble_style)
         return bubble_text
+
+    @staticmethod
+    def _panel_styles(state: str) -> tuple[str, str, str]:
+        """Return frame, border and title style for each mascot state."""
+        if state == STATES.WORKING:
+            return ("bold bright_cyan", "bright_cyan", "bold bright_cyan")
+        if state == STATES.SUCCESS:
+            return ("bold bright_green", "green", "bold bright_green")
+        if state == STATES.ERROR:
+            return ("bold bright_red", "red", "bold bright_red")
+        if state == STATES.WAVE:
+            return ("bold magenta", "magenta", "bold magenta")
+        return ("bold cyan", "cyan", "bold cyan")
 
     # ── Animated rendering (blocking with Live) ─────────────────────
 
@@ -107,10 +128,11 @@ class MascotRenderer:
         with Live(console=self.console, refresh_per_second=fps) as live:
             while not self._stop_event.is_set():
                 frame = next(frame_cycle)
-                frame_text = Text(frame, style="bold cyan")
+                frame_style, border_style, title_style = self._panel_styles(state)
+                frame_text = Text(frame, style=frame_style)
 
                 if message:
-                    bubble = self._speech_bubble(message)
+                    bubble = self._speech_bubble(message, state)
                     group = Text()
                     group.append_text(frame_text)
                     group.append_text(Text("\n"))
@@ -120,8 +142,8 @@ class MascotRenderer:
 
                 panel = Panel(
                     Align.center(group),
-                    border_style="cyan",
-                    title="🧹 Varedura",
+                    border_style=border_style,
+                    title=f"[{title_style}]✦ Varedura[/]",
                     padding=(0, 1),
                 )
                 live.update(panel)

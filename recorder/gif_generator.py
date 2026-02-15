@@ -89,11 +89,25 @@ def generate_gif(
     if not images:
         return None
 
+    max_width = max(image.width for image in images)
+    max_height = max(image.height for image in images)
+    background = images[0].getpixel((0, 0))
+
+    normalized_images: list[Image.Image] = []
+    for image in images:
+        if image.size == (max_width, max_height):
+            normalized_images.append(image)
+            continue
+
+        canvas = Image.new("RGBA", (max_width, max_height), background)
+        canvas.paste(image, (0, 0))
+        normalized_images.append(canvas)
+
     # Deduplicate consecutive identical frames
-    deduped: list[Image.Image] = [images[0]]
+    deduped: list[Image.Image] = [normalized_images[0]]
     durations: list[int] = [int(1000 / fps)]
 
-    for img in images[1:]:
+    for img in normalized_images[1:]:
         if list(img.getdata()) == list(deduped[-1].getdata()):
             durations[-1] += int(1000 / fps)
         else:

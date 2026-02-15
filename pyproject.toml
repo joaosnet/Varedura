@@ -20,6 +20,7 @@ dependencies = [
     "pypdf2>=3.0.1",
     "Pillow>=11.0.0",
     "cairosvg>=2.7.0",
+    "mcp[cli]>=1.0.0",
 ]
 
 [dependency-groups]
@@ -33,4 +34,8 @@ dev = [
 py-modules = ["main"]
 
 [tool.setuptools.packages.find]
-include = ["cli", "docker_cleaner", "monitor", "mascot", "recorder"]
+include = ["cli", "docker_cleaner", "monitor", "mascot", "recorder", "mcp_server"]
+
+[tool.uv]
+# pywin32 has no free-threading wheel (cp314t) yet; we only use stdio transport
+override-dependencies = ["pywin32>=999; sys_platform == 'win32'"]

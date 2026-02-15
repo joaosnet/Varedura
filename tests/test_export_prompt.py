@@ -8,6 +8,7 @@ from monitor.stalker import (
     config,
 )
 from monitor.speed_tester import SpeedTestResult
+from i18n import t
 
 
 def cleanup_exports():
@@ -28,7 +29,7 @@ def test_prompt_export_cancel(tmp_path):
     full_ping_history.append((now, 10.0, 20.0))
 
     res = prompt_export_report(simulated_choice="n")
-    assert "cancelada" in res.lower()
+    assert t("stalker.export_cancelled") in res or "cancelada" in res.lower() or "cancelled" in res.lower()
 
 
 def test_prompt_export_confirm_triggers_export(tmp_path):
@@ -50,5 +51,5 @@ def test_prompt_export_confirm_triggers_export(tmp_path):
 
     # Simulate confirmation
     res = prompt_export_report(simulated_choice="s")
-    assert "exportando" in res.lower()
+    assert t("stalker.exporting_full") in res or "exportando" in res.lower() or "exporting" in res.lower()
     cleanup_exports()

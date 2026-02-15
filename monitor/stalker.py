@@ -40,6 +40,7 @@ from monitor.speed_tester import (
     stop_continuous_testing,
     speed_config,
 )
+from i18n import t
 
 # Windows keyboard input
 if platform.system().lower() == "windows":
@@ -152,7 +153,7 @@ def save_prefs() -> None:
     except Exception:
         # Não falhar criticamente; apenas log em console
         try:
-            console.print("[red]Aviso: falha ao salvar preferências de exportação[/]")
+            console.print(f"[red]{t('stalker.warning_save_prefs')}[/]")
         except Exception:
             pass
 
@@ -173,7 +174,7 @@ def load_prefs() -> None:
                     config.export_max_points = int(prefs["export_max_points"])
     except Exception:
         try:
-            console.print("[red]Aviso: falha ao carregar preferências de exportação[/]")
+            console.print(f"[red]{t('stalker.warning_load_prefs')}[/]")
         except Exception:
             pass
 
@@ -319,8 +320,6 @@ def analyze_lag_source(
     - Se ambos timeout → Problema crítico no roteador ou cabo
     - Se tem processo com muitas conexões → Pode ser ele saturando
     """
-    from i18n import t
-
     # Caso 1: Timeout total
     if local_ms is None and ext_ms is None:
         return (
@@ -456,7 +455,6 @@ def check_keyboard():
 def handle_key(key: str) -> Optional[str]:
     """Processa entrada de teclado. Retorna mensagem para log ou None."""
     global show_help, running, config, port_scanner_state
-    from i18n import t
 
     if key == "q":
         running = False
@@ -508,7 +506,7 @@ def prompt_change_gateway() -> str:
         config.gateway_ip = common_gateways[(current_idx + 1) % len(common_gateways)]
     except ValueError:
         config.gateway_ip = common_gateways[0]
-    return f"[yellow]Gateway alterado para: {config.gateway_ip}[/]"
+    return f"[yellow]{t('stalker.gateway_changed', ip=config.gateway_ip)}[/]"
 
 
 def prompt_change_external() -> str:
@@ -519,7 +517,7 @@ def prompt_change_external() -> str:
         config.external_ip = dns_servers[(current_idx + 1) % len(dns_servers)]
     except ValueError:
         config.external_ip = dns_servers[0]
-    return f"[yellow]DNS externo alterado para: {config.external_ip}[/]"
+    return f"[yellow]{t('stalker.dns_changed', ip=config.external_ip)}[/]"
 
 
 def prompt_change_threshold() -> str:
@@ -530,7 +528,7 @@ def prompt_change_threshold() -> str:
         config.lag_threshold_ms = thresholds[(current_idx + 1) % len(thresholds)]
     except ValueError:
         config.lag_threshold_ms = thresholds[0]
-    return f"[yellow]Threshold alterado para: {config.lag_threshold_ms}ms[/]"
+    return f"[yellow]{t('stalker.threshold_changed', value=config.lag_threshold_ms)}[/]"
 
 
 def prompt_change_interval() -> str:
@@ -541,7 +539,7 @@ def prompt_change_interval() -> str:
         config.interval = intervals[(current_idx + 1) % len(intervals)]
     except ValueError:
         config.interval = intervals[0]
-    return f"[yellow]Intervalo alterado para: {config.interval}s[/]"
+    return f"[yellow]{t('stalker.interval_changed', value=config.interval)}[/]"
 
 
 def prompt_change_contracted_speed() -> str:
@@ -567,7 +565,7 @@ def prompt_change_contracted_speed() -> str:
 
     speed_config.velocidade_contratada_down = new_speed[0]
     speed_config.velocidade_contratada_up = new_speed[1]
-    return f"[yellow]Velocidade contratada: {new_speed[0]}/{new_speed[1]} Mbps (↓/↑)[/]"
+    return f"[yellow]{t('stalker.contracted_speed_changed', down=new_speed[0], up=new_speed[1])}[/]"
 
 
 def prompt_export_report(simulated_choice: str | None = None) -> str:
@@ -582,10 +580,7 @@ def prompt_export_report(simulated_choice: str | None = None) -> str:
     # Contagem de pontos estimada
     total_points = len(full_ping_history) if full_ping_history else len(local_stats.timestamps)
     # Mensagem de aviso
-    warning = (
-        "AVISO: O histórico completo pode consumir muita memória e demorar."
-        " Deseja continuar com exportação COMPLETA? (s/N): "
-    )
+    warning = t("stalker.export_warning")
 
     # Usar escolha simulada (para testes)
     if simulated_choice is not None:
@@ -594,24 +589,24 @@ def prompt_export_report(simulated_choice: str | None = None) -> str:
         # Se já está marcado como permissivo, não perguntar
         if config.allow_full_history_export:
             msg = export_combined_report(full_history=True)
-            return f"[cyan]Exportando com histórico completo (config permitida)...[/] | {msg}"
+            return f"[cyan]{t('stalker.exporting_full_config')}[/] | {msg}"
 
         # Pergunta interativa simples (compatível Windows/Unix)
         try:
             if platform.system().lower() == "windows":
-                print(f"Exportar relatório (pontos estimados: {total_points}). {warning}", end=" ")
+                print(t("stalker.export_points_prompt", points=total_points, warning=warning), end=" ")
                 ch = msvcrt.getwch()
                 print(ch)
                 choice = ch.lower()
             else:
-                print(f"Exportar relatório (pontos estimados: {total_points}). {warning}", end=" ")
+                print(t("stalker.export_points_prompt", points=total_points, warning=warning), end=" ")
                 choice = sys.stdin.read(1).lower()
                 print(choice)
         except Exception:
             choice = "n"
 
     if choice not in ("s", "y", "sa"):
-        return "[yellow]Exportação cancelada pelo usuário[/]"
+        return f"[yellow]{t('stalker.export_cancelled')}[/]"
 
     # Se o usuário escolheu 'sa', persistir preferencia
     if choice == "sa":
@@ -619,7 +614,7 @@ def prompt_export_report(simulated_choice: str | None = None) -> str:
 
     # Confirmed: start export with full_history=True
     msg = export_combined_report(full_history=True)
-    return f"[cyan]Exportando com histórico completo...[/] | {msg}"
+    return f"[cyan]{t('stalker.exporting_full')}[/] | {msg}"
 
 
 # --- Estado de Exportação em Background ---
@@ -2220,11 +2215,11 @@ def export_combined_report(full_history: bool = False) -> str:
 
     with _export_lock:
         if _export_status["running"]:
-            return "[yellow]⏳ Exportação já em andamento...[/]"
+            return f"[yellow]{t('stalker.export_already_running')}[/]"
 
         # Verificar se há dados para exportar
         if not local_stats.history and get_speed_tester().stats.test_count == 0:
-            return "[yellow]Nenhum dado para exportar ainda[/]"
+            return f"[yellow]{t('stalker.export_no_data')}[/]"
 
         _export_status["running"] = True
         _export_status["completed"] = False
@@ -2237,8 +2232,8 @@ def export_combined_report(full_history: bool = False) -> str:
     export_thread.start()
 
     if full_history:
-        return "[cyan]📄 Gerando relatório PDF (histórico COMPLETO) em background...[/]"
-    return "[cyan]📄 Gerando relatório PDF em background...[/]"
+        return f"[cyan]{t('stalker.export_pdf_full_bg')}[/]"
+    return f"[cyan]{t('stalker.export_pdf_bg')}[/]"
 
 
 def get_export_status() -> Optional[str]:
@@ -2287,11 +2282,9 @@ def make_ascii_graph(
 
     # Adicionar linha de stats
     if stats.min_ms is not None:
-        stats_line = (
-            f"Min:{stats.min_ms:.0f} Máx:{stats.max_ms:.0f} Méd:{stats.avg_ms:.0f}ms"
-        )
+        stats_line = t("stalker.graph_stats", min=stats.min_ms, max=stats.max_ms, avg=stats.avg_ms)
     else:
-        stats_line = "Aguardando dados..."
+        stats_line = t("stalker.graph_waiting")
 
     return f"{label}\n{graph_line}\n[dim]{stats_line}[/]"
 
@@ -2314,14 +2307,13 @@ def make_header():
     grid = Table.grid(expand=True)
     grid.add_column(justify="center", ratio=1)
     grid.add_row(
-        f"[b bold cyan]💀 V's NETWORK STALKER v3.1[/]  [dim]|  {current_date} {current_time}[/]"
+        f"[b bold cyan]{t('stalker.header_title')}[/]  [dim]|  {current_date} {current_time}[/]"
     )
     grid.add_row(
-        f"[dim]SO: {os_name} | Gateway: {config.gateway_ip} | DNS: {config.external_ip} | "
-        f"Portas: {ports_info} | Limite: {config.lag_threshold_ms}ms[/]"
+        f"[dim]{t('stalker.header_info', os=os_name, gateway=config.gateway_ip, dns=config.external_ip, ports=ports_info, threshold=config.lag_threshold_ms)}[/]"
     )
     grid.add_row(
-        "[dim italic]Teclas: [H]elp [G]ateway [E]xternal [T]hreshold [I]nterval [P]ortas [S]can e[X]portar [Q]uit[/]"
+        f"[dim italic]{t('stalker.header_keys')}[/]"
     )
     return Panel(grid, style="white on blue")
 
@@ -2329,34 +2321,34 @@ def make_header():
 def make_ping_table(local_ms, ext_ms, threshold):
     """Cria a tabela de status dos Pings."""
     table = Table(expand=True, box=box.ROUNDED)
-    table.add_column("Destino", justify="center")
-    table.add_column("Ping (ms)", justify="center")
-    table.add_column("Status", justify="center")
+    table.add_column(t("stalker.ping_destination"), justify="center")
+    table.add_column(t("stalker.ping_ms"), justify="center")
+    table.add_column(t("stalker.ping_status"), justify="center")
 
     # Formatação Local
     if local_ms is None:
-        local_display = "TIMEOUT"
+        local_display = t("stalker.timeout")
         local_style = "bold white on red"
-        local_status = "CRÍTICO"
+        local_status = t("stalker.critical")
     else:
         local_display = f"{local_ms:.1f} ms"
         if local_ms > threshold:
             local_style = "bold red"
-            local_status = "LAG 🏠"
+            local_status = t("stalker.lag_local")
         else:
             local_style = "green"
             local_status = "OK"
 
     # Formatação Externa
     if ext_ms is None:
-        ext_display = "TIMEOUT"
+        ext_display = t("stalker.timeout")
         ext_style = "bold white on red"
-        ext_status = "CRÍTICO"
+        ext_status = t("stalker.critical")
     else:
         ext_display = f"{ext_ms:.1f} ms"
         if ext_ms > threshold:
             ext_style = "bold red"
-            ext_status = "LAG 🌐"
+            ext_status = t("stalker.lag_external")
         else:
             ext_style = "green"
             ext_status = "OK"
@@ -2372,7 +2364,7 @@ def make_ping_table(local_ms, ext_ms, threshold):
         Text(ext_status, style=ext_style),
     )
 
-    return Panel(table, title="📡 Status da Conexão", border_style="cyan")
+    return Panel(table, title=t("stalker.connection_status"), border_style="cyan")
 
 
 def make_graph_panel():
@@ -2381,7 +2373,7 @@ def make_graph_panel():
         local_stats, width=config.graph_width, label="[cyan]Gateway[/]"
     )
     ext_graph = make_ascii_graph(
-        external_stats, width=config.graph_width, label="[orange1]Externo[/]"
+        external_stats, width=config.graph_width, label=f"[orange1]{t('stalker.graph_external')}[/]"
     )
 
     # Info de intervalo de tempo
@@ -2390,16 +2382,16 @@ def make_graph_panel():
         now_str = datetime.datetime.now().strftime("%H:%M:%S")
         time_info = f"[dim]{start_str} → {now_str}[/]"
     else:
-        time_info = "[dim]Aguardando dados...[/]"
+        time_info = f"[dim]{t('stalker.graph_waiting')}[/]"
 
     # Indicador de linha de threshold
-    threshold_info = f"[red]--- Limite: {config.lag_threshold_ms}ms ---[/]"
+    threshold_info = f"[red]{t('stalker.graph_threshold', threshold=config.lag_threshold_ms)}[/]"
 
     content = Text.from_markup(
         f"{time_info}\n\n{local_graph}\n\n{ext_graph}\n\n{threshold_info}"
     )
     return Panel(
-        content, title="📊 Histórico de Ping (Tempo Real)", border_style="magenta"
+        content, title=t("stalker.graph_title"), border_style="magenta"
     )
 
 
@@ -2407,37 +2399,37 @@ def make_process_table(procs):
     """Cria a tabela de processos suspeitos."""
     table = Table(expand=True, box=box.SIMPLE_HEAD)
     table.add_column("PID", style="dim", width=8)
-    table.add_column("Processo", style="bold yellow")
-    table.add_column("Uso Total (MB)", justify="right", style="magenta")
+    table.add_column(t("stalker.process_col"), style="bold yellow")
+    table.add_column(t("stalker.total_usage_mb"), justify="right", style="magenta")
 
     if not procs:
         if is_android():
-            table.add_row("-", "[dim]Sem acesso (Requer Root?)[/]", "-")
+            table.add_row("-", f"[dim]{t('stalker.no_access_root')}[/]", "-")
         else:
-            table.add_row("-", "[dim]Nenhum tráfego detectado[/]", "-")
+            table.add_row("-", f"[dim]{t('stalker.no_traffic')}[/]", "-")
     else:
         for pid, name, bytes_total in procs:
             mb = bytes_total / (1024 * 1024)
-            proc_name = name if name else "Desconhecido"
+            proc_name = name if name else t("stalker.unknown_process")
             table.add_row(str(pid), proc_name, f"{mb:.2f} MB")
 
     return Panel(
-        table, title="🔍 Top Consumo de Rede (Acumulado)", border_style="yellow"
+        table, title=t("stalker.process_table_title"), border_style="yellow"
     )
 
 
 def make_ports_panel():
     """Cria painel de portas TCP em listening."""
     table = Table(expand=True, box=box.SIMPLE_HEAD)
-    table.add_column("Porta", style="bold yellow", width=8, justify="center")
-    table.add_column("Processo", style="bold green")
-    table.add_column("End.", style="dim", width=10)
+    table.add_column(t("stalker.ports_col"), style="bold yellow", width=8, justify="center")
+    table.add_column(t("stalker.process_short_col"), style="bold green")
+    table.add_column(t("stalker.address_col"), style="dim", width=10)
 
     # Mostrar no máximo 8 portas
     ports_to_show = port_scanner_state.listening_tcp[:8]
 
     if not ports_to_show:
-        table.add_row("-", "[dim]Nenhuma porta encontrada[/]", "-")
+        table.add_row("-", f"[dim]{t('stalker.no_ports_found')}[/]", "-")
     else:
         for port_info in ports_to_show:
             endereco = port_info.endereco if port_info.endereco != "Todas" else "*"
@@ -2451,7 +2443,7 @@ def make_ports_panel():
 
     return Panel(
         table,
-        title=f"🔌 Portas TCP ({total}{extra_info}) [dim]Último: {last_scan}[/]",
+        title=t("stalker.ports_title", total=total, extra=extra_info, last_scan=last_scan),
         border_style="green",
     )
 
@@ -2459,14 +2451,14 @@ def make_ports_panel():
 def make_connections_panel():
     """Cria painel de processos com mais conexões."""
     table = Table(expand=True, box=box.SIMPLE_HEAD)
-    table.add_column("Processo", style="bold cyan")
-    table.add_column("Conexões", style="bold yellow", justify="center", width=8)
-    table.add_column("RAM", style="dim", justify="right", width=8)
+    table.add_column(t("stalker.process_col"), style="bold cyan")
+    table.add_column(t("stalker.connections_col"), style="bold yellow", justify="center", width=8)
+    table.add_column(t("stalker.ram_col"), style="dim", justify="right", width=8)
 
     connections = port_scanner_state.top_connections[:5]
 
     if not connections:
-        table.add_row("[dim]Aguardando scan...[/]", "-", "-")
+        table.add_row(f"[dim]{t('stalker.waiting_scan')}[/]", "-", "-")
     else:
         for proc in connections:
             ram_str = f"{proc.memoria_mb:.0f}MB" if proc.memoria_mb > 0 else "N/A"
@@ -2474,7 +2466,7 @@ def make_connections_panel():
 
     return Panel(
         table,
-        title=f"🏆 Top Conexões (Estab: {port_scanner_state.total_established})",
+        title=t("stalker.connections_title", count=port_scanner_state.total_established),
         border_style="cyan",
     )
 
@@ -2486,10 +2478,10 @@ def make_speed_panel():
         snapshot = tester.get_stats_snapshot()
 
         table = Table(expand=True, box=box.ROUNDED)
-        table.add_column("Provedor", style="bold cyan", width=12)
-        table.add_column("Download", justify="center", width=10)
-        table.add_column("Upload", justify="center", width=10)
-        table.add_column("Ping", justify="center", width=8)
+        table.add_column(t("stalker.speed_provider"), style="bold cyan", width=12)
+        table.add_column(t("stalker.speed_download"), justify="center", width=10)
+        table.add_column(t("stalker.speed_upload"), justify="center", width=10)
+        table.add_column(t("stalker.speed_ping"), justify="center", width=8)
 
         results_by_provider = snapshot.get("results_by_provider", {})
         is_testing = snapshot.get("is_testing", False)
@@ -2540,34 +2532,34 @@ def make_speed_panel():
                     table.add_row(
                         f"[yellow]{current_provider[:11]}[/]",
                         f"[yellow]{progress_mbps:.0f} Mbps[/]",
-                        "[dim]baixando...[/]",
+                        f"[dim]{t('stalker.speed_downloading')}[/]",
                         "[dim]...[/]",
                     )
                 elif progress_phase == "upload":
                     table.add_row(
                         f"[yellow]{current_provider[:11]}[/]",
                         "[dim]ok[/]",
-                        "[yellow]upload...[/]",
+                        f"[yellow]{t('stalker.speed_uploading')}[/]",
                         "[dim]...[/]",
                     )
                 else:
                     table.add_row(
                         f"[yellow]{current_provider[:11]}[/]",
-                        "[dim]conectando[/]",
+                        f"[dim]{t('stalker.speed_connecting')}[/]",
                         "[dim]...[/]",
                         "[dim]...[/]",
                     )
             else:
                 table.add_row(
-                    "[yellow]...[/]", "[dim]iniciando[/]", "[dim]...[/]", "[dim]...[/]"
+                    "[yellow]...[/]", f"[dim]{t('stalker.speed_starting')}[/]", "[dim]...[/]", "[dim]...[/]"
                 )
         elif not results_by_provider:
             if snapshot.get("last_error"):
-                error_msg = str(snapshot.get("last_error", "Erro"))[:20]
+                error_msg = str(snapshot.get("last_error", t("stalker.speed_error")))[:20]
                 table.add_row("-", f"[red]{error_msg}[/]", "-", "-")
             else:
                 table.add_row(
-                    "[dim]...[/]", "[dim]aguardando[/]", "[dim]...[/]", "[dim]...[/]"
+                    "[dim]...[/]", f"[dim]{t('stalker.speed_waiting')}[/]", "[dim]...[/]", "[dim]...[/]"
                 )
 
         test_count = snapshot.get("test_count", 0)
@@ -2575,14 +2567,14 @@ def make_speed_panel():
 
         return Panel(
             table,
-            title=f"Velocidade ({num_providers} provedores, {test_count} testes)",
-            subtitle=f"[dim]Contrato: {speed_config.velocidade_contratada_down:.0f}/{speed_config.velocidade_contratada_up:.0f} Mbps | Min: {speed_config.percentual_minimo:.0f}%[/]",
+            title=t("stalker.speed_title", providers=num_providers, tests=test_count),
+            subtitle=f"[dim]{t('stalker.speed_subtitle', down=speed_config.velocidade_contratada_down, up=speed_config.velocidade_contratada_up, min=speed_config.percentual_minimo)}[/]",
             border_style="magenta",
         )
     except Exception as e:
         return Panel(
-            f"[red]Erro: {str(e)[:30]}[/]",
-            title="Velocidade",
+            f"[red]{t('stalker.speed_error')}: {str(e)[:30]}[/]",
+            title=t("stalker.speed_title_error"),
             border_style="red",
         )
 
@@ -2601,45 +2593,33 @@ def make_log_panel(log_events):
             content.append("\n")
 
     return Panel(
-        content, title="📜 Histórico de Alertas (Últimos Eventos)", border_style="red"
+        content, title=t("stalker.log_title"), border_style="red"
     )
 
 
 def make_help_panel():
     """Cria painel de ajuda com atalhos de teclado."""
-    help_text = """
-[bold cyan]CONTROLES:[/]
-
-  [yellow]H[/] - Mostrar/esconder esta ajuda
-  [yellow]G[/] - Ciclar IP do Gateway (192.168.x.1, 10.0.0.1)
-  [yellow]E[/] - Ciclar DNS externo (8.8.8.8, 1.1.1.1, etc)
-  [yellow]T[/] - Ciclar limite de lag (50, 100, 150, 200, 300ms)
-  [yellow]I[/] - Ciclar intervalo de refresh (0.5, 1, 2, 5s)
-  [yellow]P[/] - Mostrar/esconder painel de portas
-  [yellow]V[/] - Mostrar/esconder painel de velocidade
-  [yellow]C[/] - Ciclar velocidade contratada (100, 200, 300, 500, 600, 1000 Mbps)
-  [yellow]S[/] - Atualizar scan de portas manualmente
-  [yellow]X[/] - Exportar dados para CSV e gráfico PNG
-  [yellow]Q[/] - Sair
-
-[dim]Os valores ciclam automaticamente entre opções comuns.[/]
-[dim]Velocidade: Monitor contínuo (ANATEL exige mínimo 80% da contratada)[/]
-"""
-    return Panel(Text.from_markup(help_text), title="❓ Ajuda", border_style="green")
+    help_text = t("stalker.help_text")
+    return Panel(Text.from_markup(help_text), title=t("stalker.help_title"), border_style="green")
 
 
 def main():
     global running, show_help, port_scanner_state, scan_counter
 
+    # Reset state so stalker can be re-entered from the main menu
+    running = True
+    show_help = False
+    scan_counter = 0
+
     # Layout Principal
     layout = Layout()
 
     log_events = deque(maxlen=config.history_size)
-    log_events.append("[dim]Monitoramento iniciado... aguardando anomalias.[/]")
+    log_events.append(f"[dim]{t('stalker.monitoring_started')}[/]")
 
     if is_android():
         log_events.append(
-            "[yellow]Android detectado: Leitura de processos pode ser limitada.[/]"
+            f"[yellow]{t('stalker.android_detected')}[/]"
         )
 
     # Scan inicial de portas em background (não trava a inicialização)
@@ -2651,16 +2631,16 @@ def main():
             pass  # Silently fail, will show empty state
 
     threading.Thread(target=_initial_port_scan, daemon=True).start()
-    log_events.append("[dim]Scan de portas iniciando em background...[/]")
+    log_events.append(f"[dim]{t('stalker.port_scan_bg')}[/]")
 
     # Iniciar teste de velocidade contínuo em background
     try:
         start_continuous_testing()
         log_events.append(
-            f"[cyan]Monitor de velocidade iniciado (Contrato: {speed_config.velocidade_contratada_down}/{speed_config.velocidade_contratada_up} Mbps)[/]"
+            f"[cyan]{t('stalker.speed_monitor_started', down=speed_config.velocidade_contratada_down, up=speed_config.velocidade_contratada_up)}[/]"
         )
     except Exception as e:
-        log_events.append(f"[red]Erro ao iniciar speed test: {e}[/]")
+        log_events.append(f"[red]{t('stalker.speed_start_error', error=e)}[/]")
 
     with Live(layout, refresh_per_second=4, screen=True):
         while running:
@@ -2715,17 +2695,17 @@ def main():
 
                 if local_ms and local_ms > config.lag_threshold_ms:
                     log_events.append(
-                        f"[{start_time}] [bold red]ALERTA:[/] Lag local alto: {local_ms:.1f}ms (Gateway)"
+                        f"[{start_time}] [bold red]{t('stalker.alert_local_lag', ms=local_ms)}[/]"
                     )
                     alert_triggered = True
                 elif ext_ms and ext_ms > config.lag_threshold_ms:
                     log_events.append(
-                        f"[{start_time}] [bold orange1]ALERTA:[/] Lag externo detectado: {ext_ms:.1f}ms (DNS)"
+                        f"[{start_time}] [bold orange1]{t('stalker.alert_ext_lag', ms=ext_ms)}[/]"
                     )
                     alert_triggered = True
                 elif local_ms is None or ext_ms is None:
                     log_events.append(
-                        f"[{start_time}] [bold white on red]CRÍTICO:[/] Perda de pacote detectada!"
+                        f"[{start_time}] [bold white on red]{t('stalker.alert_packet_loss')}[/]"
                     )
                     alert_triggered = True
 
@@ -2734,16 +2714,16 @@ def main():
                     suspeito, explicacao = analyze_lag_source(
                         local_ms, ext_ms, config.lag_threshold_ms, procs
                     )
-                    log_events.append(f"   ↳ [bold yellow]Diagnóstico:[/] {suspeito}")
+                    log_events.append(f"   ↳ [bold yellow]{t('stalker.diagnostic')}[/] {suspeito}")
                     log_events.append(f"   ↳ [dim]{explicacao}[/]")
 
                     # Mostrar processo com mais conexões se houver (como info secundária)
                     if procs and not suspeito.startswith("🔌"):
                         top_hog = procs[0]
                         conns = top_hog[2] // (1024 * 1024)  # Número de conexões
-                        hog_name = top_hog[1] if top_hog[1] else "Desconhecido"
+                        hog_name = top_hog[1] if top_hog[1] else t("stalker.unknown_process")
                         log_events.append(
-                            f"   ↳ [dim]Top conexões: {hog_name} ({conns} ativas)[/]"
+                            f"   ↳ [dim]{t('stalker.top_connections_log', name=hog_name, conns=conns)}[/]"
                         )
 
                 # 5. Construir Layout
@@ -2821,23 +2801,37 @@ def main():
             except KeyboardInterrupt:
                 break
 
-    # Cleanup e exportar relatório final
+    # Cleanup
     stop_continuous_testing()
 
-    # Exportar relatório combinado ao sair (em background, não bloqueia)
+    # Perguntar se usuário quer gerar relatório ao sair
     tester = get_speed_tester()
     if tester.stats.test_count > 0 or local_stats.history:
-        console.print("\n[cyan]📄 Gerando relatório final em background...[/]")
-        export_combined_report()
-        # Aguardar no máximo 3 segundos para o relatório ser gerado
-        import time as time_module
+        try:
+            choice = (
+                console.input(
+                    f"\n[bold cyan]{t('stalker.ask_final_report')}[/]"
+                )
+                .strip()
+                .lower()
+            )
+        except Exception:
+            choice = "n"
 
-        for _ in range(30):  # 30 x 0.1s = 3s máximo
-            time_module.sleep(0.1)
-            status = get_export_status()
-            if status:
-                console.print(status)
-                break
+        if choice in ("s", "sim", "y", "yes"):
+            console.print(f"\n[cyan]{t('stalker.generating_report')}[/]")
+            export_combined_report()
+            # Aguardar no máximo 3 segundos para o relatório ser gerado
+            import time as time_module
+
+            for _ in range(30):  # 30 x 0.1s = 3s máximo
+                time_module.sleep(0.1)
+                status = get_export_status()
+                if status:
+                    console.print(status)
+                    break
+        else:
+            console.print(f"[dim]{t('stalker.report_skipped')}[/]")
 
 
 # Carregar preferências salvas (se existirem)

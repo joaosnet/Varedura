@@ -118,8 +118,8 @@ Varedura/
 ├── monitor/               # Network monitoring
 │   ├── stalker.py        # Network Stalker
 │   └── port_scanner.py   # Port scanner
-├── mascot/                # Animated ASCII art mascot
-│   ├── frames.py         # ASCII art frames (idle, working, success, error, wave)
+├── mascot/                # Animated pixel-art mascot
+│   ├── frames.py         # Pixel-art frames (idle, working, success, error, wave)
 │   └── renderer.py       # MascotRenderer (static, animated, speech bubbles)
 ├── recorder/              # Terminal session recording
 │   ├── session_recorder.py  # Rich Console capture → SVG snapshots

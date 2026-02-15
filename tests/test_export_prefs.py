@@ -9,6 +9,7 @@ from monitor.stalker import (
     prompt_export_report,
     handle_key,
 )
+from i18n import t
 
 
 def test_prefs_persistence(tmp_path):
@@ -40,7 +41,7 @@ def test_prompt_export_save_always(tmp_path):
 
     # Chamar prompt com 'sa' (simula confirmar e salvar)
     res = prompt_export_report(simulated_choice="sa")
-    assert "exportando" in res.lower()
+    assert t("stalker.exporting_full") in res or "exportando" in res.lower() or "exporting" in res.lower()
 
     # Carregar do disco para garantir persistência
     config.allow_full_history_export = False
