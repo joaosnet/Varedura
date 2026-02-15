@@ -129,7 +129,7 @@ Varedura/
 
 ```bash
 # Clone
-git clone https://github.com/joaod/Varedura.git
+git clone https://github.com/joaosnet/Varedura.git
 cd Varedura
 
 # Create venv & install
