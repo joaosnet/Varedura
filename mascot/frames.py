@@ -40,5 +40,6 @@ FRAMES: dict[str, list[Path]] = {
     STATES.SCANNING: _paths("scanning"),
 }
 
-# Sprite display size (columns x rows in terminal)
-SPRITE_SIZE = (48, 48)
+# Sprite display size (columns x rows in terminal).
+# 20x20 image → ~20 cols × 10 rows of half-block chars.
+SPRITE_SIZE = (20, 20)
