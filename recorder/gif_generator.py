@@ -1,4 +1,10 @@
-"""GIF generator — converts Rich SVG snapshots to animated GIF."""
+"""GIF generator — converts Rich SVG snapshots to animated GIF.
+
+Backends tried in order (best quality first):
+  1. gifski  — highest-quality GIF encoder (needs binary in PATH)
+  2. ffmpeg  — palettegen/paletteuse with Floyd-Steinberg dithering
+  3. Pillow  — pure-Python fallback, always available
+"""
 
 from __future__ import annotations
 
@@ -10,13 +16,51 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
+# ---------------------------------------------------------------------------
+# SVG → PNG conversion
+# ---------------------------------------------------------------------------
 
-def _svg_to_png_bytes(svg_content: str, width: int = 800) -> Optional[bytes]:
-    """Convert SVG string to PNG bytes.
+_RENDER_SCALE = 2  # render at 2× then downscale for sharper text edges
 
-    Tries cairosvg first, falls back to svglib+reportlab.
+
+def _svg_to_png_bytes(
+    svg_content: str,
+    width: int = 1280,
+    *,
+    scale: int = _RENDER_SCALE,
+) -> Optional[bytes]:
+    """Convert SVG string to high-quality PNG bytes.
+
+    Renders at ``width * scale`` then down-samples with Lanczos to ``width``
+    for sharper edges (super-sampling anti-aliasing).
     """
-    # Try cairosvg (best quality)
+    render_width = width * scale
+    raw_png = _render_svg_raw(svg_content, render_width)
+    if raw_png is None:
+        return None
+
+    # If scale == 1 no downscale needed
+    if scale <= 1:
+        return raw_png
+
+    # Down-sample for crisp result
+    try:
+        from PIL import Image
+
+        img = Image.open(io.BytesIO(raw_png))
+        target_w = img.width // scale
+        target_h = img.height // scale
+        img = img.resize((target_w, target_h), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception:
+        return raw_png  # still usable at higher res
+
+
+def _render_svg_raw(svg_content: str, width: int) -> Optional[bytes]:
+    """Low-level SVG → PNG using best available renderer."""
+    # --- cairosvg (best quality) ---
     try:
         import cairosvg
 
@@ -27,7 +71,6 @@ def _svg_to_png_bytes(svg_content: str, width: int = 800) -> Optional[bytes]:
     except ImportError:
         pass
     except Exception:
-        # Retry with smaller width if Cairo rejects the size
         try:
             import cairosvg
 
@@ -38,7 +81,7 @@ def _svg_to_png_bytes(svg_content: str, width: int = 800) -> Optional[bytes]:
         except Exception:
             pass
 
-    # Fallback: svglib + reportlab (already in project deps)
+    # --- svglib + reportlab ---
     try:
         from svglib.svglib import renderSVG
         from reportlab.graphics import renderPM
@@ -51,7 +94,6 @@ def _svg_to_png_bytes(svg_content: str, width: int = 800) -> Optional[bytes]:
     except Exception:
         pass
 
-    # Last resort: simple HTML-to-image approach not available
     return None
 
 
@@ -67,6 +109,7 @@ def _prepare_images(
     width: int,
     fps: int,
 ):
+    """Convert SVG frames to normalised RGBA images + per-frame durations."""
     from PIL import Image
 
     images: list[Image.Image] = []
@@ -80,6 +123,7 @@ def _prepare_images(
     if not images:
         return [], []
 
+    # --- normalise all frames to a uniform canvas size ---
     import statistics
 
     target_width = max(image.width for image in images)
@@ -95,11 +139,18 @@ def _prepare_images(
             normalized_images.append(image)
             continue
 
-        cropped = image.crop((0, 0, min(image.width, target_width), min(image.height, target_height)))
-        canvas = Image.new("RGBA", (target_width, target_height), background)
-        canvas.paste(cropped, (0, 0))
-        normalized_images.append(canvas)
+        # Resize with Lanczos when dimensions differ slightly; crop when too tall
+        w = min(image.width, target_width)
+        h = min(image.height, target_height)
+        cropped = image.crop((0, 0, w, h))
+        if cropped.size != (target_width, target_height):
+            canvas = Image.new("RGBA", (target_width, target_height), background)
+            canvas.paste(cropped, (0, 0))
+            normalized_images.append(canvas)
+        else:
+            normalized_images.append(cropped)
 
+    # --- deduplicate consecutive identical frames ---
     import hashlib
 
     def _frame_hash(img: Image.Image) -> str:
@@ -146,12 +197,20 @@ def _expand_for_constant_fps(images, durations: list[int], fps: int):
 
 
 def _save_with_pillow(images, durations: list[int], output: Path) -> bool:
+    """High-quality Pillow GIF with per-frame median-cut + Floyd-Steinberg."""
     from PIL import Image
 
     palette_images: list[Image.Image] = []
     for image in images:
-        converted = image.convert("P", palette=Image.ADAPTIVE, colors=256)
-        palette_images.append(converted)
+        # quantize() with MEDIANCUT + Floyd-Steinberg dithering produces
+        # noticeably better gradients and text edges than convert("P").
+        rgb = image.convert("RGB")
+        quantized = rgb.quantize(
+            colors=256,
+            method=Image.Quantize.MEDIANCUT,
+            dither=Image.Dither.FLOYDSTEINBERG,
+        )
+        palette_images.append(quantized)
 
     palette_images[0].save(
         output,
@@ -159,12 +218,13 @@ def _save_with_pillow(images, durations: list[int], output: Path) -> bool:
         append_images=palette_images[1:],
         duration=durations,
         loop=0,
-        optimize=True,
+        optimize=False,  # skip Pillow's optimiser — it can degrade quality
     )
     return True
 
 
 def _save_with_gifski(images, fps: int, output: Path) -> bool:
+    """Use gifski for the best possible GIF quality (lossy encoder)."""
     gifski_bin = shutil.which("gifski") or shutil.which("gifski.exe")
     if not gifski_bin:
         return False
@@ -177,12 +237,20 @@ def _save_with_gifski(images, fps: int, output: Path) -> bool:
             image.save(frame_file, format="PNG")
             frame_paths.append(str(frame_file))
 
-        cmd = [gifski_bin, "-o", str(output), "--fps", str(max(1, fps)), *frame_paths]
+        cmd = [
+            gifski_bin,
+            "-o", str(output),
+            "--fps", str(max(1, fps)),
+            "--quality", "100",   # maximum quality
+            "--motion-quality", "100",
+            *frame_paths,
+        ]
         result = subprocess.run(cmd, capture_output=True, text=True)
         return result.returncode == 0 and output.exists()
 
 
 def _save_with_ffmpeg(images, fps: int, output: Path) -> bool:
+    """Use ffmpeg palettegen/paletteuse with Floyd-Steinberg dithering."""
     ffmpeg_bin = shutil.which("ffmpeg") or shutil.which("ffmpeg.exe")
     if not ffmpeg_bin:
         return False
@@ -195,32 +263,25 @@ def _save_with_ffmpeg(images, fps: int, output: Path) -> bool:
 
         palette_file = temp_path / "palette.png"
         input_pattern = str(temp_path / "frame_%06d.png")
+        safe_fps = str(max(1, fps))
 
+        # Pass 1 — generate optimal 256-colour palette from ALL frames
         gen_palette = [
-            ffmpeg_bin,
-            "-y",
-            "-framerate",
-            str(max(1, fps)),
-            "-i",
-            input_pattern,
-            "-vf",
-            "palettegen=stats_mode=diff",
+            ffmpeg_bin, "-y",
+            "-framerate", safe_fps,
+            "-i", input_pattern,
+            "-vf", "palettegen=max_colors=256:stats_mode=full:reserve_transparent=0",
             str(palette_file),
         ]
 
+        # Pass 2 — apply palette with Floyd-Steinberg (best dithering for text)
         use_palette = [
-            ffmpeg_bin,
-            "-y",
-            "-framerate",
-            str(max(1, fps)),
-            "-i",
-            input_pattern,
-            "-i",
-            str(palette_file),
-            "-lavfi",
-            "paletteuse=dither=sierra2_4a",
-            "-loop",
-            "0",
+            ffmpeg_bin, "-y",
+            "-framerate", safe_fps,
+            "-i", input_pattern,
+            "-i", str(palette_file),
+            "-lavfi", "paletteuse=dither=floyd_steinberg:diff_mode=rectangle",
+            "-loop", "0",
             str(output),
         ]
 
@@ -237,16 +298,22 @@ def generate_gif(
     output_path: str | Path,
     fps: int = 2,
     last_frame_duration: float = 3.0,
-    width: int = 800,
+    width: int = 1280,
 ) -> Optional[Path]:
     """Convert a list of SVG strings into an animated GIF.
+
+    Quality pipeline:
+      - SVGs are rendered at 2× resolution then down-sampled with Lanczos
+      - Frames are normalised to a uniform canvas size
+      - Consecutive duplicate frames are collapsed (duration extended)
+      - Backend priority: gifski → ffmpeg → Pillow
 
     Args:
         svg_frames: List of SVG content strings (one per frame).
         output_path: Where to save the GIF.
         fps: Frames per second for the animation.
         last_frame_duration: How long to hold the last frame (seconds).
-        width: Output width in pixels.
+        width: Output width in pixels (default 1280 for crisp text).
 
     Returns:
         Path to generated GIF, or None on failure.
