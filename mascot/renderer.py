@@ -1,61 +1,79 @@
-"""Rendering utilities for the Varedura mascot."""
+"""Rendering utilities for the Varedura mascot (rich-pixels sprites)."""
 
 from __future__ import annotations
 
 import itertools
 import time
 import threading
+from pathlib import Path
 from typing import Optional
 
 from rich.align import Align
 from rich.columns import Columns
-from rich.console import Console
+from rich.console import Console, Group
 from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
 
-from mascot.frames import FRAMES, COMPACT, STATES
+from rich_pixels import Pixels
+
+from mascot.frames import FRAMES, STATES, SPRITE_SIZE
 
 
 class MascotRenderer:
-    """Renders the Varedura mascot in various states with optional speech bubbles."""
+    """Renders the Varedura mascot using pixel-art sprites via rich-pixels."""
 
     def __init__(self, console: Optional[Console] = None):
         self.console = console or Console()
         self._stop_event = threading.Event()
         self._animation_thread: Optional[threading.Thread] = None
+        self._pixel_cache: dict[str, Pixels] = {}
+
+    # ── Pixel loading (cached) ──────────────────────────────────────
+
+    def _load_pixels(self, path: Path) -> Pixels:
+        """Load a sprite PNG as a Pixels renderable, with caching."""
+        key = str(path)
+        if key not in self._pixel_cache:
+            self._pixel_cache[key] = Pixels.from_image_path(
+                path, resize=SPRITE_SIZE
+            )
+        return self._pixel_cache[key]
 
     # ── Static rendering ────────────────────────────────────────────
 
     def render_static(self, state: str = STATES.IDLE, message: str = "") -> Panel:
-        """Return a Rich Panel with the mascot in the given state."""
+        """Return a Rich Panel with the mascot sprite in the given state."""
         frames = FRAMES.get(state, FRAMES[STATES.IDLE])
-        frame_style, border_style, title_style = self._panel_styles(state)
-        frame_text = Text(frames[0], style=frame_style)
+        if not frames:
+            frames = FRAMES[STATES.IDLE]
+        border_style, title_style = self._panel_styles(state)
+        sprite = self._load_pixels(frames[0])
 
-        content_parts = [frame_text]
+        content_parts: list = [sprite]
         if message:
             bubble = self._speech_bubble(message, state)
-            content_parts.append(Text("\n"))
+            content_parts.append(Text(""))
             content_parts.append(bubble)
 
-        group = Text()
-        for part in content_parts:
-            group.append_text(part)
-
         return Panel(
-            Align.center(group),
+            Align.center(Group(*content_parts)),
             border_style=border_style,
             title=f"[{title_style}]✦ Varedura[/]",
             padding=(0, 1),
         )
 
     def render_inline(self, state: str = STATES.IDLE) -> str:
-        """Return a compact single-line mascot string for inline use."""
-        frames = COMPACT.get(state, COMPACT[STATES.IDLE])
-        if isinstance(frames, list):
-            return frames[0]
-        return frames
+        """Return a compact emoji string for inline use."""
+        icons = {
+            STATES.IDLE: "🤖",
+            STATES.WORKING: "🤖🧹",
+            STATES.SUCCESS: "🤖✅",
+            STATES.ERROR: "🤖❌",
+            STATES.WAVE: "🤖👋",
+            STATES.SCANNING: "🤖📡",
+        }
+        return icons.get(state, "🤖")
 
     def get_mascot_and_content(self, state: str, message: str, content) -> Columns:
         """Return mascot alongside other Rich content (for menu layout)."""
@@ -85,21 +103,22 @@ class MascotRenderer:
         parts.append(f"  ╰{'─' * width}╯\n")
         parts.append("     ╲")
 
-        bubble_text = Text("".join(parts), style=bubble_style)
-        return bubble_text
+        return Text("".join(parts), style=bubble_style)
 
     @staticmethod
-    def _panel_styles(state: str) -> tuple[str, str, str]:
-        """Return frame, border and title style for each mascot state."""
+    def _panel_styles(state: str) -> tuple[str, str]:
+        """Return border and title style for each mascot state."""
         if state == STATES.WORKING:
-            return ("bold bright_cyan", "bright_cyan", "bold bright_cyan")
+            return ("bright_cyan", "bold bright_cyan")
         if state == STATES.SUCCESS:
-            return ("bold bright_green", "green", "bold bright_green")
+            return ("green", "bold bright_green")
         if state == STATES.ERROR:
-            return ("bold bright_red", "red", "bold bright_red")
+            return ("red", "bold bright_red")
         if state == STATES.WAVE:
-            return ("bold magenta", "magenta", "bold magenta")
-        return ("bold cyan", "cyan", "bold cyan")
+            return ("magenta", "bold magenta")
+        if state == STATES.SCANNING:
+            return ("bright_cyan", "bold bright_cyan")
+        return ("cyan", "bold cyan")
 
     # ── Animated rendering (blocking with Live) ─────────────────────
 
@@ -110,15 +129,10 @@ class MascotRenderer:
         duration: float = 0.0,
         fps: float = 2.0,
     ) -> None:
-        """Show animated mascot using Rich Live (blocking).
-
-        Args:
-            state: Animation state to display.
-            message: Speech bubble text.
-            duration: How long to animate (0 = until stopped externally).
-            fps: Frames per second.
-        """
+        """Show animated mascot using Rich Live (blocking)."""
         frames = FRAMES.get(state, FRAMES[STATES.IDLE])
+        if not frames:
+            frames = FRAMES[STATES.IDLE]
         frame_cycle = itertools.cycle(frames)
         interval = 1.0 / fps
 
@@ -127,21 +141,18 @@ class MascotRenderer:
 
         with Live(console=self.console, refresh_per_second=fps) as live:
             while not self._stop_event.is_set():
-                frame = next(frame_cycle)
-                frame_style, border_style, title_style = self._panel_styles(state)
-                frame_text = Text(frame, style=frame_style)
+                frame_path = next(frame_cycle)
+                sprite = self._load_pixels(frame_path)
+                border_style, title_style = self._panel_styles(state)
 
+                content_parts: list = [sprite]
                 if message:
                     bubble = self._speech_bubble(message, state)
-                    group = Text()
-                    group.append_text(frame_text)
-                    group.append_text(Text("\n"))
-                    group.append_text(bubble)
-                else:
-                    group = frame_text
+                    content_parts.append(Text(""))
+                    content_parts.append(bubble)
 
                 panel = Panel(
-                    Align.center(group),
+                    Align.center(Group(*content_parts)),
                     border_style=border_style,
                     title=f"[{title_style}]✦ Varedura[/]",
                     padding=(0, 1),
