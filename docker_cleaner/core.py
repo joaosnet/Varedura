@@ -376,7 +376,8 @@ try {{
                 self.log(t("cleanup.vhdx_found", path=path, size=f"{size_gb:.2f}"))
         return total_size, existing_files
 
-    def docker_cleanup(self):
+    def docker_cleanup(self, prune_only: str | None = None):
+        """Run Docker cleanup. If prune_only is set, only that specific step runs."""
         if not self.is_docker_running():
             self.log(t("cleanup.docker_not_running"), "WARNING")
             try:
@@ -429,6 +430,42 @@ try {{
 
         self.log(t("cleanup.starting_docker_cleanup"))
 
+        # If prune_only is set, run only that specific step
+        if prune_only == "containers":
+            self.log(t("cleanup.stopping_containers"))
+            containers_result = self.run_command("docker ps -q", capture_output=True)
+            if containers_result and containers_result.stdout.strip():
+                for cid in containers_result.stdout.strip().split("\n"):
+                    if cid.strip():
+                        self.run_command(f"docker stop {cid.strip()}", capture_output=True)
+                        self.log(t("cleanup.container_stopped", id=cid.strip()))
+            self.log(t("cleanup.removing_containers"))
+            result = self.run_command("docker container prune -f")
+            space = self._parse_reclaimed_space(result)
+            self.log(t("cleanup.space_containers", space=space))
+            return True
+        elif prune_only == "images":
+            self.log(t("cleanup.removing_images"))
+            result = self.run_command("docker image prune -af")
+            space = self._parse_reclaimed_space(result)
+            self.log(t("cleanup.space_images", space=space))
+            return True
+        elif prune_only == "volumes":
+            self.log(t("cleanup.removing_volumes"))
+            result = self.run_command("docker volume prune -f")
+            space = self._parse_reclaimed_space(result)
+            self.log(t("cleanup.space_volumes", space=space))
+            return True
+        elif prune_only == "networks":
+            self.log(t("cleanup.removing_networks"))
+            self.run_command("docker network prune -f")
+            return True
+        elif prune_only == "builder":
+            self.log(t("cleanup.clearing_build_cache"))
+            self.run_command("docker builder prune -af")
+            return True
+
+        # Full cleanup (original behavior when prune_only is None)
         self.log(t("cleanup.stopping_containers"))
         containers_result = self.run_command("docker ps -q", capture_output=True)
         if containers_result and containers_result.stdout.strip():

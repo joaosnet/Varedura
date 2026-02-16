@@ -32,28 +32,127 @@ _MCP_CONFIG_FILE = Path(".vscode") / "mcp.json"
 _recording_enabled = True
 _session_recorder = None
 
+# All available cleanup steps with their i18n keys and default ON/OFF
+CLEANUP_STEPS = [
+    ("containers",   "cleanup_prefs.step_containers",  True),
+    ("images",       "cleanup_prefs.step_images",       True),
+    ("volumes",      "cleanup_prefs.step_volumes",      True),
+    ("networks",     "cleanup_prefs.step_networks",     True),
+    ("builder",      "cleanup_prefs.step_builder",      True),
+    ("stop_docker",  "cleanup_prefs.step_stop_docker",  False),
+    ("wsl_sparse",   "cleanup_prefs.step_wsl_sparse",   False),
+    ("compact_vhdx", "cleanup_prefs.step_compact_vhdx", False),
+    ("temp_files",   "cleanup_prefs.step_temp_files",   False),
+    ("recycle_bin",  "cleanup_prefs.step_recycle_bin",   False),
+]
+
+
+def _load_prefs() -> dict:
+    """Load all preferences from disk."""
+    try:
+        if _PREFS_FILE.exists():
+            return json.loads(_PREFS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+
+def _save_prefs(data: dict) -> None:
+    """Save preferences to disk."""
+    try:
+        _PREFS_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
 
 def _load_recording_pref() -> bool:
     """Load recording preference from disk (default: enabled)."""
-    try:
-        if _PREFS_FILE.exists():
-            data = json.loads(_PREFS_FILE.read_text(encoding="utf-8"))
-            return bool(data.get("recording_enabled", True))
-    except Exception:
-        pass
-    return True
+    return bool(_load_prefs().get("recording_enabled", True))
 
 
 def _save_recording_pref(enabled: bool) -> None:
     """Save recording preference to disk."""
-    try:
-        data = {}
-        if _PREFS_FILE.exists():
-            data = json.loads(_PREFS_FILE.read_text(encoding="utf-8"))
-        data["recording_enabled"] = enabled
-        _PREFS_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    except Exception:
-        pass
+    data = _load_prefs()
+    data["recording_enabled"] = enabled
+    _save_prefs(data)
+
+
+def _load_cleanup_steps() -> dict[str, bool] | None:
+    """Load cleanup step preferences. Returns None if never configured."""
+    data = _load_prefs()
+    return data.get("cleanup_steps")
+
+
+def _save_cleanup_steps(steps: dict[str, bool]) -> None:
+    """Save cleanup step preferences."""
+    data = _load_prefs()
+    data["cleanup_steps"] = steps
+    _save_prefs(data)
+
+
+def _get_cleanup_steps() -> dict[str, bool]:
+    """Get cleanup steps, using defaults if not yet configured."""
+    saved = _load_cleanup_steps()
+    if saved is not None:
+        return saved
+    return {key: default for key, _, default in CLEANUP_STEPS}
+
+
+def show_cleanup_prefs(first_run: bool = False) -> dict[str, bool]:
+    """Interactive toggle screen for cleanup step preferences.
+
+    Shows a numbered list of steps the user can toggle ON/OFF.
+    Returns the final step dict.
+    """
+    steps = _get_cleanup_steps()
+
+    title_key = "cleanup_prefs.first_run_title" if first_run else "cleanup_prefs.title"
+
+    while True:
+        console.clear()
+        console.print(Panel(
+            f"[bold cyan]{t(title_key)}[/]",
+            style="blue",
+        ))
+
+        if first_run:
+            console.print(f"\n[yellow]{t('cleanup_prefs.first_run_intro')}[/]\n")
+
+        console.print(f"  [dim]{t('cleanup_prefs.instructions')}[/]\n")
+
+        tbl = Table(box=box.ROUNDED, expand=True, show_header=False)
+        tbl.add_column("#", style="bold yellow", width=4)
+        tbl.add_column("", width=8)
+        tbl.add_column("Step", style="white")
+
+        for i, (key, label_key, _) in enumerate(CLEANUP_STEPS, 1):
+            on = steps.get(key, False)
+            icon = "[bold green]✓[/]" if on else "[dim]✗[/]"
+            status = f"[green]{t('cleanup_prefs.on')}[/]" if on else f"[dim]{t('cleanup_prefs.off')}[/]"
+            tbl.add_row(str(i), f"{icon} {status}", t(label_key))
+
+        console.print(tbl)
+
+        enabled_count = sum(1 for v in steps.values() if v)
+        console.print(
+            f"\n  [cyan]{t('cleanup_prefs.summary', count=enabled_count, total=len(CLEANUP_STEPS))}[/]\n"
+        )
+
+        choice = console.input(f"[bold cyan]{t('menu.select_option')}[/]").strip()
+
+        if not choice:
+            # Enter pressed — save and exit
+            _save_cleanup_steps(steps)
+            console.print(f"\n[green]{t('cleanup_prefs.saved')}[/]")
+            return steps
+
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(CLEANUP_STEPS):
+                key = CLEANUP_STEPS[idx][0]
+                steps[key] = not steps.get(key, False)
+        except ValueError:
+            pass
 
 
 def _is_mcp_configured() -> bool:
@@ -122,7 +221,6 @@ def _build_menu_layout(mascot_panel: Panel) -> Columns:
     menu.add_row("1", t("menu.option_1"), t("menu.desc_1"))
     menu.add_row("2", t("menu.option_2"), t("menu.desc_2"))
     menu.add_row("3", t("menu.option_3"), t("menu.desc_3"))
-    menu.add_row("4", t("menu.option_4"), t("menu.desc_4"))
     menu.add_row("", "", "")
     menu.add_row("S", t("menu.option_settings"), t("menu.desc_settings"))
     menu.add_row("Q", t("menu.quit"), t("menu.quit_desc"))
@@ -231,30 +329,79 @@ def run_network_stalker():
 
 
 def run_docker_cleanup():
-    """Run quick Docker cleanup."""
+    """Run Docker cleanup using the user's saved step preferences.
+
+    On first run (no prefs saved), shows the cleanup wizard first.
+    """
+    # First-run wizard if cleanup steps were never configured
+    if _load_cleanup_steps() is None:
+        show_cleanup_prefs(first_run=True)
+        console.input(f"\n[dim]{t('menu.press_enter')}[/]")
+
+    steps = _get_cleanup_steps()
+    enabled = [k for k, v in steps.items() if v]
+
+    if not enabled:
+        console.print(f"\n[yellow]{t('menu.invalid_option')}[/]")
+        return
+
     success = False
     try:
         from docker_cleaner.core import WSLDockerCleaner
+        from rich.progress import Progress, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn
 
         cleaner = WSLDockerCleaner()
-        cleaner.docker_cleanup()
-        success = True
-    except ImportError as e:
-        console.print(f"[red]{t('menu.error_loading_cleaner', error=e)}[/]")
-    except Exception as e:
-        console.print(f"[red]{t('menu.error_during_cleanup', error=e)}[/]")
-    finally:
-        mascot.show_result(success, t("mascot.success") if success else t("mascot.error"))
 
+        # Map step keys to cleaner methods
+        step_methods = {
+            "containers":   lambda: cleaner.docker_cleanup(prune_only="containers"),
+            "images":       lambda: cleaner.docker_cleanup(prune_only="images"),
+            "volumes":      lambda: cleaner.docker_cleanup(prune_only="volumes"),
+            "networks":     lambda: cleaner.docker_cleanup(prune_only="networks"),
+            "builder":      lambda: cleaner.docker_cleanup(prune_only="builder"),
+            "stop_docker":  cleaner.stop_docker_wsl,
+            "wsl_sparse":   cleaner.configure_wsl_sparse,
+            "compact_vhdx": cleaner.compact_vhdx_files,
+            "temp_files":   cleaner.cleanup_temp_files,
+            "recycle_bin":  cleaner.cleanup_recycle_bin,
+        }
 
-def run_docker_full_cleanup():
-    """Run full Docker cleanup with VHDX compaction."""
-    success = False
-    try:
-        from docker_cleaner.core import WSLDockerCleaner
+        step_weight = {
+            "containers": 10, "images": 15, "volumes": 10, "networks": 5,
+            "builder": 10, "stop_docker": 15, "wsl_sparse": 10,
+            "compact_vhdx": 20, "temp_files": 10, "recycle_bin": 5,
+        }
 
-        cleaner = WSLDockerCleaner()
-        cleaner.run_full_cleanup_with_progress()
+        total_weight = sum(step_weight.get(k, 10) for k in enabled)
+
+        progress = Progress(
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            TimeRemainingColumn(),
+            console=console,
+        )
+
+        with progress:
+            task_id = progress.add_task(
+                f"[cyan]{t('menu.starting_cleanup')}", total=total_weight
+            )
+            for key in enabled:
+                # Find label
+                label = key
+                for k, lbl_key, _ in CLEANUP_STEPS:
+                    if k == key:
+                        label = t(lbl_key)
+                        break
+                progress.update(task_id, description=f"[cyan]{label}")
+                method = step_methods.get(key)
+                if method:
+                    try:
+                        method()
+                    except Exception as e:
+                        console.print(f"[red]  {label}: {e}[/]")
+                progress.update(task_id, advance=step_weight.get(key, 10))
+
         success = True
     except ImportError as e:
         console.print(f"[red]{t('menu.error_loading_cleaner', error=e)}[/]")
@@ -394,11 +541,16 @@ def show_settings():
         mcp_status_icon = "🟢" if mcp_configured else "⚫"
         mcp_status_text = t("mcp.status_on") if mcp_configured else t("mcp.status_off")
 
+        cleanup_steps = _get_cleanup_steps()
+        cleanup_count = sum(1 for v in cleanup_steps.values() if v)
+        cleanup_summary = t("cleanup_prefs.summary", count=cleanup_count, total=len(CLEANUP_STEPS))
+
         status = Table(box=box.SIMPLE, show_header=True, expand=True)
         status.add_column(t("settings.current_status"), style="bold cyan")
         status.add_column("", style="white")
         status.add_row(t("settings.option_rec"), f"{rec_status_icon} {rec_status_text}")
         status.add_row(t("settings.option_lang"), f"🌐 {current_lang}")
+        status.add_row(t("settings.option_cleanup"), f"🐳 {cleanup_summary}")
         status.add_row(t("mcp.option"), f"{mcp_status_icon} {mcp_status_text}")
         console.print(Panel(status, border_style="dim"))
         console.print()
@@ -411,7 +563,8 @@ def show_settings():
 
         menu.add_row("1", f"{rec_status_icon} {t('settings.option_rec')}", t("settings.desc_rec"))
         menu.add_row("2", t("settings.option_lang"), t("settings.desc_lang"))
-        menu.add_row("3", f"{mcp_status_icon} {t('mcp.option')}", t("mcp.desc"))
+        menu.add_row("3", t("settings.option_cleanup"), t("settings.desc_cleanup"))
+        menu.add_row("4", f"{mcp_status_icon} {t('mcp.option')}", t("mcp.desc"))
         menu.add_row("", "", "")
         menu.add_row("V", t("settings.back"), t("settings.desc_back"))
 
@@ -427,6 +580,9 @@ def show_settings():
             change_language()
             console.input(f"\n[dim]{t('menu.press_enter')}[/]")
         elif choice == "3":
+            show_cleanup_prefs()
+            console.input(f"\n[dim]{t('menu.press_enter')}[/]")
+        elif choice == "4":
             _toggle_mcp_config()
             console.input(f"\n[dim]{t('menu.press_enter')}[/]")
         elif choice == "v":
@@ -490,10 +646,6 @@ def main():
                 run_docker_cleanup()
                 console.input(f"\n[dim]{t('menu.press_enter')}[/]")
             elif choice == "3":
-                console.print(f"\n[yellow]{t('menu.starting_full_cleanup')}[/]\n")
-                run_docker_full_cleanup()
-                console.input(f"\n[dim]{t('menu.press_enter')}[/]")
-            elif choice == "4":
                 run_port_scanner()
                 console.input(f"\n[dim]{t('menu.press_enter')}[/]")
             elif choice == "lmarena":
