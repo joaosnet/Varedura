@@ -47,8 +47,14 @@ class MascotRenderer:
         frames = FRAMES.get(state, FRAMES[STATES.IDLE])
         if not frames:
             frames = FRAMES[STATES.IDLE]
+        return self.render_static_from_path(frames[0], message, state)
+
+    def render_static_from_path(
+        self, path: "Path", message: str = "", state: str = STATES.IDLE
+    ) -> Panel:
+        """Return a Rich Panel with a specific sprite PNG and optional speech bubble."""
         border_style, title_style = self._panel_styles(state)
-        sprite = self._load_pixels(frames[0])
+        sprite = self._load_pixels(path)
 
         content_parts: list = [sprite]
         if message:

@@ -9,16 +9,19 @@ Main entry point providing a Rich-based menu for all tools.
 
 import json
 import sys
+import threading
+import itertools
 from datetime import datetime
 from pathlib import Path
 from rich.columns import Columns
-from rich.console import Console
+from rich.console import Console, Group
+from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
 from rich import box
 from i18n import t, init as i18n_init, set_language, get_language, get_supported_languages
 from mascot.renderer import MascotRenderer
-from mascot.frames import STATES
+from mascot.frames import STATES, FRAMES
 
 console = Console(record=True)
 i18n_init()
@@ -104,19 +107,13 @@ def _toggle_mcp_config() -> None:
         console.print(f"[red]{t('mcp.error', error=str(e))}[/]")
 
 
-def show_menu():
-    """Display the main menu with mascot."""
-    console.clear()
-
-    # Header
+def _build_menu_layout(mascot_panel: Panel) -> Columns:
+    """Build the full menu layout with a given mascot panel."""
     header = Table.grid(expand=True)
     header.add_column(justify="center")
     header.add_row(f"[bold cyan]{t('menu.title')}[/]")
     header.add_row(f"[dim]{t('menu.subtitle')}[/]")
-    console.print(Panel(header, style="blue"))
-    console.print()
 
-    # Menu options
     menu = Table(box=box.ROUNDED, expand=True, show_header=False)
     menu.add_column("Key", style="bold yellow", width=5)
     menu.add_column("Option", style="white")
@@ -132,10 +129,49 @@ def show_menu():
 
     menu_panel = Panel(menu, title=t("menu.tools"), border_style="cyan")
 
-    # Show mascot alongside menu
-    mascot_panel = mascot.render_static(STATES.IDLE, t("mascot.welcome"))
-    console.print(Columns([mascot_panel, menu_panel], expand=True, padding=(0, 2)))
-    console.print()
+    return Group(
+        Panel(header, style="blue"),
+        "",
+        Columns([mascot_panel, menu_panel], expand=True, padding=(0, 2)),
+        "",
+        f"[bold cyan]{t('menu.select_option')}[/]",
+    )
+
+
+def show_animated_menu() -> str:
+    """Display the main menu with a continuously animated mascot.
+
+    Returns the user's menu choice. The mascot cycles through idle
+    frames at ~2 fps while waiting for input.
+    """
+    frames = FRAMES.get(STATES.IDLE, FRAMES[STATES.IDLE])
+    frame_cycle = itertools.cycle(frames)
+    message = t("mascot.welcome")
+
+    # Shared state for the input thread
+    user_input: list[str] = []
+    input_ready = threading.Event()
+
+    def _read_input() -> None:
+        try:
+            line = input()
+        except EOFError:
+            line = "q"
+        user_input.append(line.strip().lower())
+        input_ready.set()
+
+    input_thread = threading.Thread(target=_read_input, daemon=True)
+
+    with Live(console=console, refresh_per_second=2, screen=True) as live:
+        input_thread.start()
+        while not input_ready.is_set():
+            frame_path = next(frame_cycle)
+            mascot_panel = mascot.render_static_from_path(frame_path, message)
+            layout = _build_menu_layout(mascot_panel)
+            live.update(layout)
+            input_ready.wait(timeout=0.5)
+
+    return user_input[0] if user_input else ""
 
 
 def _start_recording_session():
@@ -445,9 +481,7 @@ def main():
 
     try:
         while True:
-            show_menu()
-
-            choice = console.input(f"[bold cyan]{t('menu.select_option')}[/]").strip().lower()
+            choice = show_animated_menu()
 
             if choice == "1":
                 run_network_stalker()
