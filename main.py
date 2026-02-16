@@ -400,11 +400,48 @@ def show_settings():
             console.input(f"[dim]{t('menu.press_enter_short')}[/]")
 
 
+def _ask_recording_prompt() -> bool:
+    """Show a startup prompt asking whether to record the session as GIF.
+
+    Returns True to enable recording, False for streaming.
+    """
+    saved = _load_recording_pref()
+    saved_label = t("recorder.prompt_saved_on") if saved else t("recorder.prompt_saved_off")
+
+    console.print()
+    console.print(Panel(
+        f"[bold cyan]{t('recorder.prompt_question')}[/]\n\n"
+        f"[yellow]{t('recorder.prompt_note')}[/]\n\n"
+        f"[dim]{t('recorder.prompt_why')}[/]",
+        title=t("recorder.prompt_title"),
+        border_style="cyan",
+    ))
+    console.print()
+    console.print(f"  {t('recorder.prompt_options', pref=saved_label)}")
+    console.print()
+
+    answer = console.input("[bold cyan]> [/]").strip().lower()
+
+    if answer in ("y", "s"):
+        return True
+    elif answer == "n":
+        return False
+    else:
+        return saved
+
+
 def main():
     """Main entry point."""
     global _recording_enabled, _session_recorder
-    _recording_enabled = _load_recording_pref()
-    _session_recorder = _start_recording_session()
+    _recording_enabled = _ask_recording_prompt()
+    _save_recording_pref(_recording_enabled)
+
+    if _recording_enabled:
+        console.print(f"\n[green]{t('recorder.chosen_recording')}[/]\n")
+        _session_recorder = _start_recording_session()
+    else:
+        console.print(f"\n[green]{t('recorder.chosen_streaming')}[/]\n")
+        _session_recorder = None
 
     try:
         while True:

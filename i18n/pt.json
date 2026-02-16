@@ -353,5 +353,15 @@
     "mcp.removed": "Configuração do servidor MCP removida.",
     "mcp.error": "Erro ao configurar servidor MCP: {error}",
     "mcp.usage_hint": "O Copilot CLI agora pode usar as ferramentas do Varedura neste workspace.",
-    "mcp.run_hint": "Para testar manualmente: uv run python -m mcp_server"
+    "mcp.run_hint": "Para testar manualmente: uv run python -m mcp_server",
+
+    "recorder.prompt_title": "🎬 Gravação de Sessão",
+    "recorder.prompt_question": "Deseja gravar esta sessão como um GIF?",
+    "recorder.prompt_note": "OBSERVAÇÃO: Se ativar a gravação, a saída em tempo real (streaming)\nserá desabilitada. Isso significa que você não verá os resultados\ndos comandos aparecendo linha por linha — em vez disso, os resultados\naparecerão todos de uma vez após cada comando terminar.",
+    "recorder.prompt_why": "Isso acontece porque a gravação precisa capturar imagens\nlimpas da tela. O streaming ao vivo deixaria a gravação\nconfusa e difícil de ler.",
+    "recorder.prompt_options": "[S] Sim, gravar  /  [N] Não, manter streaming  /  [Enter] Usar preferência salva ({pref})",
+    "recorder.prompt_saved_on": "gravar",
+    "recorder.prompt_saved_off": "streaming",
+    "recorder.chosen_recording": "🔴 Gravação ativada — streaming em tempo real desabilitado.",
+    "recorder.chosen_streaming": "▶ Streaming em tempo real ativado — gravação desabilitada."
 }

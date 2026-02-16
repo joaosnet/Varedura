@@ -353,5 +353,15 @@
     "mcp.removed": "MCP server configuration removed.",
     "mcp.error": "Error configuring MCP server: {error}",
     "mcp.usage_hint": "Copilot CLI can now use Varedura tools in this workspace.",
-    "mcp.run_hint": "To test manually: uv run python -m mcp_server"
+    "mcp.run_hint": "To test manually: uv run python -m mcp_server",
+
+    "recorder.prompt_title": "🎬 Session Recording",
+    "recorder.prompt_question": "Would you like to record this session as a GIF?",
+    "recorder.prompt_note": "NOTE: If you enable recording, live output (streaming) will be\ndisabled. This means you won't see command results appearing\nline by line in real time — instead, results will show all at\nonce after each command finishes.",
+    "recorder.prompt_why": "This happens because recording needs to capture clean\nscreen snapshots. Live streaming would make the recording\nmessy and hard to read.",
+    "recorder.prompt_options": "[Y] Yes, record  /  [N] No, keep streaming  /  [Enter] Use saved preference ({pref})",
+    "recorder.prompt_saved_on": "record",
+    "recorder.prompt_saved_off": "stream",
+    "recorder.chosen_recording": "🔴 Recording enabled — live streaming disabled.",
+    "recorder.chosen_streaming": "▶ Live streaming enabled — recording disabled."
 }
