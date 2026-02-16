@@ -32,6 +32,15 @@ _MCP_CONFIG_FILE = Path(".vscode") / "mcp.json"
 _recording_enabled = True
 _session_recorder = None
 
+# Animated emoji sequences for each menu item (cycled at ~2 fps)
+_MENU_EMOJIS = {
+    "network":  ["🌐", "📡", "🛰️ ", "🔍"],
+    "docker":   ["🐳", "🧹", "🗑️ ", "♻️ "],
+    "port":     ["🔌", "🔎", "📊", "🎯"],
+    "settings": ["⚙️ ", "🔧", "🛠️ ", "⚙️ "],
+    "quit":     ["👋", "🚪", "👋", "🚪"],
+}
+
 # All available cleanup steps with their i18n keys and default ON/OFF
 CLEANUP_STEPS = [
     ("containers",   "cleanup_prefs.step_containers",  True),
@@ -206,8 +215,12 @@ def _toggle_mcp_config() -> None:
         console.print(f"[red]{t('mcp.error', error=str(e))}[/]")
 
 
-def _build_menu_layout(mascot_panel: Panel) -> Columns:
+def _build_menu_layout(mascot_panel: Panel, frame_idx: int = 0) -> Columns:
     """Build the full menu layout with a given mascot panel."""
+    def _emoji(key: str) -> str:
+        seq = _MENU_EMOJIS[key]
+        return seq[frame_idx % len(seq)]
+
     header = Table.grid(expand=True)
     header.add_column(justify="center")
     header.add_row(f"[bold cyan]{t('menu.title')}[/]")
@@ -218,12 +231,12 @@ def _build_menu_layout(mascot_panel: Panel) -> Columns:
     menu.add_column("Option", style="white")
     menu.add_column("Description", style="dim")
 
-    menu.add_row("1", t("menu.option_1"), t("menu.desc_1"))
-    menu.add_row("2", t("menu.option_2"), t("menu.desc_2"))
-    menu.add_row("3", t("menu.option_3"), t("menu.desc_3"))
+    menu.add_row("1", f"{_emoji('network')} {t('menu.option_1')}", t("menu.desc_1"))
+    menu.add_row("2", f"{_emoji('docker')} {t('menu.option_2')}", t("menu.desc_2"))
+    menu.add_row("3", f"{_emoji('port')} {t('menu.option_3')}", t("menu.desc_3"))
     menu.add_row("", "", "")
-    menu.add_row("S", t("menu.option_settings"), t("menu.desc_settings"))
-    menu.add_row("Q", t("menu.quit"), t("menu.quit_desc"))
+    menu.add_row("S", f"{_emoji('settings')} {t('menu.option_settings')}", t("menu.desc_settings"))
+    menu.add_row("Q", f"{_emoji('quit')} {t('menu.quit')}", t("menu.quit_desc"))
 
     menu_panel = Panel(menu, title=t("menu.tools"), border_style="cyan")
 
@@ -262,11 +275,13 @@ def show_animated_menu() -> str:
 
     with Live(console=console, refresh_per_second=2, screen=True) as live:
         input_thread.start()
+        frame_idx = 0
         while not input_ready.is_set():
             frame_path = next(frame_cycle)
             mascot_panel = mascot.render_static_from_path(frame_path, message)
-            layout = _build_menu_layout(mascot_panel)
+            layout = _build_menu_layout(mascot_panel, frame_idx)
             live.update(layout)
+            frame_idx += 1
             input_ready.wait(timeout=0.5)
 
     return user_input[0] if user_input else ""
