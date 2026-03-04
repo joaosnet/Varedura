@@ -361,6 +361,9 @@
     "cleanup_prefs.on": "ON",
     "cleanup_prefs.off": "OFF",
 
+    "menu.no_steps_enabled": "No cleanup steps are enabled. Enable at least one in Settings.",
+    "menu.configure_steps_hint": "Tip: Go to Settings > Docker Cleanup Steps to enable steps.",
+
     "mcp.option": "MCP Server (Copilot)",
     "mcp.desc": "Configure MCP server for GitHub Copilot CLI",
     "mcp.status_on": "Configured",

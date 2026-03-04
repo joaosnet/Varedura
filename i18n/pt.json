@@ -361,6 +361,9 @@
     "cleanup_prefs.on": "LIGADO",
     "cleanup_prefs.off": "DESLIGADO",
 
+    "menu.no_steps_enabled": "Nenhuma etapa de limpeza está ativada. Ative pelo menos uma em Configurações.",
+    "menu.configure_steps_hint": "Dica: Vá em Configurações > Etapas do Docker Cleanup para ativar etapas.",
+
     "mcp.option": "MCP Server (Copilot)",
     "mcp.desc": "Configurar servidor MCP para GitHub Copilot CLI",
     "mcp.status_on": "Configurado",

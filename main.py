@@ -118,7 +118,6 @@ def show_cleanup_prefs(first_run: bool = False) -> dict[str, bool]:
     title_key = "cleanup_prefs.first_run_title" if first_run else "cleanup_prefs.title"
 
     while True:
-        console.clear()
         console.print(Panel(
             f"[bold cyan]{t(title_key)}[/]",
             style="blue",
@@ -159,9 +158,11 @@ def show_cleanup_prefs(first_run: bool = False) -> dict[str, bool]:
             idx = int(choice) - 1
             if 0 <= idx < len(CLEANUP_STEPS):
                 key = CLEANUP_STEPS[idx][0]
-                steps[key] = not steps.get(key, False)
-        except ValueError:
-            pass
+                old_val = steps.get(key, False)
+                steps[key] = not old_val
+                console.print(f"\n[green]✓ {t(label_key)}: {t('cleanup_prefs.on' if not old_val else 'cleanup_prefs.off')}[/]\n")
+        except (ValueError, IndexError):
+            console.print(f"\n[red]{t('menu.invalid_option')}[/]\n")
 
 
 def _is_mcp_configured() -> bool:
@@ -357,7 +358,9 @@ def run_docker_cleanup():
     enabled = [k for k, v in steps.items() if v]
 
     if not enabled:
-        console.print(f"\n[yellow]{t('menu.invalid_option')}[/]")
+        console.print(f"\n[yellow]{t('menu.no_steps_enabled')}[/]")
+        console.print(f"[dim]{t('menu.configure_steps_hint')}[/]\n")
+        console.input(f"[dim]{t('menu.press_enter')}[/]")
         return
 
     success = False
@@ -538,15 +541,6 @@ def change_language():
 def show_settings():
     """Show the settings menu with all configurable options."""
     while True:
-        console.clear()
-
-        # Header
-        header = Table.grid(expand=True)
-        header.add_column(justify="center")
-        header.add_row(f"[bold cyan]{t('settings.title')}[/]")
-        console.print(Panel(header, style="blue"))
-        console.print()
-
         # Current status
         rec_status_icon = "🔴" if _recording_enabled else "⚫"
         rec_status_text = t("settings.rec_on") if _recording_enabled else t("settings.rec_off")
@@ -559,6 +553,13 @@ def show_settings():
         cleanup_steps = _get_cleanup_steps()
         cleanup_count = sum(1 for v in cleanup_steps.values() if v)
         cleanup_summary = t("cleanup_prefs.summary", count=cleanup_count, total=len(CLEANUP_STEPS))
+
+        # Header
+        header = Table.grid(expand=True)
+        header.add_column(justify="center")
+        header.add_row(f"[bold cyan]{t('settings.title')}[/]")
+        console.print(Panel(header, style="blue"))
+        console.print()
 
         status = Table(box=box.SIMPLE, show_header=True, expand=True)
         status.add_column(t("settings.current_status"), style="bold cyan")
@@ -589,15 +590,19 @@ def show_settings():
         choice = console.input(f"[bold cyan]{t('menu.select_option')}[/]").strip().lower()
 
         if choice == "1":
+            console.print(f"\n[bold yellow]→ {t('settings.option_rec')}[/]")
             toggle_recording()
             console.input(f"\n[dim]{t('menu.press_enter')}[/]")
         elif choice == "2":
+            console.print(f"\n[bold yellow]→ {t('settings.option_lang')}[/]")
             change_language()
             console.input(f"\n[dim]{t('menu.press_enter')}[/]")
         elif choice == "3":
+            console.print(f"\n[bold yellow]→ {t('settings.option_cleanup')}[/]")
             show_cleanup_prefs()
             console.input(f"\n[dim]{t('menu.press_enter')}[/]")
         elif choice == "4":
+            console.print(f"\n[bold yellow]→ {t('mcp.option')}[/]")
             _toggle_mcp_config()
             console.input(f"\n[dim]{t('menu.press_enter')}[/]")
         elif choice == "v":
@@ -655,19 +660,23 @@ def main():
             choice = show_animated_menu()
 
             if choice == "1":
+                console.print(f"\n[bold green]✓ {t('menu.option_1')}[/]\n")
                 run_network_stalker()
+                console.input(f"\n[dim]{t('menu.press_enter')}[/]")
             elif choice == "2":
-                console.print(f"\n[yellow]{t('menu.starting_cleanup')}[/]\n")
+                console.print(f"\n[bold green]✓ {t('menu.option_2')}[/]\n")
                 run_docker_cleanup()
                 console.input(f"\n[dim]{t('menu.press_enter')}[/]")
             elif choice == "3":
+                console.print(f"\n[bold green]✓ {t('menu.option_3')}[/]\n")
                 run_port_scanner()
                 console.input(f"\n[dim]{t('menu.press_enter')}[/]")
             elif choice == "lmarena":
-                console.print(f"\n[yellow]{t('menu.starting_lmarena')}[/]\n")
+                console.print(f"\n[bold green]✓ LMArena[/]\n")
                 run_lmarena_models()
                 console.input(f"\n[dim]{t('menu.press_enter')}[/]")
             elif choice == "s":
+                console.print(f"\n[bold green]✓ {t('menu.option_settings')}[/]\n")
                 show_settings()
             elif choice == "q":
                 mascot.show_wave(t("mascot.goodbye"))
