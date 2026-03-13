@@ -110,10 +110,24 @@ uv tool uninstall varedura
 
 | Requisito | Notas |
 |---|---|
-| **Python ≥ 3.14** | Gerenciado automaticamente pelo `uv` durante a instalação |
+| **Python ≥ 3.14.2** | Gerenciado automaticamente pelo `uv` durante a instalação |
 | **uv** | Instalado automaticamente pelo instalador se ausente |
 | **Docker** | Opcional — necessário para funcionalidades de limpeza Docker |
 | **Admin / root** | Opcional — necessário para compactação VHDX e config WSL (Windows) |
+
+---
+
+## 📌 Estado Atual do Projeto
+
+Atualmente, o Varedura é um app de terminal baseado em **Rich**, com módulos separados para limpeza Docker, diagnóstico de rede, integração MCP e gravação de sessão.
+
+- Interface principal: menu animado em `main.py` (sem Textual)
+- Limpeza Docker: lógica sync + async em `docker_cleaner/core.py`
+- Ferramentas de rede: `monitor/stalker.py`, `monitor/port_scanner.py`, `monitor/speed_tester.py`
+- Servidor MCP: `mcp_server/server.py` (5 ferramentas para agentes de IA)
+- Gravador de sessão: captura SVG + geração de GIF em `recorder/`
+- i18n: suporte bilíngue em `i18n/en.json` e `i18n/pt.json`
+- Utilitário de modelos: parser/gerador LM Arena em `lmarena/`
 
 ---
 
@@ -163,6 +177,10 @@ uv tool uninstall varedura
 - **Troque a qualquer momento** pelo menu de Configurações
 - **350+ chaves de tradução** cobrindo toda a interface
 - **Persiste** a escolha em `~/.varedura_lang.json`
+
+### 🧠 Modelos LM Arena
+- Faz parsing e normalização de listas de modelos para fluxos LM Arena
+- Gera saídas estruturadas a partir de `lmarena/lmarena_models.txt`
 
 ---
 
@@ -230,44 +248,70 @@ Varedura roda em **Windows**, **Linux** e **macOS**:
 
 ---
 
-## 🏗️ Estrutura do Projeto
+## 🏗️ File Tree Atual (Mar 2026)
 
 ```
 Varedura/
-├── main.py                   # Ponto de entrada TUI Rich (comando varedura)
-├── install.sh                # Instalador standalone (Linux/macOS)
-├── install.ps1               # Instalador standalone (Windows)
-├── pyproject.toml            # Dependências & config do projeto
-│
-├── docker_cleaner/           # Lógica core de limpeza (sync + async)
-│   └── core.py              # Classe WSLDockerCleaner
-├── cli/                      # Pontos de entrada CLI
-│   ├── main_cleaner.py      # CLI de limpeza completa
-│   ├── quick_cleanup.py     # CLI de prune rápido
-│   ├── admin_tasks.py       # Helper admin (VHDX, WSL sparse)
-│   └── richlog.py           # Escritor de logs diários
-├── monitor/                  # Monitoramento de rede
-│   ├── stalker.py           # Network Stalker (latência, portas, gráficos)
-│   ├── port_scanner.py      # Estruturas de dados do scanner
-│   ├── speed_tester.py      # Teste de velocidade de internet
-│   └── speed_providers.py   # Backends de provedores de speed test
-├── mcp_server/               # Servidor MCP para integração com agentes IA
-│   └── __main__.py          # Definições de ferramentas
-├── mascot/                   # Mascote pixel-art animado
-│   ├── frames.py            # Frames ASCII art por estado
-│   └── renderer.py          # MascotRenderer (animado + balões de fala)
-├── recorder/                 # Gravação de sessão de terminal
-│   ├── session_recorder.py  # Rich Console → snapshots SVG
-│   └── gif_generator.py     # Frames SVG → GIF animado
-├── i18n/                     # Traduções (350+ chaves)
-│   ├── pt.json              # Português
-│   └── en.json              # Inglês
-├── lmarena/                  # Parser/gerador de modelos LM Arena
-├── tests/                    # Testes unitários (pytest)
-├── exports/                  # PDFs & CSVs gerados
-├── recordings/               # Screencasts GIF auto-gerados
-├── screenshots/              # demo.gif (atualizado a cada sessão)
-└── logs/                     # Logs rotativos diários
+├── .github/
+├── .vscode/
+├── build/
+│   └── lib/
+│       ├── cli/
+│       ├── docker_cleaner/
+│       ├── i18n/
+│       ├── mascot/
+│       ├── mcp_server/
+│       ├── monitor/
+│       └── recorder/
+├── cli/
+│   ├── admin_tasks.py
+│   ├── main_cleaner.py
+│   ├── quick_cleanup.py
+│   └── richlog.py
+├── docker_cleaner/
+│   └── core.py
+├── exports/
+├── i18n/
+│   ├── en.json
+│   └── pt.json
+├── lmarena/
+│   ├── generator.py
+│   ├── lmarena_models.txt
+│   └── models.py
+├── mascot/
+│   ├── frames.py
+│   ├── generate_sprites.py
+│   ├── images/
+│   └── renderer.py
+├── mcp_server/
+│   ├── __main__.py
+│   └── server.py
+├── monitor/
+│   ├── port_scanner.py
+│   ├── speed_providers.py
+│   ├── speed_tester.py
+│   └── stalker.py
+├── recorder/
+│   ├── gif_generator.py
+│   └── session_recorder.py
+├── recordings/
+├── screenshots/
+├── tests/
+│   ├── images/
+│   ├── static/
+│   ├── test_export_pdf.py
+│   ├── test_export_prefs.py
+│   └── test_export_prompt.py
+├── install.ps1
+├── install.sh
+├── LICENSE
+├── main.py
+├── POST-SUBMISSION.md
+├── pyproject.toml
+├── README.md
+├── README.pt-BR.md
+├── router_template.html
+└── uv.lock
 ```
 
 ---

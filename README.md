@@ -110,10 +110,24 @@ uv tool uninstall varedura
 
 | Requirement | Notes |
 |---|---|
-| **Python ≥ 3.14** | Managed automatically by `uv` during install |
+| **Python ≥ 3.14.2** | Managed automatically by `uv` during install |
 | **uv** | Installed automatically by the installer if missing |
 | **Docker** | Optional — needed for Docker cleanup features |
 | **Admin / root** | Optional — needed for VHDX compaction & WSL config (Windows) |
+
+---
+
+## 📌 Current Project Status
+
+Varedura is currently a **Rich-based terminal app** with modular tooling for Docker cleanup, network diagnostics, MCP integration, and session recording.
+
+- Main interface: animated menu in `main.py` (not Textual)
+- Docker engine cleanup: sync + async logic in `docker_cleaner/core.py`
+- Network tooling: `monitor/stalker.py`, `monitor/port_scanner.py`, `monitor/speed_tester.py`
+- MCP server: `mcp_server/server.py` (5 tools exposed to AI agents)
+- Session recorder: SVG capture + GIF generation in `recorder/`
+- i18n: bilingual `i18n/en.json` and `i18n/pt.json`
+- Model utilities: LM Arena parser/generator in `lmarena/`
 
 ---
 
@@ -163,6 +177,10 @@ uv tool uninstall varedura
 - **Switch anytime** from the Settings menu
 - **350+ translation keys** covering every UI element
 - **Persists** your choice to `~/.varedura_lang.json`
+
+### 🧠 LM Arena Models
+- Parses and normalizes model lists for LM Arena workflows
+- Generates structured outputs from `lmarena/lmarena_models.txt`
 
 ---
 
@@ -230,44 +248,70 @@ Varedura runs on **Windows**, **Linux**, and **macOS**:
 
 ---
 
-## 🏗️ Project Structure
+## 🏗️ Current File Tree (Mar 2026)
 
 ```
 Varedura/
-├── main.py                   # Rich TUI entry point (varedura command)
-├── install.sh                # Standalone installer (Linux/macOS)
-├── install.ps1               # Standalone installer (Windows)
-├── pyproject.toml            # Dependencies & project config
-│
-├── docker_cleaner/           # Core cleanup logic (sync + async)
-│   └── core.py              # WSLDockerCleaner class
-├── cli/                      # CLI entry points
-│   ├── main_cleaner.py      # Full cleanup CLI
-│   ├── quick_cleanup.py     # Quick prune CLI
-│   ├── admin_tasks.py       # Admin helper (VHDX, WSL sparse)
-│   └── richlog.py           # Daily log writer
-├── monitor/                  # Network monitoring
-│   ├── stalker.py           # Network Stalker (latency, ports, graphs)
-│   ├── port_scanner.py      # Port scanner data structures
-│   ├── speed_tester.py      # Internet speed testing
-│   └── speed_providers.py   # Speed test provider backends
-├── mcp_server/               # MCP server for AI agent integration
-│   └── __main__.py          # Tool definitions (docker_status, port_scan, etc.)
-├── mascot/                   # Animated pixel-art mascot
-│   ├── frames.py            # ASCII art frames per state
-│   └── renderer.py          # MascotRenderer (animated + speech bubbles)
-├── recorder/                 # Terminal session recording
-│   ├── session_recorder.py  # Rich Console → SVG snapshots
-│   └── gif_generator.py     # SVG frames → animated GIF
-├── i18n/                     # Translations (350+ keys)
-│   ├── pt.json              # Portuguese
-│   └── en.json              # English
-├── lmarena/                  # LM Arena model parser/generator
-├── tests/                    # Unit tests (pytest)
-├── exports/                  # Generated PDFs & CSVs
-├── recordings/               # Auto-generated GIF screencasts
-├── screenshots/              # demo.gif (auto-updated each session)
-└── logs/                     # Daily rotating logs
+├── .github/
+├── .vscode/
+├── build/
+│   └── lib/
+│       ├── cli/
+│       ├── docker_cleaner/
+│       ├── i18n/
+│       ├── mascot/
+│       ├── mcp_server/
+│       ├── monitor/
+│       └── recorder/
+├── cli/
+│   ├── admin_tasks.py
+│   ├── main_cleaner.py
+│   ├── quick_cleanup.py
+│   └── richlog.py
+├── docker_cleaner/
+│   └── core.py
+├── exports/
+├── i18n/
+│   ├── en.json
+│   └── pt.json
+├── lmarena/
+│   ├── generator.py
+│   ├── lmarena_models.txt
+│   └── models.py
+├── mascot/
+│   ├── frames.py
+│   ├── generate_sprites.py
+│   ├── images/
+│   └── renderer.py
+├── mcp_server/
+│   ├── __main__.py
+│   └── server.py
+├── monitor/
+│   ├── port_scanner.py
+│   ├── speed_providers.py
+│   ├── speed_tester.py
+│   └── stalker.py
+├── recorder/
+│   ├── gif_generator.py
+│   └── session_recorder.py
+├── recordings/
+├── screenshots/
+├── tests/
+│   ├── images/
+│   ├── static/
+│   ├── test_export_pdf.py
+│   ├── test_export_prefs.py
+│   └── test_export_prompt.py
+├── install.ps1
+├── install.sh
+├── LICENSE
+├── main.py
+├── POST-SUBMISSION.md
+├── pyproject.toml
+├── README.md
+├── README.pt-BR.md
+├── router_template.html
+└── uv.lock
 ```
 
 ---
