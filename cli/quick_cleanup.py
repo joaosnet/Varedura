@@ -11,6 +11,7 @@ import sys
 import shutil
 import time
 from i18n import t
+from docker_cleaner.core import get_docker_vhdx_paths
 
 IS_WINDOWS = sys.platform.startswith("win")
 
@@ -95,28 +96,29 @@ def quick_cleanup(console: Optional[Console] = None):
                 overall_task, description=f"[cyan]{t('quick.compacting_vhdx')}"
             )
             if IS_WINDOWS:
-                vhdx_path = os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx")
-                if os.path.exists(vhdx_path):
-                    size_before = os.path.getsize(vhdx_path) / (1024**3)
-                    console.print(f"\n[bold]{t('quick.size_before', size=f'{size_before:.2f}')}[/bold]")
-                    ps_cmd = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
-                    if run_cmd(
-                        console,
-                        f'powershell -Command "{ps_cmd}"',
-                        t("quick.compacting_vhdx_desc"),
-                    ):
-                        time.sleep(5)
-                        if os.path.exists(vhdx_path):
-                            size_after = os.path.getsize(vhdx_path) / (1024**3)
-                            space_saved = size_before - size_after
-                            console.print(f"[bold]{t('quick.size_after', size=f'{size_after:.2f}')}[/bold]")
-                            console.print(
-                                f"[bold]{t('quick.space_saved', size=f'{space_saved:.2f}')}[/bold]"
-                            )
-                else:
+                vhdx_paths = get_docker_vhdx_paths()
+                if not vhdx_paths:
                     console.print(
-                        f"[yellow]{t('quick.vhdx_not_found', path=vhdx_path)}[/yellow]"
+                        f"[yellow]{t('quick.vhdx_not_found', path=os.path.expandvars(r'%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx'))}[/yellow]"
                     )
+                else:
+                    for vhdx_path in vhdx_paths:
+                        size_before = os.path.getsize(vhdx_path) / (1024**3)
+                        console.print(f"\n[bold]{t('quick.size_before', size=f'{size_before:.2f}')}[/bold]")
+                        ps_cmd = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
+                        if run_cmd(
+                            console,
+                            f'powershell -Command "{ps_cmd}"',
+                            t("quick.compacting_vhdx_desc"),
+                        ):
+                            time.sleep(5)
+                            if os.path.exists(vhdx_path):
+                                size_after = os.path.getsize(vhdx_path) / (1024**3)
+                                space_saved = size_before - size_after
+                                console.print(f"[bold]{t('quick.size_after', size=f'{size_after:.2f}')}[/bold]")
+                                console.print(
+                                    f"[bold]{t('quick.space_saved', size=f'{space_saved:.2f}')}[/bold]"
+                                )
             else:
                 console.print(f"[dim]{t('cleanup.vhdx_windows_only')}[/dim]")
             current_task_progress.remove_task(current_task)

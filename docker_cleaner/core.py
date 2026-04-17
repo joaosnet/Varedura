@@ -9,6 +9,7 @@ import sys
 import time
 import shutil
 from datetime import datetime
+from pathlib import Path
 from typing import Optional, Callable
 import logging
 from rich.console import Console
@@ -25,6 +26,34 @@ from rich.live import Live
 from i18n import t
 
 IS_WINDOWS = sys.platform.startswith("win")
+
+DOCKER_WSL_ROOT_TEMPLATES = (
+    r"%LOCALAPPDATA%\Docker\wsl",
+    r"%USERPROFILE%\AppData\Local\Docker\wsl",
+)
+
+DOCKER_VHDX_FILENAMES = ("docker_data.vhdx", "ext4.vhdx")
+
+
+def get_docker_vhdx_paths() -> list[str]:
+    """Discover Docker WSL VHDX files across supported layouts."""
+    if not IS_WINDOWS:
+        return []
+
+    paths: list[str] = []
+    for root_template in DOCKER_WSL_ROOT_TEMPLATES:
+        root = Path(os.path.expandvars(root_template))
+        if not root.exists():
+            continue
+
+        for filename in DOCKER_VHDX_FILENAMES:
+            matches = sorted(
+                (path for path in root.rglob(filename) if path.is_file()),
+                key=lambda path: str(path).lower(),
+            )
+            paths.extend(str(path) for path in matches)
+
+    return list(dict.fromkeys(paths))
 
 if IS_WINDOWS:
     import ctypes
@@ -305,18 +334,7 @@ try {{
 
     # --- Relacionados ao VHDX e Docker (copiado e mantido) ---
     def _get_all_vhdx_paths(self) -> list[str]:
-        if not IS_WINDOWS:
-            return []
-        paths = [
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\main\ext4.vhdx"),
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx"),
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\distro\ext4.vhdx"),
-            os.path.expandvars(r"%USERPROFILE%\AppData\Local\Docker\wsl\main\ext4.vhdx"),
-            os.path.expandvars(r"%USERPROFILE%\AppData\Local\Docker\wsl\data\ext4.vhdx"),
-            os.path.expandvars(r"%USERPROFILE%\AppData\Local\Docker\wsl\distro\ext4.vhdx"),
-        ]
-        # Remove duplicates while preserving order
-        return list(dict.fromkeys(paths))
+        return get_docker_vhdx_paths()
 
     def _wait_for_vhdx_unlock(self, path: str, timeout: int = 30) -> bool:
         start_time = time.time()

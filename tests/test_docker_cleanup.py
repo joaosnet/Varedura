@@ -113,3 +113,25 @@ def test_compact_vhdx_files_requests_elevation_and_falls_back(monkeypatch, tmp_p
     assert captured_commands[0].startswith("diskpart /s ")
     assert 'Optimize-VHD -Path' in captured_commands[1]
     assert not any(level == "ERROR" for level, _message in log_messages)
+
+
+def test_get_docker_vhdx_paths_discovers_disk_layout(monkeypatch, tmp_path):
+    monkeypatch.setattr(core, "IS_WINDOWS", True)
+
+    profile_root = tmp_path / "Users" / "joaod"
+    localappdata_root = profile_root / "AppData" / "Local"
+    docker_wsl_root = localappdata_root / "Docker" / "wsl"
+    (docker_wsl_root / "data").mkdir(parents=True)
+    (docker_wsl_root / "disk").mkdir(parents=True)
+
+    docker_data_path = docker_wsl_root / "disk" / "docker_data.vhdx"
+    ext4_path = docker_wsl_root / "data" / "ext4.vhdx"
+    docker_data_path.write_bytes(b"docker-data")
+    ext4_path.write_bytes(b"ext4-data")
+
+    monkeypatch.setenv("LOCALAPPDATA", str(localappdata_root))
+    monkeypatch.setenv("USERPROFILE", str(profile_root))
+
+    paths = core.get_docker_vhdx_paths()
+
+    assert paths == [str(docker_data_path), str(ext4_path)]

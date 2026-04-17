@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from docker_cleaner.core import get_docker_vhdx_paths
 
 mcp = FastMCP(
     "Varedura",
@@ -154,11 +155,7 @@ def docker_full_cleanup() -> str:
 
         # Find and report VHDX files
         import os
-        vhdx_candidates = [
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\main\ext4.vhdx"),
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx"),
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\distro\ext4.vhdx"),
-        ]
+        vhdx_candidates = get_docker_vhdx_paths()
         vhdx_info = []
         for path in vhdx_candidates:
             if os.path.exists(path):
