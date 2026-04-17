@@ -31,16 +31,18 @@ if IS_WINDOWS:
 
 
 class WSLDockerCleaner:
-    def __init__(self):
+    def __init__(self, console: Optional[Console] = None):
         self.log_messages = []
         self.total_space_saved = 0
-        self.console = Console()
+        self.console = console or Console()
         self.logger = logging.getLogger(__name__)
+        self.silent_console = False
 
     def log(self, message, level="INFO"):
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_msg = f"[{timestamp}] [{level}] {message}"
-        self.console.print(f"[bold]{timestamp}[/bold] [{level}] {message}")
+        if not getattr(self, 'silent_console', False):
+            self.console.print(f"[bold]{timestamp}[/bold] [{level}] {message}")
         self.log_messages.append(log_msg)
         # Also log via standard logging so the UI logger captures it
         try:
@@ -302,6 +304,46 @@ try {{
             sys.exit(1)
 
     # --- Relacionados ao VHDX e Docker (copiado e mantido) ---
+    def _get_all_vhdx_paths(self) -> list[str]:
+        if not IS_WINDOWS:
+            return []
+        paths = [
+            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\main\ext4.vhdx"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\distro\ext4.vhdx"),
+            os.path.expandvars(r"%USERPROFILE%\AppData\Local\Docker\wsl\main\ext4.vhdx"),
+            os.path.expandvars(r"%USERPROFILE%\AppData\Local\Docker\wsl\data\ext4.vhdx"),
+            os.path.expandvars(r"%USERPROFILE%\AppData\Local\Docker\wsl\distro\ext4.vhdx"),
+        ]
+        # Remove duplicates while preserving order
+        return list(dict.fromkeys(paths))
+
+    def _wait_for_vhdx_unlock(self, path: str, timeout: int = 30) -> bool:
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                with open(path, "a+b"):
+                    pass
+                return True
+            except PermissionError:
+                time.sleep(2)
+            except FileNotFoundError:
+                return False
+        return False
+
+    async def _wait_for_vhdx_unlock_async(self, path: str, timeout: int = 30) -> bool:
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                with open(path, "a+b"):
+                    pass
+                return True
+            except PermissionError:
+                await asyncio.sleep(2)
+            except FileNotFoundError:
+                return False
+        return False
+
     def _parse_reclaimed_space(self, result) -> str:
         """Parse the reclaimed space from Docker prune command output.
 
@@ -346,24 +388,8 @@ try {{
     def get_docker_vhdx_size(self):
         if not IS_WINDOWS:
             return 0, []
-        # Include all known Docker VHDX locations (varies by Docker Desktop version)
-        vhdx_paths = [
-            # Newer Docker Desktop versions use 'main' subfolder
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\main\ext4.vhdx"),
-            # Older Docker Desktop versions use 'data' and 'distro' subfolders
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx"),
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\distro\ext4.vhdx"),
-            # Alternative paths using USERPROFILE
-            os.path.expandvars(
-                r"%USERPROFILE%\AppData\Local\Docker\wsl\main\ext4.vhdx"
-            ),
-            os.path.expandvars(
-                r"%USERPROFILE%\AppData\Local\Docker\wsl\data\ext4.vhdx"
-            ),
-            os.path.expandvars(
-                r"%USERPROFILE%\AppData\Local\Docker\wsl\distro\ext4.vhdx"
-            ),
-        ]
+        
+        vhdx_paths = self._get_all_vhdx_paths()
 
         total_size = 0
         existing_files = []
@@ -385,14 +411,14 @@ try {{
                     docker_path = r"C:\Program Files\Docker\Docker\Docker Desktop.exe"
                     if not os.path.exists(docker_path):
                         self.log(
-                            t("cleanup.docker_not_found", path=docker_path), "ERROR"
+                            t("cleanup.docker_not_found", path=docker_path), "WARNING"
                         )
                         self.log(
                             t("cleanup.skip_docker"),
                             "WARNING",
                         )
                         return False
-                    subprocess.Popen([docker_path], shell=True)
+                    subprocess.Popen([docker_path], shell=False)
                 else:
                     # Linux/macOS: try to start Docker daemon
                     if shutil.which("docker") is None:
@@ -509,6 +535,7 @@ try {{
 
     def stop_docker_wsl(self):
         self.log(t("cleanup.stopping_docker_wsl"))
+        result = None
         if IS_WINDOWS:
             self.log(t("cleanup.stopping_docker_desktop"))
             docker_processes = [
@@ -519,17 +546,15 @@ try {{
                 "dockerd.exe",
                 "vpnkit.exe",
             ]
-            for process in docker_processes:
-                result = self.run_command(
-                    f'taskkill /F /IM "{process}"', capture_output=True
-                )
-                if result and result.returncode == 0:
-                    self.log(t("cleanup.process_killed", process=process))
-            time.sleep(5)
+            kill_commands = " & ".join(
+                [f'taskkill /F /IM "{process}" /T 2>nul' for process in docker_processes]
+            )
+            batch_command = f"{kill_commands} & wsl --shutdown"
 
-            self.log(t("cleanup.stopping_wsl"))
-            result = self.run_command("wsl --shutdown", capture_output=True)
-            if result:
+            if not self.is_admin():
+                self.log(t("cleanup.requesting_admin"))
+            result = self.run_elevated_command(batch_command)
+            if result and result.returncode == 0:
                 self.log(t("cleanup.wsl_stopped"))
             else:
                 self.log(t("cleanup.wsl_error"), "ERROR")
@@ -546,7 +571,7 @@ try {{
                 self.log(t("cleanup.docker_stop_error_linux", error=""), "WARNING")
 
         time.sleep(10)
-        return True
+        return bool(result and result.returncode == 0)
 
     def configure_wsl_sparse(self):
         if not IS_WINDOWS:
@@ -557,9 +582,14 @@ try {{
         if not result:
             return False
         distributions = ["docker-desktop", "docker-desktop-data"]
+        sparse_commands = "; ".join(
+            [f'wsl --manage "{distro}" --set-sparse true' for distro in distributions]
+        )
         for distro in distributions:
             self.log(t("cleanup.sparse_distro", distro=distro))
-            self.run_command(f'wsl --manage "{distro}" --set-sparse true')
+        if not self.is_admin():
+            self.log(t("cleanup.requesting_admin"))
+        result = self.run_elevated_command(sparse_commands)
         wslconfig_path = os.path.expanduser("~/.wslconfig")
         wslconfig_content = """[wsl2]
 sparseVhd=true
@@ -574,50 +604,82 @@ swapFile=%TEMP%\\wsl-swap.vhdx
             self.log(t("cleanup.wslconfig_updated", path=wslconfig_path))
         except Exception as e:
             self.log(t("cleanup.wslconfig_error", error=str(e)), "ERROR")
-        return True
+        return bool(result and result.returncode == 0)
 
     def compact_vhdx_files(self):
         if not IS_WINDOWS:
             self.log(t("cleanup.vhdx_windows_only"), "INFO")
             return True
-        if not self.is_admin():
-            self.log(t("cleanup.admin_recommended"), "WARNING")
-            return False
+        needs_elevation = not self.is_admin()
+        if needs_elevation:
+            self.log(t("cleanup.requesting_admin"))
         self.log(t("cleanup.compacting_vhdx"))
-        # Include all known Docker VHDX locations (varies by Docker Desktop version)
-        vhdx_paths = [
-            # Newer Docker Desktop versions use 'main' subfolder
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\main\ext4.vhdx"),
-            # Older Docker Desktop versions use 'data' and 'distro' subfolders
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx"),
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\distro\ext4.vhdx"),
-        ]
+        
+        vhdx_paths = self._get_all_vhdx_paths()
         success = False
+        
         for vhdx_path in vhdx_paths:
             if os.path.exists(vhdx_path):
                 size_before = os.path.getsize(vhdx_path)
                 size_before_gb = size_before / (1024**3)
                 self.log(t("cleanup.compacting_file", path=vhdx_path, size=f"{size_before_gb:.2f}"))
-                ps_command = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
-                result = self.run_elevated_command(ps_command)
-                if result and result.returncode == 0:
-                    time.sleep(5)
-                    if os.path.exists(vhdx_path):
-                        size_after = os.path.getsize(vhdx_path)
-                        size_after_gb = size_after / (1024**3)
-                        space_saved = (size_before - size_after) / (1024**3)
-                        self.total_space_saved += space_saved
-                        self.log(
-                            t("cleanup.compact_done", size=f"{size_after_gb:.2f}", saved=f"{space_saved:.2f}")
-                        )
-                        success = True
+                
+                # Try to shutdown wsl again just in case
+                self.run_command("wsl --shutdown", capture_output=True)
+                
+                if not self._wait_for_vhdx_unlock(vhdx_path, timeout=90):
+                    self.log(f"Timeout waiting for lock release: {vhdx_path}. O arquivo pode estar sendo usado por outro processo. Pulando compactação.", "ERROR")
+                    continue
+                
+                # Diskpart approach
+                diskpart_script_path = os.path.join(os.environ.get("TEMP", "C:\\Temp"), "compact_vhdx.txt")
+                diskpart_script = f'select vdisk file="{vhdx_path}"\nattach vdisk readonly\ncompact vdisk\ndetach vdisk\n'
+                
+                try:
+                    with open(diskpart_script_path, "w", encoding="utf-8") as f:
+                        f.write(diskpart_script)
+                    
+                    cmd = f'diskpart /s "{diskpart_script_path}"'
+                    result = self.run_elevated_command(cmd)
+                    
+                    if result and result.returncode == 0:
+                        time.sleep(2)
+                        if os.path.exists(vhdx_path):
+                            size_after = os.path.getsize(vhdx_path)
+                            size_after_gb = size_after / (1024**3)
+                            space_saved = (size_before - size_after) / (1024**3)
+                            self.total_space_saved += max(0, space_saved)
+                            self.log(
+                                t("cleanup.compact_done", size=f"{size_after_gb:.2f}", saved=f"{space_saved:.2f}")
+                            )
+                            success = True
+                        else:
+                            self.log(t("cleanup.file_not_found_after", path=vhdx_path), "ERROR")
                     else:
-                        self.log(
-                            t("cleanup.file_not_found_after", path=vhdx_path),
-                            "ERROR",
-                        )
-                else:
-                    self.log(t("cleanup.compact_error", path=vhdx_path), "ERROR")
+                        error_msg = result.stderr if result and hasattr(result, "stderr") and result.stderr else "Unknown error"
+                        self.log(f"Diskpart failed: {error_msg}. Falling back to Optimize-VHD...", "WARNING")
+                        
+                        ps_command = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
+                        result2 = self.run_elevated_command(ps_command)
+                        if result2 and result2.returncode == 0:
+                            time.sleep(2)
+                            size_after = os.path.getsize(vhdx_path)
+                            size_after_gb = size_after / (1024**3)
+                            space_saved = (size_before - size_after) / (1024**3)
+                            self.total_space_saved += max(0, space_saved)
+                            self.log(
+                                t("cleanup.compact_done", size=f"{size_after_gb:.2f}", saved=f"{space_saved:.2f}")
+                            )
+                            success = True
+                        else:
+                            err2 = result2.stderr if result2 and hasattr(result2, "stderr") and result2.stderr else "Unknown error"
+                            self.log(t("cleanup.compact_error", path=vhdx_path) + f" - {err2}", "ERROR")
+                finally:
+                    if os.path.exists(diskpart_script_path):
+                        try:
+                            os.remove(diskpart_script_path)
+                        except Exception:
+                            pass
         return success
 
     def cleanup_temp_files(self):
@@ -987,9 +1049,13 @@ wsl --shutdown
             stream_callback(f"{t('cleanup.sparse_distros', distros=', '.join(distributions))}\n")
             stream_callback(f"{t('cleanup.admin_single_uac')}\n")
 
-        result = await self.run_elevated_command_async(
-            sparse_cmds, stream_callback=stream_callback
-        )
+        try:
+            result = await self.run_elevated_command_async(
+                sparse_cmds, stream_callback=stream_callback
+            )
+        except Exception as e:
+            if stream_callback:
+                stream_callback(f"[WARNING] set-sparse failed: {e}\n")
 
         # .wslconfig (non-elevated)
         wslconfig_path = os.path.expanduser("~/.wslconfig")
@@ -1023,10 +1089,7 @@ swapFile=%TEMP%\\wsl-swap.vhdx
         if stream_callback:
             stream_callback(f"{t('cleanup.compacting_vhdx')}\n")
 
-        vhdx_paths = [
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx"),
-            os.path.expandvars(r"%LOCALAPPDATA%\Docker\wsl\distro\ext4.vhdx"),
-        ]
+        vhdx_paths = self._get_all_vhdx_paths()
 
         success = False
         for vhdx_path in vhdx_paths:
@@ -1038,33 +1101,78 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                     stream_callback(
                         f"{t('cleanup.compacting_file', path=vhdx_path, size=f'{size_before_gb:.2f}')}\n"
                     )
-
-                ps_command = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
-                result = await self.run_elevated_command_async(
-                    ps_command, stream_callback=stream_callback
-                )
-
-                if result and result.returncode == 0:
-                    await asyncio.sleep(5)
-                    if os.path.exists(vhdx_path):
-                        size_after = os.path.getsize(vhdx_path)
-                        size_after_gb = size_after / (1024**3)
-                        space_saved = (size_before - size_after) / (1024**3)
-                        self.total_space_saved += space_saved
-
-                        if stream_callback:
-                            stream_callback(
-                                f"{t('cleanup.compact_done', size=f'{size_after_gb:.2f}', saved=f'{space_saved:.2f}')}\n"
-                            )
-                        success = True
-                    else:
-                        if stream_callback:
-                            stream_callback(
-                                f"{t('cleanup.file_not_found_after', path=vhdx_path)}\n"
-                            )
-                else:
+                
+                # Try to shutdown wsl again just in case
+                await self.run_command_async("wsl --shutdown", shell=True)
+                
+                unlocked = await self._wait_for_vhdx_unlock_async(vhdx_path, timeout=90)
+                if not unlocked:
                     if stream_callback:
-                        stream_callback(f"{t('cleanup.compact_error', path=vhdx_path)}\n")
+                        stream_callback(f"[ERROR] Timeout waiting for lock release: {vhdx_path}. O arquivo pode estar sendo usado. Pulando.\n")
+                    continue
+
+                diskpart_script_path = os.path.join(os.environ.get("TEMP", "C:\\Temp"), "compact_vhdx_async.txt")
+                diskpart_script = f'select vdisk file="{vhdx_path}"\nattach vdisk readonly\ncompact vdisk\ndetach vdisk\n'
+                
+                try:
+                    with open(diskpart_script_path, "w", encoding="utf-8") as f:
+                        f.write(diskpart_script)
+                    
+                    cmd = f'diskpart /s "{diskpart_script_path}"'
+                    result = await self.run_elevated_command_async(
+                        cmd, stream_callback=stream_callback
+                    )
+                    
+                    if result and result.returncode == 0:
+                        await asyncio.sleep(2)
+                        if os.path.exists(vhdx_path):
+                            size_after = os.path.getsize(vhdx_path)
+                            size_after_gb = size_after / (1024**3)
+                            space_saved = (size_before - size_after) / (1024**3)
+                            self.total_space_saved += max(0, space_saved)
+
+                            if stream_callback:
+                                stream_callback(
+                                    f"{t('cleanup.compact_done', size=f'{size_after_gb:.2f}', saved=f'{space_saved:.2f}')}\n"
+                                )
+                            success = True
+                        else:
+                            if stream_callback:
+                                stream_callback(
+                                    f"{t('cleanup.file_not_found_after', path=vhdx_path)}\n"
+                                )
+                    else:
+                        error_msg = result.stderr if result and hasattr(result, "stderr") and result.stderr else "Unknown error"
+                        if stream_callback:
+                            stream_callback(f"[WARNING] Diskpart failed: {error_msg}. Falling back to Optimize-VHD...\n")
+                            
+                        ps_command = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
+                        result2 = await self.run_elevated_command_async(
+                            ps_command, stream_callback=stream_callback
+                        )
+
+                        if result2 and result2.returncode == 0:
+                            await asyncio.sleep(2)
+                            size_after = os.path.getsize(vhdx_path)
+                            size_after_gb = size_after / (1024**3)
+                            space_saved = (size_before - size_after) / (1024**3)
+                            self.total_space_saved += max(0, space_saved)
+
+                            if stream_callback:
+                                stream_callback(
+                                    f"{t('cleanup.compact_done', size=f'{size_after_gb:.2f}', saved=f'{space_saved:.2f}')}\n"
+                                )
+                            success = True
+                        else:
+                            err2 = result2.stderr if result2 and hasattr(result2, "stderr") and result2.stderr else "Unknown error"
+                            if stream_callback:
+                                stream_callback(f"{t('cleanup.compact_error', path=vhdx_path)} - {err2}\n")
+                finally:
+                    if os.path.exists(diskpart_script_path):
+                        try:
+                            os.remove(diskpart_script_path)
+                        except Exception:
+                            pass
 
         return success
 
@@ -1108,6 +1216,9 @@ swapFile=%TEMP%\\wsl-swap.vhdx
         initial_size, _ = self.get_docker_vhdx_size()
         initial_size_gb = initial_size / (1024**3)
         self.log(t("cleanup.initial_vhdx_size", size=f"{initial_size_gb:.2f}"))
+        
+        self.silent_console = True
+
         overall_progress = Progress(
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
@@ -1124,6 +1235,8 @@ swapFile=%TEMP%\\wsl-swap.vhdx
         overall_task = overall_progress.add_task(
             f"[cyan]{t('cleanup.running_full_cleanup')}", total=100
         )
+        
+        success = False
         with Live(progress_group, refresh_per_second=10, console=self.console):
             try:
                 current_task = current_task_progress.add_task(t("cleanup.cleaning_docker"))
@@ -1184,15 +1297,21 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                 overall_progress.update(
                     overall_task, description=f"[green]{t('cleanup.cleanup_done')}"
                 )
-
-                current_size, _ = self.get_docker_vhdx_size()
-                current_size_gb = current_size / (1024**3)
-                self.display_final_report(initial_size_gb, current_size_gb)
-                self.log(t("cleanup.cleanup_complete_success"))
-                return True
+                success = True
             except Exception as e:
                 self.log(t("cleanup.cleanup_error", error=str(e)), "ERROR")
-                return False
+                success = False
+
+        self.silent_console = False
+
+        if success:
+            current_size, _ = self.get_docker_vhdx_size()
+            current_size_gb = current_size / (1024**3)
+            self.display_final_report(initial_size_gb, current_size_gb)
+            self.log(t("cleanup.cleanup_complete_success"))
+            return True
+        else:
+            return False
 
     def display_initial_info(self):
         table = Table(title=t("cleanup.initial_info_title"))

@@ -368,7 +368,7 @@ def run_docker_cleanup():
         from docker_cleaner.core import WSLDockerCleaner
         from rich.progress import Progress, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn
 
-        cleaner = WSLDockerCleaner()
+        cleaner = WSLDockerCleaner(console=console)
 
         # Map step keys to cleaner methods
         step_methods = {
@@ -404,6 +404,7 @@ def run_docker_cleanup():
             task_id = progress.add_task(
                 f"[cyan]{t('menu.starting_cleanup')}", total=total_weight
             )
+            cleaner.silent_console = True
             for key in enabled:
                 # Find label
                 label = key
@@ -419,6 +420,7 @@ def run_docker_cleanup():
                     except Exception as e:
                         console.print(f"[red]  {label}: {e}[/]")
                 progress.update(task_id, advance=step_weight.get(key, 10))
+            cleaner.silent_console = False
 
         success = True
     except ImportError as e:

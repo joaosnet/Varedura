@@ -129,7 +129,7 @@ class SessionRecorder:
                 temp.print(renderable)
                 svg = temp.export_svg(title="Varedura")
             elif self._console is not None:
-                svg = self._console.export_svg(title="Varedura", clear=True)
+                svg = self._console.export_svg(title="Varedura", clear=False)
             else:
                 return
 
