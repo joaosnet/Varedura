@@ -400,29 +400,36 @@ def run_docker_cleanup():
             console=console,
         )
 
+        failures = []
         with progress:
             task_id = progress.add_task(
                 f"[cyan]{t('menu.starting_cleanup')}", total=total_weight
             )
             cleaner.silent_console = True
-            for key in enabled:
-                # Find label
-                label = key
-                for k, lbl_key, _ in CLEANUP_STEPS:
-                    if k == key:
-                        label = t(lbl_key)
-                        break
-                progress.update(task_id, description=f"[cyan]{label}")
-                method = step_methods.get(key)
-                if method:
-                    try:
-                        method()
-                    except Exception as e:
-                        console.print(f"[red]  {label}: {e}[/]")
-                progress.update(task_id, advance=step_weight.get(key, 10))
-            cleaner.silent_console = False
+            try:
+                for key in enabled:
+                    # Find label
+                    label = key
+                    for k, lbl_key, _ in CLEANUP_STEPS:
+                        if k == key:
+                            label = t(lbl_key)
+                            break
+                    progress.update(task_id, description=f"[cyan]{label}")
+                    method = step_methods.get(key)
+                    if method:
+                        try:
+                            if method() is False:
+                                failures.append(label)
+                        except Exception as e:
+                            failures.append(label)
+                            console.print(f"[red]  {label}: {e}[/]")
+                    progress.update(task_id, advance=step_weight.get(key, 10))
+            finally:
+                cleaner.silent_console = False
 
-        success = True
+        success = not failures
+        if failures:
+            console.print(f"[red]{t('menu.error_during_cleanup', error=', '.join(failures))}[/]")
     except ImportError as e:
         console.print(f"[red]{t('menu.error_loading_cleaner', error=e)}[/]")
     except Exception as e:

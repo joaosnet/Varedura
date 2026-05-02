@@ -6,14 +6,8 @@ from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn
 from rich.panel import Panel
 from rich.live import Live
 import subprocess
-import os
-import sys
-import shutil
-import time
 from i18n import t
-from docker_cleaner.core import get_docker_vhdx_paths
-
-IS_WINDOWS = sys.platform.startswith("win")
+from docker_cleaner.core import WSLDockerCleaner
 
 
 def run_cmd(console, cmd, desc=""):
@@ -55,16 +49,15 @@ def quick_cleanup(console: Optional[Console] = None):
     overall_task = overall_progress.add_task(
         f"[cyan]{t('quick.running_quick')}", total=100
     )
+    cleaner = WSLDockerCleaner(console=console)
     with Live(progress_group, refresh_per_second=10, console=console):
         try:
             current_task = current_task_progress.add_task(t("quick.cleaning_docker"))
             overall_progress.update(
                 overall_task, description=f"[cyan]{t('quick.cleaning_docker')}"
             )
-            run_cmd(
-                console,
-                "docker system prune -af --volumes",
-                t("quick.cleaning_docker_aggressive"),
+            docker_ok = cleaner.docker_cleanup(
+                steps=("containers", "images", "volumes", "networks", "system", "builder")
             )
             current_task_progress.remove_task(current_task)
             overall_progress.update(overall_task, advance=40)
@@ -73,21 +66,7 @@ def quick_cleanup(console: Optional[Console] = None):
             overall_progress.update(
                 overall_task, description=f"[cyan]{t('quick.stopping_docker_wsl')}"
             )
-            if IS_WINDOWS:
-                run_cmd(
-                    console,
-                    'taskkill /F /IM "Docker Desktop.exe" /T 2>NUL',
-                    t("quick.stopping_docker_desktop"),
-                )
-                time.sleep(3)
-                run_cmd(console, "wsl --shutdown", t("quick.stopping_wsl"))
-            else:
-                if shutil.which("systemctl"):
-                    run_cmd(console, "sudo systemctl stop docker", t("quick.stopping_docker_desktop"))
-                else:
-                    run_cmd(console, "sudo killall Docker com.docker.hyperkit dockerd 2>/dev/null || true",
-                            t("quick.stopping_docker_desktop"))
-            time.sleep(5)
+            stop_ok = cleaner.stop_docker_wsl()
             current_task_progress.remove_task(current_task)
             overall_progress.update(overall_task, advance=30)
 
@@ -95,37 +74,14 @@ def quick_cleanup(console: Optional[Console] = None):
             overall_progress.update(
                 overall_task, description=f"[cyan]{t('quick.compacting_vhdx')}"
             )
-            if IS_WINDOWS:
-                vhdx_paths = get_docker_vhdx_paths()
-                if not vhdx_paths:
-                    console.print(
-                        f"[yellow]{t('quick.vhdx_not_found', path=os.path.expandvars(r'%LOCALAPPDATA%\Docker\wsl\data\ext4.vhdx'))}[/yellow]"
-                    )
-                else:
-                    for vhdx_path in vhdx_paths:
-                        size_before = os.path.getsize(vhdx_path) / (1024**3)
-                        console.print(f"\n[bold]{t('quick.size_before', size=f'{size_before:.2f}')}[/bold]")
-                        ps_cmd = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
-                        if run_cmd(
-                            console,
-                            f'powershell -Command "{ps_cmd}"',
-                            t("quick.compacting_vhdx_desc"),
-                        ):
-                            time.sleep(5)
-                            if os.path.exists(vhdx_path):
-                                size_after = os.path.getsize(vhdx_path) / (1024**3)
-                                space_saved = size_before - size_after
-                                console.print(f"[bold]{t('quick.size_after', size=f'{size_after:.2f}')}[/bold]")
-                                console.print(
-                                    f"[bold]{t('quick.space_saved', size=f'{space_saved:.2f}')}[/bold]"
-                                )
-            else:
-                console.print(f"[dim]{t('cleanup.vhdx_windows_only')}[/dim]")
+            compact_ok = cleaner.compact_vhdx_files()
             current_task_progress.remove_task(current_task)
             overall_progress.update(overall_task, advance=30)
             overall_progress.update(
                 overall_task, description=f"[green]{t('quick.cleanup_done')}"
             )
+            if not (docker_ok and stop_ok and compact_ok):
+                return False
         except Exception as e:
             console.print(f"[red]{t('quick.cleanup_error', error=str(e))}[/red]")
             return False

@@ -11,13 +11,12 @@ Usage:
 
 import json
 import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
-from docker_cleaner.core import get_docker_vhdx_paths
+from docker_cleaner.core import WSLDockerCleaner
 
 mcp = FastMCP(
     "Varedura",
@@ -90,42 +89,24 @@ def docker_quick_cleanup() -> str:
 
     ⚠️  DESTRUCTIVE: This removes all stopped containers, unused images,
     unused volumes, unused networks, and build cache. Running containers
-    are stopped first.
+    are preserved.
 
     Returns the space reclaimed by each step.
     """
-    if not _is_docker_running():
-        return json.dumps({"error": "Docker is not running. Start Docker Desktop first."}, indent=2)
-
-    steps = [
-        ("stop_containers", "docker ps -q"),
-        ("prune_containers", "docker container prune -f"),
-        ("prune_images", "docker image prune -af"),
-        ("prune_volumes", "docker volume prune -f"),
-        ("prune_networks", "docker network prune -f"),
-        ("system_prune", "docker system prune -af --volumes"),
-        ("prune_builder", "docker builder prune -af"),
-    ]
-
-    results: dict[str, Any] = {}
-
-    # Stop running containers first
-    ps_result = _run_cmd("docker ps -q")
-    if ps_result["returncode"] == 0 and ps_result["stdout"]:
-        container_ids = ps_result["stdout"].split()
-        for cid in container_ids:
-            _run_cmd(f"docker stop {cid}", timeout=30)
-        results["stopped_containers"] = len(container_ids)
-    else:
-        results["stopped_containers"] = 0
-
-    # Run prune steps (skip the stop step)
-    for name, cmd in steps[1:]:
-        r = _run_cmd(cmd, timeout=300)
-        results[name] = r["stdout"] if r["returncode"] == 0 else r["stderr"]
-
-    results["timestamp"] = datetime.now().isoformat()
-    return json.dumps(results, indent=2, ensure_ascii=False)
+    cleaner = WSLDockerCleaner()
+    success = cleaner.docker_cleanup(
+        steps=("containers", "images", "volumes", "networks", "system", "builder")
+    )
+    return json.dumps(
+        {
+            "success": success,
+            "running_containers_preserved": True,
+            "steps": [result.to_dict() for result in cleaner.last_cleanup_results],
+            "timestamp": datetime.now().isoformat(),
+        },
+        indent=2,
+        ensure_ascii=False,
+    )
 
 
 @mcp.tool()
@@ -139,52 +120,28 @@ def docker_full_cleanup() -> str:
     On Linux/macOS, performs quick cleanup + Docker service restart.
     VHDX compaction requires administrator privileges on Windows.
     """
-    # Quick cleanup first
-    quick_result = json.loads(docker_quick_cleanup())
-    if "error" in quick_result:
-        return json.dumps(quick_result, indent=2)
+    cleaner = WSLDockerCleaner()
+    quick_success = cleaner.docker_cleanup(
+        steps=("containers", "images", "volumes", "networks", "system", "builder")
+    )
+    quick_steps = [result.to_dict() for result in cleaner.last_cleanup_results]
+    stop_success = cleaner.stop_docker_wsl()
+    compact_success = cleaner.compact_vhdx_files()
 
-    full_result: dict[str, Any] = {"quick_cleanup": quick_result}
-
-    if sys.platform.startswith("win"):
-        # Stop Docker Desktop
-        _run_cmd('taskkill /F /IM "Docker Desktop.exe"', timeout=30)
-        # Stop WSL
-        wsl_r = _run_cmd("wsl --shutdown", timeout=60)
-        full_result["wsl_shutdown"] = "success" if wsl_r["returncode"] == 0 else wsl_r["stderr"]
-
-        # Find and report VHDX files
-        import os
-        vhdx_candidates = get_docker_vhdx_paths()
-        vhdx_info = []
-        for path in vhdx_candidates:
-            if os.path.exists(path):
-                size_gb = os.path.getsize(path) / (1024**3)
-                vhdx_info.append({"path": path, "size_gb": round(size_gb, 2)})
-
-        full_result["vhdx_files"] = vhdx_info
-
-        # Attempt VHDX compaction (requires admin)
-        compact_results = []
-        for vhdx in vhdx_info:
-            compact_cmd = f"powershell -Command \"Optimize-VHD -Path '{vhdx['path']}' -Mode Full\""
-            r = _run_cmd(compact_cmd, timeout=600)
-            new_size = 0.0
-            if os.path.exists(vhdx["path"]):
-                new_size = round(os.path.getsize(vhdx["path"]) / (1024**3), 2)
-            compact_results.append({
-                "path": vhdx["path"],
-                "original_gb": vhdx["size_gb"],
-                "compacted_gb": new_size,
-                "saved_gb": round(vhdx["size_gb"] - new_size, 2),
-                "success": r["returncode"] == 0,
-                "error": r["stderr"] if r["returncode"] != 0 else None,
-            })
-        full_result["vhdx_compaction"] = compact_results
-    else:
-        full_result["note"] = "VHDX compaction is only available on Windows (WSL2)"
-
-    full_result["timestamp"] = datetime.now().isoformat()
+    full_result: dict[str, Any] = {
+        "success": quick_success and stop_success and compact_success,
+        "running_containers_preserved": True,
+        "quick_cleanup": {
+            "success": quick_success,
+            "steps": quick_steps,
+        },
+        "docker_wsl_shutdown": {"success": stop_success},
+        "vhdx_compaction": {
+            "success": compact_success,
+            "steps": [result.to_dict() for result in cleaner.last_compaction_results],
+        },
+        "timestamp": datetime.now().isoformat(),
+    }
     return json.dumps(full_result, indent=2, ensure_ascii=False)
 
 

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import subprocess
 import os
 import sys
 import time
 import shutil
+import tempfile
+from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Callable
@@ -34,6 +37,39 @@ DOCKER_WSL_ROOT_TEMPLATES = (
 
 DOCKER_VHDX_FILENAMES = ("docker_data.vhdx", "ext4.vhdx")
 
+DOCKER_CLEANUP_COMMANDS = {
+    "containers": ("cleanup.removing_containers", "docker container prune -f"),
+    "images": ("cleanup.removing_images", "docker image prune -af"),
+    "volumes": ("cleanup.removing_volumes", "docker volume prune -f"),
+    "networks": ("cleanup.removing_networks", "docker network prune -f"),
+    "system": ("cleanup.full_system_cleanup", "docker system prune -af --volumes"),
+    "builder": ("cleanup.clearing_build_cache", "docker builder prune -af"),
+}
+
+DEFAULT_DOCKER_CLEANUP_STEPS = (
+    "containers",
+    "images",
+    "volumes",
+    "networks",
+    "system",
+    "builder",
+)
+
+
+@dataclass
+class CleanupStepResult:
+    step: str
+    success: bool
+    command: str = ""
+    stdout: str = ""
+    stderr: str = ""
+    returncode: int | None = None
+    skipped: bool = False
+    message: str = ""
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
 
 def get_docker_vhdx_paths() -> list[str]:
     """Discover Docker WSL VHDX files across supported layouts."""
@@ -59,6 +95,21 @@ if IS_WINDOWS:
     import ctypes
 
 
+def _ps_single_quoted(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
+def _powershell_encoded_command(script: str) -> str:
+    encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
+    return f'powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand {encoded}'
+
+
+def _temp_file_path(suffix: str) -> str:
+    handle, path = tempfile.mkstemp(suffix=suffix)
+    os.close(handle)
+    return path
+
+
 class WSLDockerCleaner:
     def __init__(self, console: Optional[Console] = None):
         self.log_messages = []
@@ -66,6 +117,8 @@ class WSLDockerCleaner:
         self.console = console or Console()
         self.logger = logging.getLogger(__name__)
         self.silent_console = False
+        self.last_cleanup_results: list[CleanupStepResult] = []
+        self.last_compaction_results: list[CleanupStepResult] = []
 
     def log(self, message, level="INFO"):
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -213,30 +266,64 @@ class WSLDockerCleaner:
                 f"sudo bash -c '{command}'", shell=True, stream_callback=stream_callback
             )
 
-        # Windows: PowerShell Start-Process RunAs
-        escaped_cmd = (
-            command.replace("'", "'\"'\"'").replace('"', '\\"').replace("\n", "`n")
-        )
-
-        ps_script = f'''
-$outFile = [System.IO.Path]::GetTempFileName().Replace(".tmp", ".txt")
-$errFile = [System.IO.Path]::GetTempFileName().Replace(".tmp", ".txt")
-try {{
-    $proc = Start-Process powershell -ArgumentList "-NoProfile", "-Command", "{escaped_cmd}" -Verb RunAs -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput $outFile -RedirectStandardError $errFile
-    Get-Content $outFile -Raw -Encoding UTF8
-    if (Test-Path $errFile) {{ "[stderr]`n" + (Get-Content $errFile -Raw -Encoding UTF8) }}
-}} finally {{
-    if (Test-Path $outFile) {{ Remove-Item $outFile -Force }}
-    if (Test-Path $errFile) {{ Remove-Item $errFile -Force }}
-}}
-'''
-        ps_cmd = (
-            f'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "{ps_script}"'
-        )
+        ps_cmd = self._build_windows_elevated_command(command)
 
         return await self.run_command_async(
             ps_cmd, shell=True, stream_callback=stream_callback
         )
+
+    def _build_windows_elevated_command(self, command: str) -> str:
+        """Build a RunAs command that captures child stdout/stderr/exit code.
+
+        PowerShell does not allow -Verb RunAs together with
+        -RedirectStandardOutput/-RedirectStandardError. The elevated child writes
+        to temp files itself, and the parent reads those files after -Wait.
+        """
+        out_path = _temp_file_path(".out")
+        err_path = _temp_file_path(".err")
+        code_path = _temp_file_path(".code")
+
+        child_script = f"""
+$code = 0
+try {{
+    & {{
+{command}
+    }} 1> {_ps_single_quoted(out_path)} 2> {_ps_single_quoted(err_path)}
+    if ($null -ne $LASTEXITCODE) {{
+        $code = [int]$LASTEXITCODE
+    }} elseif (-not $?) {{
+        $code = 1
+    }}
+}} catch {{
+    $_ | Out-File -FilePath {_ps_single_quoted(err_path)} -Append -Encoding UTF8
+    $code = 1
+}}
+[System.IO.File]::WriteAllText({_ps_single_quoted(code_path)}, [string]$code)
+exit $code
+"""
+        parent_script = f"""
+$outFile = {_ps_single_quoted(out_path)}
+$errFile = {_ps_single_quoted(err_path)}
+$codeFile = {_ps_single_quoted(code_path)}
+$childScript = {_ps_single_quoted(child_script)}
+try {{
+    $proc = Start-Process powershell.exe -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $childScript) -Verb RunAs -WindowStyle Hidden -Wait -PassThru
+    $codeText = if (Test-Path $codeFile) {{ (Get-Content $codeFile -Raw -Encoding UTF8).Trim() }} else {{ "" }}
+    $code = if ($codeText -match "^-?\\d+$") {{ [int]$codeText }} elseif ($null -ne $proc.ExitCode) {{ [int]$proc.ExitCode }} else {{ 1 }}
+    if (Test-Path $outFile) {{
+        $outText = Get-Content $outFile -Raw -Encoding UTF8
+        if ($outText) {{ [Console]::Out.Write($outText) }}
+    }}
+    if (Test-Path $errFile) {{
+        $errText = Get-Content $errFile -Raw -Encoding UTF8
+        if ($errText) {{ [Console]::Error.Write($errText) }}
+    }}
+    exit $code
+}} finally {{
+    Remove-Item $outFile, $errFile, $codeFile -Force -ErrorAction SilentlyContinue
+}}
+"""
+        return _powershell_encoded_command(parent_script)
 
     def run_elevated_command(self, command: str) -> subprocess.CompletedProcess | None:
         """Versão sync para CLI."""
@@ -244,22 +331,7 @@ try {{
             self.log(t("cleanup.executing_elevated", cmd=command))
             return self.run_command(f"sudo bash -c '{command}'")
 
-        escaped_cmd = command.replace("'", "'\"'\"'").replace('"', '\\"')
-
-        ps_script = f'''
-$outFile = [System.IO.Path]::GetTempFileName().Replace(".tmp", ".txt")
-$errFile = [System.IO.Path]::GetTempFileName().Replace(".tmp", ".txt")
-try {{
-    Start-Process powershell -ArgumentList "-NoProfile", "-Command", "{escaped_cmd}" -Verb RunAs -WindowStyle Hidden -Wait -RedirectStandardOutput $outFile -RedirectStandardError $errFile
-    Get-Content $outFile -Raw -Encoding UTF8
-    if (Test-Path $errFile) {{ Get-Content $errFile -Raw -Encoding UTF8 }}
-}} finally {{
-    Remove-Item $outFile, $errFile -Force -ErrorAction SilentlyContinue
-}}
-'''
-        ps_cmd = (
-            f'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "{ps_script}"'
-        )
+        ps_cmd = self._build_windows_elevated_command(command)
 
         self.log(t("cleanup.executing_elevated", cmd=command))
         return self.run_command(ps_cmd)
@@ -420,8 +492,63 @@ try {{
                 self.log(t("cleanup.vhdx_found", path=path, size=f"{size_gb:.2f}"))
         return total_size, existing_files
 
-    def docker_cleanup(self, prune_only: str | None = None):
-        """Run Docker cleanup. If prune_only is set, only that specific step runs."""
+    def _result_text(self, result: subprocess.CompletedProcess | None) -> tuple[str, str, int | None]:
+        if result is None:
+            return "", "No result returned", None
+        return result.stdout or "", result.stderr or "", result.returncode
+
+    def _run_docker_cleanup_step(self, step: str) -> CleanupStepResult:
+        label_key, command = DOCKER_CLEANUP_COMMANDS[step]
+        self.log(t(label_key))
+        result = self.run_command(command)
+        stdout, stderr, returncode = self._result_text(result)
+        success = returncode == 0
+
+        if step in {"containers", "images", "volumes", "system"}:
+            space = self._parse_reclaimed_space(result)
+            space_key = {
+                "containers": "cleanup.space_containers",
+                "images": "cleanup.space_images",
+                "volumes": "cleanup.space_volumes",
+                "system": "cleanup.space_system",
+            }[step]
+            self.log(t(space_key, space=space))
+
+        return CleanupStepResult(
+            step=step,
+            success=success,
+            command=command,
+            stdout=stdout,
+            stderr=stderr,
+            returncode=returncode,
+        )
+
+    def _normalize_cleanup_steps(
+        self,
+        prune_only: str | None = None,
+        steps: list[str] | tuple[str, ...] | None = None,
+    ) -> tuple[str, ...] | None:
+        if prune_only and steps:
+            self.log(t("cleanup.invalid_step", step=f"{prune_only}, {steps}"), "ERROR")
+            return None
+        selected = (prune_only,) if prune_only else tuple(steps or DEFAULT_DOCKER_CLEANUP_STEPS)
+        invalid = [step for step in selected if step not in DOCKER_CLEANUP_COMMANDS]
+        if invalid:
+            self.log(t("cleanup.invalid_step", step=", ".join(invalid)), "ERROR")
+            return None
+        return selected
+
+    def docker_cleanup(
+        self,
+        prune_only: str | None = None,
+        steps: list[str] | tuple[str, ...] | None = None,
+    ):
+        """Run safe Docker cleanup without stopping running containers."""
+        selected_steps = self._normalize_cleanup_steps(prune_only=prune_only, steps=steps)
+        self.last_cleanup_results = []
+        if not selected_steps:
+            return False
+
         if not self.is_docker_running():
             self.log(t("cleanup.docker_not_running"), "WARNING")
             try:
@@ -473,83 +600,14 @@ try {{
                 return False
 
         self.log(t("cleanup.starting_docker_cleanup"))
+        self.log(t("cleanup.preserve_running_containers"))
 
-        # If prune_only is set, run only that specific step
-        if prune_only == "containers":
-            self.log(t("cleanup.stopping_containers"))
-            containers_result = self.run_command("docker ps -q", capture_output=True)
-            if containers_result and containers_result.stdout.strip():
-                for cid in containers_result.stdout.strip().split("\n"):
-                    if cid.strip():
-                        self.run_command(f"docker stop {cid.strip()}", capture_output=True)
-                        self.log(t("cleanup.container_stopped", id=cid.strip()))
-            self.log(t("cleanup.removing_containers"))
-            result = self.run_command("docker container prune -f")
-            space = self._parse_reclaimed_space(result)
-            self.log(t("cleanup.space_containers", space=space))
-            return True
-        elif prune_only == "images":
-            self.log(t("cleanup.removing_images"))
-            result = self.run_command("docker image prune -af")
-            space = self._parse_reclaimed_space(result)
-            self.log(t("cleanup.space_images", space=space))
-            return True
-        elif prune_only == "volumes":
-            self.log(t("cleanup.removing_volumes"))
-            result = self.run_command("docker volume prune -f")
-            space = self._parse_reclaimed_space(result)
-            self.log(t("cleanup.space_volumes", space=space))
-            return True
-        elif prune_only == "networks":
-            self.log(t("cleanup.removing_networks"))
-            self.run_command("docker network prune -f")
-            return True
-        elif prune_only == "builder":
-            self.log(t("cleanup.clearing_build_cache"))
-            self.run_command("docker builder prune -af")
-            return True
+        self.last_cleanup_results = [
+            self._run_docker_cleanup_step(step) for step in selected_steps
+        ]
 
-        # Full cleanup (original behavior when prune_only is None)
-        self.log(t("cleanup.stopping_containers"))
-        containers_result = self.run_command("docker ps -q", capture_output=True)
-        if containers_result and containers_result.stdout.strip():
-            container_ids = containers_result.stdout.strip().split("\n")
-            for container_id in container_ids:
-                if container_id.strip():
-                    self.run_command(
-                        f"docker stop {container_id.strip()}", capture_output=True
-                    )
-                    self.log(t("cleanup.container_stopped", id=container_id.strip()))
-        else:
-            self.log(t("cleanup.no_containers"))
-
-        self.log(t("cleanup.removing_containers"))
-        result = self.run_command("docker container prune -f")
-        space = self._parse_reclaimed_space(result)
-        self.log(t("cleanup.space_containers", space=space))
-
-        self.log(t("cleanup.removing_images"))
-        result = self.run_command("docker image prune -af")
-        space = self._parse_reclaimed_space(result)
-        self.log(t("cleanup.space_images", space=space))
-
-        self.log(t("cleanup.removing_volumes"))
-        result = self.run_command("docker volume prune -f")
-        space = self._parse_reclaimed_space(result)
-        self.log(t("cleanup.space_volumes", space=space))
-
-        self.log(t("cleanup.removing_networks"))
-        self.run_command("docker network prune -f")
-
-        self.log(t("cleanup.full_system_cleanup"))
-        result = self.run_command("docker system prune -af --volumes")
-        space = self._parse_reclaimed_space(result)
-        self.log(t("cleanup.space_system", space=space))
-
-        self.log(t("cleanup.clearing_build_cache"))
-        self.run_command("docker builder prune -af")
-
-        return True
+        self.log(t("cleanup.docker_cleanup_done"))
+        return all(result.success for result in self.last_cleanup_results)
 
     def stop_docker_wsl(self):
         self.log(t("cleanup.stopping_docker_wsl"))
@@ -564,10 +622,10 @@ try {{
                 "dockerd.exe",
                 "vpnkit.exe",
             ]
-            kill_commands = " & ".join(
-                [f'taskkill /F /IM "{process}" /T 2>nul' for process in docker_processes]
+            kill_commands = "; ".join(
+                [f'taskkill /F /IM "{process}" /T 2>$null' for process in docker_processes]
             )
-            batch_command = f"{kill_commands} & wsl --shutdown"
+            batch_command = f"{kill_commands}; wsl --shutdown"
 
             if not self.is_admin():
                 self.log(t("cleanup.requesting_admin"))
@@ -591,6 +649,94 @@ try {{
         time.sleep(10)
         return bool(result and result.returncode == 0)
 
+    def _ensure_sparse_wslconfig(self) -> str:
+        wslconfig_path = os.path.expanduser("~/.wslconfig")
+        sparse_line = "sparseVhd=true"
+
+        if os.path.exists(wslconfig_path):
+            content = Path(wslconfig_path).read_text(encoding="utf-8")
+            lines = content.splitlines()
+        else:
+            lines = []
+
+        section_start = None
+        next_section = len(lines)
+        for index, line in enumerate(lines):
+            stripped = line.strip().lower()
+            if stripped == "[wsl2]":
+                section_start = index
+                continue
+            if section_start is not None and index > section_start and stripped.startswith("[") and stripped.endswith("]"):
+                next_section = index
+                break
+
+        if section_start is None:
+            if lines and lines[-1].strip():
+                lines.append("")
+            lines.extend(["[wsl2]", sparse_line])
+        else:
+            replaced = False
+            for index in range(section_start + 1, next_section):
+                stripped = lines[index].strip()
+                if stripped and not stripped.startswith(("#", ";")):
+                    key = stripped.split("=", 1)[0].strip().lower()
+                    if key == "sparsevhd":
+                        lines[index] = sparse_line
+                        replaced = True
+                        break
+            if not replaced:
+                lines.insert(next_section, sparse_line)
+
+        Path(wslconfig_path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return wslconfig_path
+
+    def _diskpart_exe(self) -> str:
+        system_diskpart = r"C:\Windows\System32\diskpart.exe"
+        return system_diskpart if os.path.exists(system_diskpart) else "diskpart.exe"
+
+    def _diskpart_script(self, vhdx_path: str) -> str:
+        return (
+            f'select vdisk file="{vhdx_path}"\n'
+            "attach vdisk readonly\n"
+            "compact vdisk\n"
+            "detach vdisk\n"
+        )
+
+    def _result_error_message(self, result: subprocess.CompletedProcess | None) -> str:
+        if result is None:
+            return "Unknown error"
+        return (result.stderr or result.stdout or "Unknown error").strip()
+
+    def _is_optimize_vhd_available(self) -> bool:
+        result = self.run_command(
+            'powershell.exe -NoProfile -Command "Get-Command Optimize-VHD -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name"',
+            capture_output=True,
+        )
+        return bool(result and result.returncode == 0 and result.stdout.strip())
+
+    def _record_vhdx_compaction(
+        self,
+        step: str,
+        success: bool,
+        command: str = "",
+        result: subprocess.CompletedProcess | None = None,
+        skipped: bool = False,
+        message: str = "",
+    ) -> None:
+        stdout, stderr, returncode = self._result_text(result)
+        self.last_compaction_results.append(
+            CleanupStepResult(
+                step=step,
+                success=success,
+                command=command,
+                stdout=stdout,
+                stderr=stderr,
+                returncode=returncode,
+                skipped=skipped,
+                message=message,
+            )
+        )
+
     def configure_wsl_sparse(self):
         if not IS_WINDOWS:
             self.log(t("cleanup.sparse_windows_only"), "INFO")
@@ -608,17 +754,8 @@ try {{
         if not self.is_admin():
             self.log(t("cleanup.requesting_admin"))
         result = self.run_elevated_command(sparse_commands)
-        wslconfig_path = os.path.expanduser("~/.wslconfig")
-        wslconfig_content = """[wsl2]
-sparseVhd=true
-memory=4GB
-processors=4
-swap=2GB
-swapFile=%TEMP%\\wsl-swap.vhdx
-"""
         try:
-            with open(wslconfig_path, "w", encoding="utf-8") as f:
-                f.write(wslconfig_content)
+            wslconfig_path = self._ensure_sparse_wslconfig()
             self.log(t("cleanup.wslconfig_updated", path=wslconfig_path))
         except Exception as e:
             self.log(t("cleanup.wslconfig_error", error=str(e)), "ERROR")
@@ -628,12 +765,20 @@ swapFile=%TEMP%\\wsl-swap.vhdx
         if not IS_WINDOWS:
             self.log(t("cleanup.vhdx_windows_only"), "INFO")
             return True
+        self.last_compaction_results = []
         needs_elevation = not self.is_admin()
         if needs_elevation:
             self.log(t("cleanup.requesting_admin"))
         self.log(t("cleanup.compacting_vhdx"))
         
         vhdx_paths = self._get_all_vhdx_paths()
+        if not vhdx_paths:
+            self.log(t("cleanup.no_vhdx_files"), "WARNING")
+            self._record_vhdx_compaction(
+                "discover_vhdx", False, skipped=True, message=t("cleanup.no_vhdx_files")
+            )
+            return False
+
         success = False
         
         for vhdx_path in vhdx_paths:
@@ -647,17 +792,23 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                 
                 if not self._wait_for_vhdx_unlock(vhdx_path, timeout=90):
                     self.log(f"Timeout waiting for lock release: {vhdx_path}. O arquivo pode estar sendo usado por outro processo. Pulando compactação.", "ERROR")
+                    self._record_vhdx_compaction(
+                        "unlock_vhdx",
+                        False,
+                        skipped=True,
+                        message=f"Timeout waiting for lock release: {vhdx_path}",
+                    )
                     continue
                 
                 # Diskpart approach
-                diskpart_script_path = os.path.join(os.environ.get("TEMP", "C:\\Temp"), "compact_vhdx.txt")
-                diskpart_script = f'select vdisk file="{vhdx_path}"\nattach vdisk readonly\ncompact vdisk\ndetach vdisk\n'
+                diskpart_script_path = _temp_file_path("_compact_vhdx.txt")
+                diskpart_script = self._diskpart_script(vhdx_path)
                 
                 try:
                     with open(diskpart_script_path, "w", encoding="utf-8") as f:
                         f.write(diskpart_script)
                     
-                    cmd = f'diskpart /s "{diskpart_script_path}"'
+                    cmd = f'& "{self._diskpart_exe()}" /s "{diskpart_script_path}"'
                     result = self.run_elevated_command(cmd)
                     
                     if result and result.returncode == 0:
@@ -670,14 +821,45 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                             self.log(
                                 t("cleanup.compact_done", size=f"{size_after_gb:.2f}", saved=f"{space_saved:.2f}")
                             )
+                            self._record_vhdx_compaction(
+                                "diskpart",
+                                True,
+                                command=cmd,
+                                result=result,
+                                message=vhdx_path,
+                            )
                             success = True
                         else:
                             self.log(t("cleanup.file_not_found_after", path=vhdx_path), "ERROR")
+                            self._record_vhdx_compaction(
+                                "diskpart",
+                                False,
+                                command=cmd,
+                                result=result,
+                                message=t("cleanup.file_not_found_after", path=vhdx_path),
+                            )
                     else:
-                        error_msg = result.stderr if result and hasattr(result, "stderr") and result.stderr else "Unknown error"
-                        self.log(f"Diskpart failed: {error_msg}. Falling back to Optimize-VHD...", "WARNING")
+                        error_msg = self._result_error_message(result)
+                        self.log(t("cleanup.diskpart_failed", error=error_msg), "WARNING")
+                        self._record_vhdx_compaction(
+                            "diskpart",
+                            False,
+                            command=cmd,
+                            result=result,
+                            message=error_msg,
+                        )
+
+                        if not self._is_optimize_vhd_available():
+                            self.log(t("cleanup.optimize_vhd_unavailable"), "ERROR")
+                            self._record_vhdx_compaction(
+                                "optimize_vhd",
+                                False,
+                                skipped=True,
+                                message=t("cleanup.optimize_vhd_unavailable"),
+                            )
+                            continue
                         
-                        ps_command = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
+                        ps_command = f"Optimize-VHD -Path {_ps_single_quoted(vhdx_path)} -Mode Full"
                         result2 = self.run_elevated_command(ps_command)
                         if result2 and result2.returncode == 0:
                             time.sleep(2)
@@ -688,10 +870,24 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                             self.log(
                                 t("cleanup.compact_done", size=f"{size_after_gb:.2f}", saved=f"{space_saved:.2f}")
                             )
+                            self._record_vhdx_compaction(
+                                "optimize_vhd",
+                                True,
+                                command=ps_command,
+                                result=result2,
+                                message=vhdx_path,
+                            )
                             success = True
                         else:
-                            err2 = result2.stderr if result2 and hasattr(result2, "stderr") and result2.stderr else "Unknown error"
+                            err2 = self._result_error_message(result2)
                             self.log(t("cleanup.compact_error", path=vhdx_path) + f" - {err2}", "ERROR")
+                            self._record_vhdx_compaction(
+                                "optimize_vhd",
+                                False,
+                                command=ps_command,
+                                result=result2,
+                                message=err2,
+                            )
                 finally:
                     if os.path.exists(diskpart_script_path):
                         try:
@@ -911,79 +1107,47 @@ swapFile=%TEMP%\\wsl-swap.vhdx
     # ========== MÉTODOS ASYNC COM STREAMING ==========
 
     async def docker_cleanup_async(
-        self, stream_callback: Optional[Callable[[str], None]] = None
+        self,
+        stream_callback: Optional[Callable[[str], None]] = None,
+        steps: list[str] | tuple[str, ...] | None = None,
     ):
         """Versão async de docker_cleanup com streaming de saída em tempo real."""
+        selected_steps = self._normalize_cleanup_steps(steps=steps)
+        self.last_cleanup_results = []
+        if not selected_steps:
+            return False
+
         if stream_callback:
             stream_callback(f"{t('cleanup.starting_docker_cleanup')}\n")
         else:
             self.log(t("cleanup.starting_docker_cleanup"))
 
-        # Parar containers
         if stream_callback:
-            stream_callback(f"{t('cleanup.stopping_containers')}\n")
+            stream_callback(f"{t('cleanup.preserve_running_containers')}\n")
 
-        containers_result = await self.run_command_async(
-            "docker ps -q", shell=True, stream_callback=stream_callback
-        )
-        if containers_result and containers_result.stdout.strip():
-            container_ids = containers_result.stdout.strip().split("\n")
-            for container_id in container_ids:
-                if container_id.strip():
-                    await self.run_command_async(
-                        f"docker stop {container_id.strip()}",
-                        shell=True,
-                        stream_callback=stream_callback,
-                    )
-
-        # Prune containers
-        if stream_callback:
-            stream_callback(f"{t('cleanup.removing_containers')}\n")
-        await self.run_command_async(
-            "docker container prune -f", shell=True, stream_callback=stream_callback
-        )
-
-        # Prune images
-        if stream_callback:
-            stream_callback(f"{t('cleanup.removing_images')}\n")
-        await self.run_command_async(
-            "docker image prune -af", shell=True, stream_callback=stream_callback
-        )
-
-        # Prune volumes
-        if stream_callback:
-            stream_callback(f"{t('cleanup.removing_volumes')}\n")
-        await self.run_command_async(
-            "docker volume prune -f", shell=True, stream_callback=stream_callback
-        )
-
-        # Prune networks
-        if stream_callback:
-            stream_callback(f"{t('cleanup.removing_networks')}\n")
-        await self.run_command_async(
-            "docker network prune -f", shell=True, stream_callback=stream_callback
-        )
-
-        # System prune completo
-        if stream_callback:
-            stream_callback(f"{t('cleanup.full_system_cleanup')}\n")
-        await self.run_command_async(
-            "docker system prune -af --volumes",
-            shell=True,
-            stream_callback=stream_callback,
-        )
-
-        # Build cache
-        if stream_callback:
-            stream_callback(f"{t('cleanup.clearing_build_cache')}\n")
-        await self.run_command_async(
-            "docker builder prune -af", shell=True, stream_callback=stream_callback
-        )
+        for step in selected_steps:
+            label_key, command = DOCKER_CLEANUP_COMMANDS[step]
+            if stream_callback:
+                stream_callback(f"{t(label_key)}\n")
+            result = await self.run_command_async(
+                command, shell=True, stream_callback=stream_callback
+            )
+            stdout, stderr, returncode = self._result_text(result)
+            self.last_cleanup_results.append(
+                CleanupStepResult(
+                    step=step,
+                    success=returncode == 0,
+                    command=command,
+                    stdout=stdout,
+                    stderr=stderr,
+                    returncode=returncode,
+                )
+            )
 
         if stream_callback:
             stream_callback(f"{t('cleanup.docker_cleanup_done')}\n")
 
-        return True
+        return all(result.success for result in self.last_cleanup_results)
 
     async def stop_docker_wsl_async(
         self, stream_callback: Optional[Callable[[str], None]] = None
@@ -1001,12 +1165,10 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                 "dockerd.exe",
                 "vpnkit.exe",
             ]
-            processes_str = " ".join([f'/IM "{p}"' for p in docker_processes])
-
-            ps_batch_cmd = f"""
-taskkill /F {processes_str} 2>nul; 
-wsl --shutdown
-"""
+            kill_commands = "; ".join(
+                [f'taskkill /F /IM "{process}" /T 2>$null' for process in docker_processes]
+            )
+            ps_batch_cmd = f"{kill_commands}; wsl --shutdown"
 
             if stream_callback:
                 stream_callback(f"{t('cleanup.batch_kill')}\n")
@@ -1075,18 +1237,8 @@ wsl --shutdown
             if stream_callback:
                 stream_callback(f"[WARNING] set-sparse failed: {e}\n")
 
-        # .wslconfig (non-elevated)
-        wslconfig_path = os.path.expanduser("~/.wslconfig")
-        wslconfig_content = """[wsl2]
-sparseVhd=true
-memory=4GB
-processors=4
-swap=2GB
-swapFile=%TEMP%\\wsl-swap.vhdx
-"""
         try:
-            with open(wslconfig_path, "w", encoding="utf-8") as f:
-                f.write(wslconfig_content)
+            wslconfig_path = self._ensure_sparse_wslconfig()
             if stream_callback:
                 stream_callback(f"{t('cleanup.wslconfig_updated', path=wslconfig_path)}\n")
         except Exception as e:
@@ -1104,10 +1256,18 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                 stream_callback(f"{t('cleanup.vhdx_windows_only')}\n")
             return True
 
+        self.last_compaction_results = []
         if stream_callback:
             stream_callback(f"{t('cleanup.compacting_vhdx')}\n")
 
         vhdx_paths = self._get_all_vhdx_paths()
+        if not vhdx_paths:
+            if stream_callback:
+                stream_callback(f"{t('cleanup.no_vhdx_files')}\n")
+            self._record_vhdx_compaction(
+                "discover_vhdx", False, skipped=True, message=t("cleanup.no_vhdx_files")
+            )
+            return False
 
         success = False
         for vhdx_path in vhdx_paths:
@@ -1127,16 +1287,22 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                 if not unlocked:
                     if stream_callback:
                         stream_callback(f"[ERROR] Timeout waiting for lock release: {vhdx_path}. O arquivo pode estar sendo usado. Pulando.\n")
+                    self._record_vhdx_compaction(
+                        "unlock_vhdx",
+                        False,
+                        skipped=True,
+                        message=f"Timeout waiting for lock release: {vhdx_path}",
+                    )
                     continue
 
-                diskpart_script_path = os.path.join(os.environ.get("TEMP", "C:\\Temp"), "compact_vhdx_async.txt")
-                diskpart_script = f'select vdisk file="{vhdx_path}"\nattach vdisk readonly\ncompact vdisk\ndetach vdisk\n'
+                diskpart_script_path = _temp_file_path("_compact_vhdx_async.txt")
+                diskpart_script = self._diskpart_script(vhdx_path)
                 
                 try:
                     with open(diskpart_script_path, "w", encoding="utf-8") as f:
                         f.write(diskpart_script)
                     
-                    cmd = f'diskpart /s "{diskpart_script_path}"'
+                    cmd = f'& "{self._diskpart_exe()}" /s "{diskpart_script_path}"'
                     result = await self.run_elevated_command_async(
                         cmd, stream_callback=stream_callback
                     )
@@ -1153,18 +1319,49 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                                 stream_callback(
                                     f"{t('cleanup.compact_done', size=f'{size_after_gb:.2f}', saved=f'{space_saved:.2f}')}\n"
                                 )
+                            self._record_vhdx_compaction(
+                                "diskpart",
+                                True,
+                                command=cmd,
+                                result=result,
+                                message=vhdx_path,
+                            )
                             success = True
                         else:
                             if stream_callback:
                                 stream_callback(
                                     f"{t('cleanup.file_not_found_after', path=vhdx_path)}\n"
                                 )
+                            self._record_vhdx_compaction(
+                                "diskpart",
+                                False,
+                                command=cmd,
+                                result=result,
+                                message=t("cleanup.file_not_found_after", path=vhdx_path),
+                            )
                     else:
-                        error_msg = result.stderr if result and hasattr(result, "stderr") and result.stderr else "Unknown error"
+                        error_msg = self._result_error_message(result)
                         if stream_callback:
-                            stream_callback(f"[WARNING] Diskpart failed: {error_msg}. Falling back to Optimize-VHD...\n")
+                            stream_callback(f"{t('cleanup.diskpart_failed', error=error_msg)}\n")
+                        self._record_vhdx_compaction(
+                            "diskpart",
+                            False,
+                            command=cmd,
+                            result=result,
+                            message=error_msg,
+                        )
+                        if not self._is_optimize_vhd_available():
+                            if stream_callback:
+                                stream_callback(f"{t('cleanup.optimize_vhd_unavailable')}\n")
+                            self._record_vhdx_compaction(
+                                "optimize_vhd",
+                                False,
+                                skipped=True,
+                                message=t("cleanup.optimize_vhd_unavailable"),
+                            )
+                            continue
                             
-                        ps_command = f'Optimize-VHD -Path "{vhdx_path}" -Mode Full'
+                        ps_command = f"Optimize-VHD -Path {_ps_single_quoted(vhdx_path)} -Mode Full"
                         result2 = await self.run_elevated_command_async(
                             ps_command, stream_callback=stream_callback
                         )
@@ -1180,11 +1377,25 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                                 stream_callback(
                                     f"{t('cleanup.compact_done', size=f'{size_after_gb:.2f}', saved=f'{space_saved:.2f}')}\n"
                                 )
+                            self._record_vhdx_compaction(
+                                "optimize_vhd",
+                                True,
+                                command=ps_command,
+                                result=result2,
+                                message=vhdx_path,
+                            )
                             success = True
                         else:
-                            err2 = result2.stderr if result2 and hasattr(result2, "stderr") and result2.stderr else "Unknown error"
+                            err2 = self._result_error_message(result2)
                             if stream_callback:
                                 stream_callback(f"{t('cleanup.compact_error', path=vhdx_path)} - {err2}\n")
+                            self._record_vhdx_compaction(
+                                "optimize_vhd",
+                                False,
+                                command=ps_command,
+                                result=result2,
+                                message=err2,
+                            )
                 finally:
                     if os.path.exists(diskpart_script_path):
                         try:
@@ -1263,6 +1474,8 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                 )
                 if self.docker_cleanup():
                     self.log(t("cleanup.docker_cleanup_success"))
+                else:
+                    raise RuntimeError(t("cleanup.cleaning_docker"))
                 current_task_progress.remove_task(current_task)
                 overall_progress.update(overall_task, advance=30)
 
@@ -1270,7 +1483,8 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                 overall_progress.update(
                     overall_task, description=f"[cyan]{t('cleanup.stopping_docker_wsl_task')}"
                 )
-                self.stop_docker_wsl()
+                if not self.stop_docker_wsl():
+                    raise RuntimeError(t("cleanup.stopping_docker_wsl_task"))
                 current_task_progress.remove_task(current_task)
                 overall_progress.update(overall_task, advance=15)
 
@@ -1280,7 +1494,8 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                 overall_progress.update(
                     overall_task, description=f"[cyan]{t('cleanup.configuring_sparse_task')}"
                 )
-                self.configure_wsl_sparse()
+                if not self.configure_wsl_sparse():
+                    raise RuntimeError(t("cleanup.configuring_sparse_task"))
                 current_task_progress.remove_task(current_task)
                 overall_progress.update(overall_task, advance=15)
 
@@ -1290,7 +1505,8 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                 overall_progress.update(
                     overall_task, description=f"[cyan]{t('cleanup.compacting_vhdx_task')}"
                 )
-                self.compact_vhdx_files()
+                if not self.compact_vhdx_files():
+                    raise RuntimeError(t("cleanup.compacting_vhdx_task"))
                 current_task_progress.remove_task(current_task)
                 overall_progress.update(overall_task, advance=20)
 
@@ -1300,7 +1516,8 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                 overall_progress.update(
                     overall_task, description=f"[cyan]{t('cleanup.cleaning_temp_task')}"
                 )
-                self.cleanup_temp_files()
+                if not self.cleanup_temp_files():
+                    raise RuntimeError(t("cleanup.cleaning_temp_task"))
                 current_task_progress.remove_task(current_task)
                 overall_progress.update(overall_task, advance=10)
 
@@ -1308,7 +1525,8 @@ swapFile=%TEMP%\\wsl-swap.vhdx
                 overall_progress.update(
                     overall_task, description=f"[cyan]{t('cleanup.emptying_recycle_task')}"
                 )
-                self.cleanup_recycle_bin()
+                if not self.cleanup_recycle_bin():
+                    raise RuntimeError(t("cleanup.emptying_recycle_task"))
                 current_task_progress.remove_task(current_task)
                 overall_progress.update(overall_task, advance=5)
 
