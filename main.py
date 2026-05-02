@@ -364,6 +364,7 @@ def run_docker_cleanup():
         return
 
     success = False
+    cleaner = None
     try:
         from docker_cleaner.core import WSLDockerCleaner
         from rich.progress import Progress, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn
@@ -429,11 +430,16 @@ def run_docker_cleanup():
 
         success = not failures
         if failures:
-            console.print(f"[red]{t('menu.error_during_cleanup', error=', '.join(failures))}[/]")
+            error_message = t('menu.error_during_cleanup', error=', '.join(failures))
+            cleaner.log(error_message, "ERROR")
+            console.print(f"[red]{error_message}[/]")
     except ImportError as e:
         console.print(f"[red]{t('menu.error_loading_cleaner', error=e)}[/]")
     except Exception as e:
-        console.print(f"[red]{t('menu.error_during_cleanup', error=e)}[/]")
+        error_message = t("menu.error_during_cleanup", error=e)
+        if cleaner:
+            cleaner.log(error_message, "ERROR")
+        console.print(f"[red]{error_message}[/]")
     finally:
         mascot.show_result(success, t("mascot.success") if success else t("mascot.error"))
 

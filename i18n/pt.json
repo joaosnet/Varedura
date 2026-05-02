@@ -97,6 +97,8 @@
     "cleanup.wslconfig_updated": ".wslconfig atualizado: {path}",
     "cleanup.wslconfig_error": "Erro .wslconfig: {error}",
     "cleanup.wsl_distro_error": "Erro listando WSL distros.",
+    "cleanup.no_docker_wsl_distros": "Nenhuma distro WSL do Docker encontrada; mantendo apenas .wslconfig atualizado.",
+    "cleanup.sparse_manage_warning": "Não foi possível aplicar sparse via wsl --manage: {error}. Continuando com .wslconfig preservado.",
     "cleanup.admin_recommended": "Execução como administrador recomendada",
     "cleanup.compacting_vhdx": "=== COMPACTANDO ARQUIVOS VHDX ===",
     "cleanup.compacting_file": "Compactando {path} ({size} GB)...",

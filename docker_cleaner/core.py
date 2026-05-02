@@ -6,6 +6,7 @@ import asyncio
 import base64
 import subprocess
 import os
+import re
 import sys
 import time
 import shutil
@@ -110,6 +111,14 @@ def _temp_file_path(suffix: str) -> str:
     return path
 
 
+def _strip_powershell_clixml(text: str) -> str:
+    """Remove PowerShell CLIXML progress records from captured streams."""
+    if not text or "#< CLIXML" not in text:
+        return text or ""
+    cleaned = re.sub(r"#< CLIXML\s*<Objs\b.*?</Objs>\s*", "", text, flags=re.DOTALL)
+    return cleaned.strip()
+
+
 class WSLDockerCleaner:
     def __init__(self, console: Optional[Console] = None):
         self.log_messages = []
@@ -119,6 +128,13 @@ class WSLDockerCleaner:
         self.silent_console = False
         self.last_cleanup_results: list[CleanupStepResult] = []
         self.last_compaction_results: list[CleanupStepResult] = []
+        self.daily_log_writer = None
+        try:
+            from cli.richlog import DailyLogWriter
+
+            self.daily_log_writer = DailyLogWriter()
+        except Exception:
+            self.daily_log_writer = None
 
     def log(self, message, level="INFO"):
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -126,6 +142,12 @@ class WSLDockerCleaner:
         if not getattr(self, 'silent_console', False):
             self.console.print(f"[bold]{timestamp}[/bold] [{level}] {message}")
         self.log_messages.append(log_msg)
+        if self.daily_log_writer:
+            try:
+                self.daily_log_writer.write(f"[{level}] {message}\n")
+                self.daily_log_writer.flush()
+            except Exception:
+                pass
         # Also log via standard logging so the UI logger captures it
         try:
             if level.upper() == "ERROR":
@@ -148,6 +170,9 @@ class WSLDockerCleaner:
                 shell=shell,
                 timeout=300,  # 5 minutos timeout
             )
+            if capture_output:
+                result.stdout = _strip_powershell_clixml(result.stdout or "")
+                result.stderr = _strip_powershell_clixml(result.stderr or "")
             if result.returncode != 0 and result.stderr:
                 self.log(t("cleanup.error", error=result.stderr), "ERROR")
             return result
@@ -224,8 +249,11 @@ class WSLDockerCleaner:
             returncode = await process.wait()
 
             # Log de erros se houver
-            if returncode != 0 and stderr_lines:
-                error_msg = "\n".join(stderr_lines)
+            stdout_text = _strip_powershell_clixml("\n".join(stdout_lines))
+            stderr_text = _strip_powershell_clixml("\n".join(stderr_lines))
+
+            if returncode != 0 and stderr_text:
+                error_msg = stderr_text
                 if stream_callback:
                     stream_callback(f"{t('cleanup.error_code', code=returncode, error=error_msg)}\n")
                 else:
@@ -235,8 +263,8 @@ class WSLDockerCleaner:
             return subprocess.CompletedProcess(
                 args=command,
                 returncode=returncode,
-                stdout="\n".join(stdout_lines),
-                stderr="\n".join(stderr_lines),
+                stdout=stdout_text,
+                stderr=stderr_text,
             )
 
         except asyncio.TimeoutError:
@@ -690,6 +718,22 @@ try {{
         Path(wslconfig_path).write_text("\n".join(lines) + "\n", encoding="utf-8")
         return wslconfig_path
 
+    def _parse_wsl_distros(self, output: str) -> list[str]:
+        distros: list[str] = []
+        for raw_line in (output or "").replace("\x00", "").splitlines():
+            line = raw_line.strip().lstrip("*").strip()
+            if not line or line.lower().startswith("name"):
+                continue
+            name = line.split()[0]
+            if name and name not in distros:
+                distros.append(name)
+        return distros
+
+    def _docker_wsl_sparse_distros(self, output: str) -> list[str]:
+        available = self._parse_wsl_distros(output)
+        wanted = {"docker-desktop", "docker-desktop-data"}
+        return [distro for distro in available if distro.lower() in wanted]
+
     def _diskpart_exe(self) -> str:
         system_diskpart = r"C:\Windows\System32\diskpart.exe"
         return system_diskpart if os.path.exists(system_diskpart) else "diskpart.exe"
@@ -743,10 +787,21 @@ try {{
             return True
         self.log(t("cleanup.configuring_sparse"))
         result = self.run_command("wsl -l -v")
-        if not result:
+        if not result or result.returncode != 0:
+            self.log(t("cleanup.wsl_distro_error"), "ERROR")
             return False
-        distributions = ["docker-desktop", "docker-desktop-data"]
-        sparse_commands = "; ".join(
+        distributions = self._docker_wsl_sparse_distros(result.stdout)
+        if not distributions:
+            self.log(t("cleanup.no_docker_wsl_distros"), "WARNING")
+            try:
+                wslconfig_path = self._ensure_sparse_wslconfig()
+                self.log(t("cleanup.wslconfig_updated", path=wslconfig_path))
+            except Exception as e:
+                self.log(t("cleanup.wslconfig_error", error=str(e)), "ERROR")
+                return False
+            return True
+
+        sparse_commands = "\n".join(
             [f'wsl --manage "{distro}" --set-sparse true' for distro in distributions]
         )
         for distro in distributions:
@@ -759,7 +814,9 @@ try {{
             self.log(t("cleanup.wslconfig_updated", path=wslconfig_path))
         except Exception as e:
             self.log(t("cleanup.wslconfig_error", error=str(e)), "ERROR")
-        return bool(result and result.returncode == 0)
+        if result and result.returncode != 0:
+            self.log(t("cleanup.sparse_manage_warning", error=self._result_error_message(result)), "WARNING")
+        return True
 
     def compact_vhdx_files(self):
         if not IS_WINDOWS:
@@ -1220,8 +1277,21 @@ try {{
                 stream_callback(f"{t('cleanup.wsl_distro_error')}\n")
             return False
 
-        distributions = ["docker-desktop", "docker-desktop-data"]
-        sparse_cmds = "; ".join(
+        distributions = self._docker_wsl_sparse_distros(result.stdout)
+        if not distributions:
+            if stream_callback:
+                stream_callback(f"{t('cleanup.no_docker_wsl_distros')}\n")
+            try:
+                wslconfig_path = self._ensure_sparse_wslconfig()
+                if stream_callback:
+                    stream_callback(f"{t('cleanup.wslconfig_updated', path=wslconfig_path)}\n")
+            except Exception as e:
+                if stream_callback:
+                    stream_callback(f"{t('cleanup.wslconfig_error', error=str(e))}\n")
+                return False
+            return True
+
+        sparse_cmds = "\n".join(
             [f'wsl --manage "{distro}" --set-sparse true' for distro in distributions]
         )
 
@@ -1236,6 +1306,7 @@ try {{
         except Exception as e:
             if stream_callback:
                 stream_callback(f"[WARNING] set-sparse failed: {e}\n")
+            result = subprocess.CompletedProcess(sparse_cmds, 1, "", str(e))
 
         try:
             wslconfig_path = self._ensure_sparse_wslconfig()
@@ -1244,6 +1315,9 @@ try {{
         except Exception as e:
             if stream_callback:
                 stream_callback(f"{t('cleanup.wslconfig_error', error=str(e))}\n")
+
+        if result and result.returncode != 0 and stream_callback:
+            stream_callback(f"{t('cleanup.sparse_manage_warning', error=self._result_error_message(result))}\n")
 
         return True
 

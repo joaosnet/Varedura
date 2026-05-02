@@ -89,6 +89,14 @@ def test_windows_elevated_command_uses_temp_files_not_start_process_redirects(mo
     assert "C:\\tmp\\code.txt" in parent_script
 
 
+def test_powershell_clixml_progress_is_removed_from_stderr():
+    clixml = """#< CLIXML
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04"><Obj S="progress"><MS><PR N="Record"><AV>Preparando módulos para primeiro uso.</AV></PR></MS></Obj></Objs>
+"""
+
+    assert core._strip_powershell_clixml(clixml) == ""
+
+
 def test_stop_docker_wsl_uses_elevated_batch_without_process_errors(monkeypatch):
     monkeypatch.setattr(core, "IS_WINDOWS", True)
 
@@ -143,7 +151,7 @@ def test_configure_wsl_sparse_elevates_manage_commands(monkeypatch, tmp_path):
 
     def fake_run_command(command: str, capture_output=True, shell=True):
         assert command == "wsl -l -v"
-        return subprocess.CompletedProcess(args=command, returncode=0, stdout="docker-desktop\n", stderr="")
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout="docker-desktop\n docker-desktop-data\n", stderr="")
 
     def fake_run_elevated_command(command: str, stream_callback=None):
         captured_commands.append(command)
@@ -163,6 +171,74 @@ def test_configure_wsl_sparse_elevates_manage_commands(monkeypatch, tmp_path):
     assert "processors=6" in wslconfig
     assert "sparseVhd=true" in wslconfig
     assert not any(level == "ERROR" for level, _message in log_messages)
+
+
+def test_configure_wsl_sparse_skips_missing_docker_distros_and_keeps_config(monkeypatch, tmp_path):
+    monkeypatch.setattr(core, "IS_WINDOWS", True)
+
+    cleaner = WSLDockerCleaner()
+    captured_commands = []
+    log_messages = []
+
+    monkeypatch.setattr(
+        cleaner,
+        "log",
+        lambda message, level="INFO": log_messages.append((level, message)),
+    )
+    monkeypatch.setattr(
+        core.os.path,
+        "expanduser",
+        lambda path: str(tmp_path / ".wslconfig") if path == "~/.wslconfig" else path,
+    )
+
+    def fake_run_command(command: str, capture_output=True, shell=True):
+        assert command == "wsl -l -v"
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout="Ubuntu\n", stderr="")
+
+    def fake_run_elevated_command(command: str, stream_callback=None):
+        captured_commands.append(command)
+        return subprocess.CompletedProcess(args=command, returncode=1, stdout="", stderr="should not run")
+
+    monkeypatch.setattr(cleaner, "run_command", fake_run_command)
+    monkeypatch.setattr(cleaner, "run_elevated_command", fake_run_elevated_command)
+
+    assert cleaner.configure_wsl_sparse() is True
+    assert captured_commands == []
+    assert "sparseVhd=true" in (tmp_path / ".wslconfig").read_text(encoding="utf-8")
+    assert not any(level == "ERROR" for level, _message in log_messages)
+
+
+def test_configure_wsl_sparse_warns_but_does_not_fail_when_manage_fails(monkeypatch, tmp_path):
+    monkeypatch.setattr(core, "IS_WINDOWS", True)
+
+    cleaner = WSLDockerCleaner()
+    log_messages = []
+
+    monkeypatch.setattr(cleaner, "is_admin", lambda: False)
+    monkeypatch.setattr(
+        cleaner,
+        "log",
+        lambda message, level="INFO": log_messages.append((level, message)),
+    )
+    monkeypatch.setattr(
+        core.os.path,
+        "expanduser",
+        lambda path: str(tmp_path / ".wslconfig") if path == "~/.wslconfig" else path,
+    )
+
+    def fake_run_command(command: str, capture_output=True, shell=True):
+        assert command == "wsl -l -v"
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout="docker-desktop\n", stderr="")
+
+    def fake_run_elevated_command(command: str, stream_callback=None):
+        return subprocess.CompletedProcess(args=command, returncode=1, stdout="", stderr="set-sparse unsupported")
+
+    monkeypatch.setattr(cleaner, "run_command", fake_run_command)
+    monkeypatch.setattr(cleaner, "run_elevated_command", fake_run_elevated_command)
+
+    assert cleaner.configure_wsl_sparse() is True
+    assert "sparseVhd=true" in (tmp_path / ".wslconfig").read_text(encoding="utf-8")
+    assert any(level == "WARNING" and "set-sparse unsupported" in message for level, message in log_messages)
 
 
 def test_compact_vhdx_files_requests_elevation_and_falls_back(monkeypatch, tmp_path):
