@@ -678,6 +678,12 @@ try {{
         return bool(result and result.returncode == 0)
 
     def _ensure_sparse_wslconfig(self) -> str:
+        """Ensure sparseVhd=true is set under [experimental] in .wslconfig.
+
+        Also fixes common .wslconfig issues:
+        - Moves sparseVhd from [wsl2] to [experimental] (correct section)
+        - Fixes swapFile paths that use %TEMP% (not supported, causes parse errors)
+        """
         wslconfig_path = os.path.expanduser("~/.wslconfig")
         sparse_line = "sparseVhd=true"
 
@@ -687,24 +693,41 @@ try {{
         else:
             lines = []
 
-        section_start = None
-        next_section = len(lines)
+        # Pass 1: Remove sparseVhd from [wsl2] and fix swapFile paths
+        current_section = None
         for index, line in enumerate(lines):
             stripped = line.strip().lower()
-            if stripped == "[wsl2]":
-                section_start = index
+            if stripped.startswith("[") and stripped.endswith("]"):
+                current_section = stripped
                 continue
-            if section_start is not None and index > section_start and stripped.startswith("[") and stripped.endswith("]"):
-                next_section = index
+            if current_section == "[wsl2]":
+                key = stripped.split("=", 1)[0].strip()
+                if key == "sparsevhd":
+                    lines[index] = ""
+                elif key == "swapfile" and "%" in line:
+                    val = line.split("=", 1)[1].strip()
+                    expanded = os.path.expandvars(val).replace("\\", "/")
+                    lines[index] = f"swapFile={expanded}"
+
+        # Pass 2: Ensure [experimental] section has sparseVhd=true
+        exp_start = None
+        exp_next = len(lines)
+        for index, line in enumerate(lines):
+            stripped = line.strip().lower()
+            if stripped == "[experimental]":
+                exp_start = index
+                continue
+            if exp_start is not None and index > exp_start and stripped.startswith("[") and stripped.endswith("]"):
+                exp_next = index
                 break
 
-        if section_start is None:
+        if exp_start is None:
             if lines and lines[-1].strip():
                 lines.append("")
-            lines.extend(["[wsl2]", sparse_line])
+            lines.extend(["[experimental]", sparse_line])
         else:
             replaced = False
-            for index in range(section_start + 1, next_section):
+            for index in range(exp_start + 1, exp_next):
                 stripped = lines[index].strip()
                 if stripped and not stripped.startswith(("#", ";")):
                     key = stripped.split("=", 1)[0].strip().lower()
@@ -713,9 +736,19 @@ try {{
                         replaced = True
                         break
             if not replaced:
-                lines.insert(next_section, sparse_line)
+                lines.insert(exp_next, sparse_line)
 
-        Path(wslconfig_path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+        # Collapse consecutive blank lines
+        cleaned: list[str] = []
+        prev_blank = False
+        for line in lines:
+            is_blank = not line.strip()
+            if is_blank and prev_blank:
+                continue
+            cleaned.append(line)
+            prev_blank = is_blank
+
+        Path(wslconfig_path).write_text("\n".join(cleaned) + "\n", encoding="utf-8")
         return wslconfig_path
 
     def _parse_wsl_distros(self, output: str) -> list[str]:
@@ -745,6 +778,124 @@ try {{
             "compact vdisk\n"
             "detach vdisk\n"
         )
+
+    def _fstrim_wsl_distros(self) -> bool:
+        """Run fstrim on Docker WSL distros to discard unused filesystem blocks.
+
+        Essential before diskpart compact: ext4 does not zero deleted data,
+        so diskpart cannot reclaim space unless blocks are discarded first.
+        """
+        self.log(t("cleanup.fstrim_starting"))
+        result = self.run_command("wsl -l -v", capture_output=True)
+        if not result or result.returncode != 0:
+            self.log(t("cleanup.fstrim_no_wsl"), "WARNING")
+            return False
+        distros = self._docker_wsl_sparse_distros(result.stdout)
+        if not distros:
+            self.log(t("cleanup.fstrim_no_distros"), "WARNING")
+            return False
+        any_success = False
+        for distro in distros:
+            self.log(t("cleanup.fstrim_distro", distro=distro))
+            trim_result = self.run_command(
+                f'wsl -d {distro} -u root -- fstrim / 2>&1', capture_output=True,
+            )
+            if trim_result and trim_result.returncode == 0:
+                self.log(t("cleanup.fstrim_success", distro=distro))
+                any_success = True
+            else:
+                self.log(t("cleanup.fstrim_fallback_dd", distro=distro))
+                self.run_command(
+                    f'wsl -d {distro} -u root -- sh -c "dd if=/dev/zero of=/zero.tmp bs=1M 2>/dev/null; rm -f /zero.tmp; sync"',
+                    capture_output=True,
+                )
+                any_success = True
+        self.run_command("wsl --shutdown", capture_output=True)
+        time.sleep(5)
+        return any_success
+
+    async def _fstrim_wsl_distros_async(
+        self, stream_callback: Optional[Callable[[str], None]] = None
+    ) -> bool:
+        """Async version of _fstrim_wsl_distros."""
+        if stream_callback:
+            stream_callback(f"{t('cleanup.fstrim_starting')}\n")
+        result = await self.run_command_async("wsl -l -v", shell=True, stream_callback=stream_callback)
+        if not result or result.returncode != 0:
+            if stream_callback:
+                stream_callback(f"{t('cleanup.fstrim_no_wsl')}\n")
+            return False
+        distros = self._docker_wsl_sparse_distros(result.stdout)
+        if not distros:
+            if stream_callback:
+                stream_callback(f"{t('cleanup.fstrim_no_distros')}\n")
+            return False
+        any_success = False
+        for distro in distros:
+            if stream_callback:
+                stream_callback(f"{t('cleanup.fstrim_distro', distro=distro)}\n")
+            trim_result = await self.run_command_async(
+                f'wsl -d {distro} -u root -- fstrim / 2>&1', shell=True, stream_callback=stream_callback,
+            )
+            if trim_result and trim_result.returncode == 0:
+                if stream_callback:
+                    stream_callback(f"{t('cleanup.fstrim_success', distro=distro)}\n")
+                any_success = True
+            else:
+                if stream_callback:
+                    stream_callback(f"{t('cleanup.fstrim_fallback_dd', distro=distro)}\n")
+                await self.run_command_async(
+                    f'wsl -d {distro} -u root -- sh -c "dd if=/dev/zero of=/zero.tmp bs=1M 2>/dev/null; rm -f /zero.tmp; sync"',
+                    shell=True, stream_callback=stream_callback,
+                )
+                any_success = True
+        await self.run_command_async("wsl --shutdown", shell=True)
+        await asyncio.sleep(5)
+        return any_success
+
+    def _recreate_vhdx(self, vhdx_path: str) -> bool:
+        """Recreate Docker VHDX by renaming old and letting Docker Desktop create fresh one.
+
+        Last-resort fallback when diskpart/Optimize-VHD cannot shrink effectively.
+        """
+        backup_path = vhdx_path + ".bak"
+        try:
+            size_before_gb = os.path.getsize(vhdx_path) / (1024**3)
+            self.log(t("cleanup.recreate_vhdx_start", path=vhdx_path, size=f"{size_before_gb:.2f}"))
+            self.run_command("wsl --shutdown", capture_output=True)
+            time.sleep(5)
+            os.rename(vhdx_path, backup_path)
+            self.log(t("cleanup.recreate_vhdx_renamed", path=backup_path))
+            docker_path = r"C:\Program Files\Docker\Docker\Docker Desktop.exe"
+            if os.path.exists(docker_path):
+                subprocess.Popen([docker_path], shell=False)
+                for _ in range(12):
+                    time.sleep(5)
+                    if os.path.exists(vhdx_path):
+                        break
+            if os.path.exists(vhdx_path):
+                size_after_gb = os.path.getsize(vhdx_path) / (1024**3)
+                saved_gb = size_before_gb - size_after_gb
+                self.total_space_saved += max(0, saved_gb)
+                self.log(t("cleanup.recreate_vhdx_done", size=f"{size_after_gb:.2f}", saved=f"{saved_gb:.2f}"))
+                try:
+                    os.remove(backup_path)
+                    self.log(t("cleanup.recreate_vhdx_backup_deleted"))
+                except Exception:
+                    self.log(t("cleanup.recreate_vhdx_backup_manual", path=backup_path), "WARNING")
+                return True
+            else:
+                self.log(t("cleanup.recreate_vhdx_failed"), "ERROR")
+                os.rename(backup_path, vhdx_path)
+                return False
+        except Exception as e:
+            self.log(t("cleanup.recreate_vhdx_error", error=str(e)), "ERROR")
+            if os.path.exists(backup_path) and not os.path.exists(vhdx_path):
+                try:
+                    os.rename(backup_path, vhdx_path)
+                except Exception:
+                    pass
+            return False
 
     def _result_error_message(self, result: subprocess.CompletedProcess | None) -> str:
         if result is None:
@@ -836,6 +987,9 @@ try {{
             )
             return False
 
+        # Phase 1: fstrim — discard unused blocks so diskpart can reclaim them
+        self._fstrim_wsl_distros()
+
         success = False
         
         for vhdx_path in vhdx_paths:
@@ -875,6 +1029,7 @@ try {{
                             size_after_gb = size_after / (1024**3)
                             space_saved = (size_before - size_after) / (1024**3)
                             self.total_space_saved += max(0, space_saved)
+                            savings_pct = (space_saved / size_before_gb * 100) if size_before_gb > 0 else 0
                             self.log(
                                 t("cleanup.compact_done", size=f"{size_after_gb:.2f}", saved=f"{space_saved:.2f}")
                             )
@@ -885,6 +1040,10 @@ try {{
                                 result=result,
                                 message=vhdx_path,
                             )
+                            # Phase 3: If compaction saved less than 10%, try VHDX recreation
+                            if savings_pct < 10 and size_before_gb > 2:
+                                self.log(t("cleanup.compact_insufficient", pct=f"{savings_pct:.1f}"))
+                                self._recreate_vhdx(vhdx_path)
                             success = True
                         else:
                             self.log(t("cleanup.file_not_found_after", path=vhdx_path), "ERROR")
@@ -1343,6 +1502,9 @@ try {{
             )
             return False
 
+        # Phase 1: fstrim — discard unused blocks so diskpart can reclaim them
+        await self._fstrim_wsl_distros_async(stream_callback=stream_callback)
+
         success = False
         for vhdx_path in vhdx_paths:
             if os.path.exists(vhdx_path):
@@ -1388,6 +1550,7 @@ try {{
                             size_after_gb = size_after / (1024**3)
                             space_saved = (size_before - size_after) / (1024**3)
                             self.total_space_saved += max(0, space_saved)
+                            savings_pct = (space_saved / size_before_gb * 100) if size_before_gb > 0 else 0
 
                             if stream_callback:
                                 stream_callback(
@@ -1400,6 +1563,11 @@ try {{
                                 result=result,
                                 message=vhdx_path,
                             )
+                            # Phase 3: If compaction saved less than 10%, try VHDX recreation
+                            if savings_pct < 10 and size_before_gb > 2:
+                                if stream_callback:
+                                    stream_callback(f"{t('cleanup.compact_insufficient', pct=f'{savings_pct:.1f}')}\n")
+                                self._recreate_vhdx(vhdx_path)
                             success = True
                         else:
                             if stream_callback:
