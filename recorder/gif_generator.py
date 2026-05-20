@@ -9,6 +9,7 @@ Backends tried in order (best quality first):
 from __future__ import annotations
 
 import io
+import importlib.util
 import re
 import shutil
 import subprocess
@@ -318,9 +319,7 @@ def generate_gif(
     Returns:
         Path to generated GIF, or None on failure.
     """
-    try:
-        from PIL import Image
-    except ImportError:
+    if importlib.util.find_spec("PIL.Image") is None:
         return None
 
     if not svg_frames:

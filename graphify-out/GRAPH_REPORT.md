@@ -1,130 +1,132 @@
-# Graph Report - C:\Users\joaod\Documents\GitHub\Varedura  (2026-05-19)
+# Graph Report - Varedura  (2026-05-19)
 
 ## Corpus Check
-- 85 files · ~258,982 words
+- 53 files · ~262,100 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1933 nodes · 2562 edges · 105 communities (85 shown, 20 thin omitted)
-- Extraction: 94% EXTRACTED · 6% INFERRED · 0% AMBIGUOUS · INFERRED: 153 edges (avg confidence: 0.78)
+- 2238 nodes · 2963 edges · 102 communities (79 shown, 23 thin omitted)
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 198 edges (avg confidence: 0.78)
 - Token cost: 0 input · 0 output
 
+## Graph Freshness
+- Built from commit: `debaedb7`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
+
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_English Translations|English Translations]]
-- [[_COMMUNITY_Portuguese Translations|Portuguese Translations]]
-- [[_COMMUNITY_Project Overview|Project Overview]]
-- [[_COMMUNITY_JQuery Runtime|JQuery Runtime]]
-- [[_COMMUNITY_Session Recording|Session Recording]]
-- [[_COMMUNITY_Network Stalker Core|Network Stalker Core]]
-- [[_COMMUNITY_Mascot Rendering|Mascot Rendering]]
-- [[_COMMUNITY_Sprite Generation|Sprite Generation]]
-- [[_COMMUNITY_Recorded Dashboard Session|Recorded Dashboard Session]]
-- [[_COMMUNITY_Screenshot Diagnostics|Screenshot Diagnostics]]
-- [[_COMMUNITY_ARP MITM Script|ARP MITM Script]]
-- [[_COMMUNITY_Installer Scripts|Installer Scripts]]
-- [[_COMMUNITY_Terminal Session Flow|Terminal Session Flow]]
-- [[_COMMUNITY_Varedura Tool Demo|Varedura Tool Demo]]
-- [[_COMMUNITY_Process Monitoring Recording|Process Monitoring Recording]]
-- [[_COMMUNITY_Export Preferences|Export Preferences]]
-- [[_COMMUNITY_Router Login Flow|Router Login Flow]]
-- [[_COMMUNITY_Demo Dashboard Flow|Demo Dashboard Flow]]
-- [[_COMMUNITY_Packet Loss Recording|Packet Loss Recording]]
-- [[_COMMUNITY_Docker Cleanup Commands|Docker Cleanup Commands]]
-- [[_COMMUNITY_VHDX Compaction|VHDX Compaction]]
-- [[_COMMUNITY_MD5 Utilities|MD5 Utilities]]
-- [[_COMMUNITY_Main Menu Runtime|Main Menu Runtime]]
-- [[_COMMUNITY_Speed Provider Interfaces|Speed Provider Interfaces]]
-- [[_COMMUNITY_SafeLogin Utilities|SafeLogin Utilities]]
-- [[_COMMUNITY_Recorded Stalker Session|Recorded Stalker Session]]
-- [[_COMMUNITY_Network Monitoring Loop|Network Monitoring Loop]]
-- [[_COMMUNITY_Docker Cleanup Tests|Docker Cleanup Tests]]
-- [[_COMMUNITY_Random Security Format|Random Security Format]]
-- [[_COMMUNITY_I18n Runtime|I18n Runtime]]
-- [[_COMMUNITY_MCP Server Tools|MCP Server Tools]]
-- [[_COMMUNITY_Port Scanner|Port Scanner]]
-- [[_COMMUNITY_CLI Network Recording|CLI Network Recording]]
-- [[_COMMUNITY_Router Phishing Server|Router Phishing Server]]
-- [[_COMMUNITY_Cleanup Safety Contracts|Cleanup Safety Contracts]]
-- [[_COMMUNITY_Speed Provider Fallback|Speed Provider Fallback]]
-- [[_COMMUNITY_Continuous Speed Tester|Continuous Speed Tester]]
-- [[_COMMUNITY_Async Docker Cleaner|Async Docker Cleaner]]
-- [[_COMMUNITY_LMArena Generator|LMArena Generator]]
-- [[_COMMUNITY_Settings Language UI|Settings Language UI]]
-- [[_COMMUNITY_Speed Tester Lifecycle|Speed Tester Lifecycle]]
-- [[_COMMUNITY_Speed Test Providers|Speed Test Providers]]
-- [[_COMMUNITY_Quick Cleanup CLI|Quick Cleanup CLI]]
-- [[_COMMUNITY_Rich Console Logging|Rich Console Logging]]
-- [[_COMMUNITY_Docker Async Steps|Docker Async Steps]]
-- [[_COMMUNITY_PDF Export Tests|PDF Export Tests]]
-- [[_COMMUNITY_Cleanup Preferences|Cleanup Preferences]]
-- [[_COMMUNITY_Saved Preferences|Saved Preferences]]
-- [[_COMMUNITY_Export Prompt Flow|Export Prompt Flow]]
-- [[_COMMUNITY_Report State Models|Report State Models]]
-- [[_COMMUNITY_Router Login Template|Router Login Template]]
-- [[_COMMUNITY_Wave Mascot Frame 1|Wave Mascot Frame 1]]
-- [[_COMMUNITY_Wave Mascot Frame 2|Wave Mascot Frame 2]]
-- [[_COMMUNITY_Admin Elevation|Admin Elevation]]
-- [[_COMMUNITY_WSL Fstrim Helpers|WSL Fstrim Helpers]]
-- [[_COMMUNITY_Idle Mascot Frame 2|Idle Mascot Frame 2]]
-- [[_COMMUNITY_Idle Mascot Frame 3|Idle Mascot Frame 3]]
-- [[_COMMUNITY_Speed Stats Models|Speed Stats Models]]
-- [[_COMMUNITY_ARP Scan Helpers|ARP Scan Helpers]]
-- [[_COMMUNITY_Error Mascot Sprite|Error Mascot Sprite]]
-- [[_COMMUNITY_Mascot Module Exports|Mascot Module Exports]]
-- [[_COMMUNITY_Idle Mascot Frame 1|Idle Mascot Frame 1]]
-- [[_COMMUNITY_Telmex Login Background|Telmex Login Background]]
-- [[_COMMUNITY_Scanning Mascot Frame 1|Scanning Mascot Frame 1]]
-- [[_COMMUNITY_Working Mascot Frame 1|Working Mascot Frame 1]]
-- [[_COMMUNITY_Working Mascot Frame 2|Working Mascot Frame 2]]
-- [[_COMMUNITY_TIME Logo Asset|TIME Logo Asset]]
-- [[_COMMUNITY_Recording Prompt Prefs|Recording Prompt Prefs]]
-- [[_COMMUNITY_LMArena Model Registry|LMArena Model Registry]]
-- [[_COMMUNITY_MTS Logo Asset|MTS Logo Asset]]
-- [[_COMMUNITY_Network Hogs Fallback|Network Hogs Fallback]]
-- [[_COMMUNITY_Ping Graph Panels|Ping Graph Panels]]
-- [[_COMMUNITY_Scanning Mascot Frame 2|Scanning Mascot Frame 2]]
-- [[_COMMUNITY_Success Mascot Sprite|Success Mascot Sprite]]
-- [[_COMMUNITY_Export History Coverage|Export History Coverage]]
-- [[_COMMUNITY_VS Code Settings|VS Code Settings]]
-- [[_COMMUNITY_Working Mascot Frame 3|Working Mascot Frame 3]]
-- [[_COMMUNITY_Vodacom Logo Asset|Vodacom Logo Asset]]
-- [[_COMMUNITY_Cyta Logo Asset|Cyta Logo Asset]]
-- [[_COMMUNITY_Orange MT Logo Asset|Orange MT Logo Asset]]
-- [[_COMMUNITY_Paraguay PSN Banner|Paraguay PSN Banner]]
-- [[_COMMUNITY_Unifi Logo Asset|Unifi Logo Asset]]
-- [[_COMMUNITY_Login Background Asset|Login Background Asset]]
-- [[_COMMUNITY_YPT Logo Asset|YPT Logo Asset]]
-- [[_COMMUNITY_CLI Package Init|CLI Package Init]]
-- [[_COMMUNITY_Cleaner CLI Entrypoint|Cleaner CLI Entrypoint]]
-- [[_COMMUNITY_Copyright Image Asset|Copyright Image Asset]]
-- [[_COMMUNITY_Docker Cleaner Package|Docker Cleaner Package]]
-- [[_COMMUNITY_Huawei Logo Asset|Huawei Logo Asset]]
-- [[_COMMUNITY_T3 Router Logo|T3 Router Logo]]
-- [[_COMMUNITY_LMArena Package Init|LMArena Package Init]]
-- [[_COMMUNITY_MCP Package Init|MCP Package Init]]
-- [[_COMMUNITY_MCP Module Entry|MCP Module Entry]]
-- [[_COMMUNITY_Monitor Package Init|Monitor Package Init]]
-- [[_COMMUNITY_Recorder Package Init|Recorder Package Init]]
-- [[_COMMUNITY_Mascot Speech Bubble|Mascot Speech Bubble]]
-- [[_COMMUNITY_Mascot Style Helper|Mascot Style Helper]]
-- [[_COMMUNITY_Provider Availability|Provider Availability]]
-- [[_COMMUNITY_Speed Test Contract|Speed Test Contract]]
-- [[_COMMUNITY_Recording Console|Recording Console]]
-- [[_COMMUNITY_Recorded SVG Frames|Recorded SVG Frames]]
-- [[_COMMUNITY_Network Interface Helper|Network Interface Helper]]
-- [[_COMMUNITY_Green Line Asset|Green Line Asset]]
+- [[_COMMUNITY_Community 0|Community 0]]
+- [[_COMMUNITY_Community 1|Community 1]]
+- [[_COMMUNITY_Community 2|Community 2]]
+- [[_COMMUNITY_Community 3|Community 3]]
+- [[_COMMUNITY_Community 4|Community 4]]
+- [[_COMMUNITY_Community 5|Community 5]]
+- [[_COMMUNITY_Community 6|Community 6]]
+- [[_COMMUNITY_Community 7|Community 7]]
+- [[_COMMUNITY_Community 8|Community 8]]
+- [[_COMMUNITY_Community 9|Community 9]]
+- [[_COMMUNITY_Community 10|Community 10]]
+- [[_COMMUNITY_Community 11|Community 11]]
+- [[_COMMUNITY_Community 12|Community 12]]
+- [[_COMMUNITY_Community 13|Community 13]]
+- [[_COMMUNITY_Community 14|Community 14]]
+- [[_COMMUNITY_Community 15|Community 15]]
+- [[_COMMUNITY_Community 16|Community 16]]
+- [[_COMMUNITY_Community 17|Community 17]]
+- [[_COMMUNITY_Community 18|Community 18]]
+- [[_COMMUNITY_Community 19|Community 19]]
+- [[_COMMUNITY_Community 20|Community 20]]
+- [[_COMMUNITY_Community 21|Community 21]]
+- [[_COMMUNITY_Community 22|Community 22]]
+- [[_COMMUNITY_Community 23|Community 23]]
+- [[_COMMUNITY_Community 24|Community 24]]
+- [[_COMMUNITY_Community 25|Community 25]]
+- [[_COMMUNITY_Community 26|Community 26]]
+- [[_COMMUNITY_Community 27|Community 27]]
+- [[_COMMUNITY_Community 28|Community 28]]
+- [[_COMMUNITY_Community 29|Community 29]]
+- [[_COMMUNITY_Community 30|Community 30]]
+- [[_COMMUNITY_Community 31|Community 31]]
+- [[_COMMUNITY_Community 32|Community 32]]
+- [[_COMMUNITY_Community 33|Community 33]]
+- [[_COMMUNITY_Community 34|Community 34]]
+- [[_COMMUNITY_Community 35|Community 35]]
+- [[_COMMUNITY_Community 36|Community 36]]
+- [[_COMMUNITY_Community 37|Community 37]]
+- [[_COMMUNITY_Community 38|Community 38]]
+- [[_COMMUNITY_Community 39|Community 39]]
+- [[_COMMUNITY_Community 40|Community 40]]
+- [[_COMMUNITY_Community 41|Community 41]]
+- [[_COMMUNITY_Community 42|Community 42]]
+- [[_COMMUNITY_Community 43|Community 43]]
+- [[_COMMUNITY_Community 44|Community 44]]
+- [[_COMMUNITY_Community 45|Community 45]]
+- [[_COMMUNITY_Community 46|Community 46]]
+- [[_COMMUNITY_Community 47|Community 47]]
+- [[_COMMUNITY_Community 48|Community 48]]
+- [[_COMMUNITY_Community 49|Community 49]]
+- [[_COMMUNITY_Community 50|Community 50]]
+- [[_COMMUNITY_Community 51|Community 51]]
+- [[_COMMUNITY_Community 52|Community 52]]
+- [[_COMMUNITY_Community 53|Community 53]]
+- [[_COMMUNITY_Community 54|Community 54]]
+- [[_COMMUNITY_Community 55|Community 55]]
+- [[_COMMUNITY_Community 56|Community 56]]
+- [[_COMMUNITY_Community 57|Community 57]]
+- [[_COMMUNITY_Community 58|Community 58]]
+- [[_COMMUNITY_Community 59|Community 59]]
+- [[_COMMUNITY_Community 60|Community 60]]
+- [[_COMMUNITY_Community 61|Community 61]]
+- [[_COMMUNITY_Community 62|Community 62]]
+- [[_COMMUNITY_Community 63|Community 63]]
+- [[_COMMUNITY_Community 64|Community 64]]
+- [[_COMMUNITY_Community 65|Community 65]]
+- [[_COMMUNITY_Community 66|Community 66]]
+- [[_COMMUNITY_Community 68|Community 68]]
+- [[_COMMUNITY_Community 69|Community 69]]
+- [[_COMMUNITY_Community 72|Community 72]]
+- [[_COMMUNITY_Community 73|Community 73]]
+- [[_COMMUNITY_Community 74|Community 74]]
+- [[_COMMUNITY_Community 75|Community 75]]
+- [[_COMMUNITY_Community 76|Community 76]]
+- [[_COMMUNITY_Community 77|Community 77]]
+- [[_COMMUNITY_Community 78|Community 78]]
+- [[_COMMUNITY_Community 79|Community 79]]
+- [[_COMMUNITY_Community 80|Community 80]]
+- [[_COMMUNITY_Community 81|Community 81]]
+- [[_COMMUNITY_Community 82|Community 82]]
+- [[_COMMUNITY_Community 83|Community 83]]
+- [[_COMMUNITY_Community 84|Community 84]]
+- [[_COMMUNITY_Community 85|Community 85]]
+- [[_COMMUNITY_Community 86|Community 86]]
+- [[_COMMUNITY_Community 87|Community 87]]
+- [[_COMMUNITY_Community 88|Community 88]]
+- [[_COMMUNITY_Community 89|Community 89]]
+- [[_COMMUNITY_Community 90|Community 90]]
+- [[_COMMUNITY_Community 91|Community 91]]
+- [[_COMMUNITY_Community 92|Community 92]]
+- [[_COMMUNITY_Community 93|Community 93]]
+- [[_COMMUNITY_Community 94|Community 94]]
+- [[_COMMUNITY_Community 96|Community 96]]
+- [[_COMMUNITY_Community 97|Community 97]]
+- [[_COMMUNITY_Community 98|Community 98]]
+- [[_COMMUNITY_Community 99|Community 99]]
+- [[_COMMUNITY_Community 100|Community 100]]
+- [[_COMMUNITY_Community 101|Community 101]]
+- [[_COMMUNITY_Community 103|Community 103]]
+- [[_COMMUNITY_Community 104|Community 104]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `WSLDockerCleaner` - 63 edges
-2. `main()` - 23 edges
-3. `do_install()` - 19 edges
-4. `MascotRenderer` - 15 edges
-5. `_draw_antenna()` - 14 edges
-6. `_draw_body()` - 14 edges
-7. `_draw_visor()` - 14 edges
-8. `msg()` - 13 edges
-9. `_new()` - 13 edges
-10. `handle_key()` - 13 edges
+1. `WSLDockerCleaner` - 64 edges
+2. `VareduraTextualApp` - 36 edges
+3. `main()` - 23 edges
+4. `do_install()` - 19 edges
+5. `MascotRenderer` - 15 edges
+6. `DailyLogWriter` - 14 edges
+7. `_draw_antenna()` - 14 edges
+8. `_draw_body()` - 14 edges
+9. `_draw_visor()` - 14 edges
+10. `msg()` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Copilot Instructions Textual UI Guidelines` --conceptually_related_to--> `Rich Main Menu Application`  [AMBIGUOUS]
@@ -133,10 +135,10 @@
   README.pt-BR.md → README.md
 - `Copilot Instructions Safety Requirements` --semantically_similar_to--> `Explicit Confirmation Safety Model`  [INFERRED] [semantically similar]
   .github/copilot-instructions.md → README.md
-- `GitHub Copilot CLI Development Experience` --semantically_similar_to--> `Copilot CLI as Primary Development Tool`  [INFERRED] [semantically similar]
-  POST-SUBMISSION.md → README.md
-- `PowerShell Install Reinstall Uninstall Flow` --implements--> `Quick Install Workflow`  [INFERRED]
-  install.ps1 → README.md
+- `test_textual_dashboard_renders_and_menu_switches_to_cleanup()` --calls--> `VareduraTextualApp`  [INFERRED]
+  tests/test_textual_app.py → cli/textual_app.py
+- `test_textual_cleanup_preferences_are_saved()` --calls--> `VareduraTextualApp`  [INFERRED]
+  tests/test_textual_app.py → cli/textual_app.py
 
 ## Hyperedges (group relationships)
 - **Docker Cleanup Workflow** — readme_docker_cleanup_feature, main_docker_cleanup_runner, cli_quick_cleanup_flow, cli_admin_tasks_main, docker_core_wsl_docker_cleaner, docker_core_docker_cleanup_flow, docker_core_vhdx_compaction_flow [EXTRACTED 1.00]
@@ -198,337 +200,313 @@
 - **Login Background Visual Composition** — loginbg_abstract_blue_login_background, loginbg_blue_gradient_palette, loginbg_blurred_full_width_backdrop [EXTRACTED 1.00]
 - **YPT Logo Brand Identity Elements** — yptlogo_logo_asset, yptlogo_purple_abstract_mark, yptlogo_gray_we_wordmark [EXTRACTED 1.00]
 
-## Communities (105 total, 20 thin omitted)
+## Communities (102 total, 23 thin omitted)
 
-### Community 0 - "English Translations"
-Cohesion: 0.01
-Nodes (395): admin.compact_result, admin.must_be_admin, admin.sparse_result, cleanup.admin_error, cleanup.admin_no, cleanup.admin_recommended, cleanup.admin_single_uac, cleanup.admin_yes (+387 more)
+### Community 0 - "Community 0"
+Cohesion: 0.00
+Nodes (416): admin.compact_result, admin.must_be_admin, admin.sparse_result, cleanup.admin_error, cleanup.admin_no, cleanup.admin_recommended, cleanup.admin_single_uac, cleanup.admin_yes (+408 more)
 
-### Community 1 - "Portuguese Translations"
-Cohesion: 0.01
-Nodes (395): admin.compact_result, admin.must_be_admin, admin.sparse_result, cleanup.admin_error, cleanup.admin_no, cleanup.admin_recommended, cleanup.admin_single_uac, cleanup.admin_yes (+387 more)
+### Community 1 - "Community 1"
+Cohesion: 0.00
+Nodes (416): admin.compact_result, admin.must_be_admin, admin.sparse_result, cleanup.admin_error, cleanup.admin_no, cleanup.admin_recommended, cleanup.admin_single_uac, cleanup.admin_yes (+408 more)
 
-### Community 2 - "Project Overview"
+### Community 2 - "Community 2"
 Cohesion: 0.06
 Nodes (53): main(), parse_args(), Admin helper script for running admin-only tasks.  This script is intended to, DailyLogWriter Rotating Log Sink, Main Cleaner CLI Entrypoint, CLI Package Wrappers, Quick Cleanup CLI Flow, Copilot Instructions Architecture Guidance (+45 more)
 
-### Community 3 - "JQuery Runtime"
+### Community 3 - "Community 3"
 Cohesion: 0.08
 Nodes (35): A(), Ae(), b(), be(), Bt(), ce(), D(), Dt() (+27 more)
 
-### Community 4 - "Session Recording"
-Cohesion: 0.06
-Nodes (28): _expand_for_constant_fps(), _finalize_durations(), generate_gif(), _prepare_images(), GIF generator — converts Rich SVG snapshots to animated GIF.  Backends tried i, Remove CSS animations from SVG so each frame is a static snapshot., Convert SVG frames to normalised RGBA images + per-frame durations., High-quality Pillow GIF with per-frame median-cut + Floyd-Steinberg. (+20 more)
-
-### Community 5 - "Network Stalker Core"
+### Community 4 - "Community 4"
 Cohesion: 0.08
-Nodes (35): analyze_lag_source(), check_keyboard(), _flush_stdin(), get_export_status(), get_ping_command(), is_android(), main(), make_connections_panel() (+27 more)
+Nodes (29): _expand_for_constant_fps(), _finalize_durations(), generate_gif(), _prepare_images(), GIF generator — converts Rich SVG snapshots to animated GIF.  Backends tried i, Remove CSS animations from SVG so each frame is a static snapshot., Remove CSS animations from SVG so each frame is a static snapshot., Convert SVG frames to normalised RGBA images + per-frame durations. (+21 more)
 
-### Community 6 - "Mascot Rendering"
+### Community 5 - "Community 5"
+Cohesion: 0.07
+Nodes (39): analyze_lag_source(), check_keyboard(), _flush_stdin(), get_export_status(), get_top_network_hogs(), _get_top_network_hogs_fallback(), is_android(), main() (+31 more)
+
+### Community 6 - "Community 6"
 Cohesion: 0.08
 Nodes (21): _paths(), Sprite frame registry for the Varedura Roomba mascot.  Each state maps to a li, Mascot animation states., Return sorted list of sprite PNGs for a given state., STATES, MascotRenderer, _panel_styles(), Rendering utilities for the Varedura mascot (rich-pixels sprites). (+13 more)
 
-### Community 7 - "Sprite Generation"
+### Community 7 - "Community 7"
 Cohesion: 0.23
 Nodes (29): _draw_antenna(), _draw_body(), _draw_broom(), _draw_eyes(), _draw_open_mouth(), _draw_sad_mouth(), _draw_smile(), _draw_sparkle() (+21 more)
 
-### Community 8 - "Recorded Dashboard Session"
+### Community 8 - "Community 8"
 Cohesion: 0.09
 Nodes (28): Alert History Panel, Connection Status Panel, DNS ec2.sa-east-1.amazonaws.com, Docker Cleanup Option, Docker Full Cleanup Option, External Latency, Gateway 192.168.18.1, Gateway Ping OK 9ms (+20 more)
 
-### Community 9 - "Screenshot Diagnostics"
+### Community 9 - "Community 9"
 Cohesion: 0.11
 Nodes (27): Alert History Panel, Status da Conexao Panel, DNS Probe ec2.sa-east-1.amazonaws.com, Gateway 192.168.18.1, Gateway Lag Alert, Google Drive Unsynced Files Notification, 100ms Latency Threshold, Top Network Consumption Panel (+19 more)
 
-### Community 10 - "ARP MITM Script"
+### Community 10 - "Community 10"
 Cohesion: 0.09
 Nodes (25): add_firewall_rules(), arp_monitor(), cleanup(), disable_ip_forwarding(), enable_ip_forwarding(), get_best_interface(), get_interface_name(), get_mac() (+17 more)
 
-### Community 11 - "Installer Scripts"
+### Community 11 - "Community 11"
 Cohesion: 0.28
 Nodes (25): Add-ToUserPath(), ask_action(), check_dependencies(), cmd_exists(), confirm_yes(), detect_lang(), detect_os(), do_check() (+17 more)
 
-### Community 12 - "Terminal Session Flow"
+### Community 12 - "Community 12"
 Cohesion: 0.08
 Nodes (26): Alert History Panel, Background Port Scan, Connection Status Panel, DNS ec2.sa-east-1.amazonaws.com, Docker Cleanup, Docker Full Cleanup, Farewell Screen, Generate Final Session Report Prompt (+18 more)
 
-### Community 13 - "Varedura Tool Demo"
+### Community 13 - "Community 13"
 Cohesion: 0.10
 Nodes (25): Alert History Panel, Bandwidth Contract 500/100 Mbps, Connection Status Panel, DNS ec2.sa-east-1.amazonaws.com, Docker Cleanup, Docker Full Cleanup, Final Report Not Generated, Gateway 192.168.18.1 (+17 more)
 
-### Community 14 - "Process Monitoring Recording"
+### Community 14 - "Community 14"
 Cohesion: 0.11
 Nodes (25): Alert History Latest Events Panel, AnyDesk.exe Connection Activity, Background Port Scan, Code-Insiders.exe Local TCP Port, Connection Status Panel, External AWS DNS Ping Check, Gateway 192.168.18.1 Ping Check, GoogleDriveFS.exe Network Activity (+17 more)
 
-### Community 15 - "Export Preferences"
+### Community 15 - "Community 15"
 Cohesion: 0.11
 Nodes (21): handle_key(), load_prefs(), prompt_change_contracted_speed(), prompt_change_external(), prompt_change_gateway(), prompt_change_interval(), prompt_change_threshold(), Persiste preferências relevantes para exportação em JSON. (+13 more)
 
-### Community 16 - "Router Login Flow"
+### Community 16 - "Community 16"
 Cohesion: 0.10
 Nodes (22): Router Phishing Handoff, jQuery 3.5.1, HMAC-MD5 API, MD5 Digest API, RndSecurityFormat SHA-256 Style Formatter, FormatUrlEncode, Router Asset Mirroring, capture_router_html (+14 more)
 
-### Community 17 - "Demo Dashboard Flow"
+### Community 17 - "Community 17"
 Cohesion: 0.12
 Nodes (21): Alert History Panel, Background Port Scan Workflow, Connection Status Panel, Dense Terminal Dashboard Layout, Docker Cleanup Tool, Keyboard-Driven Controls, Main Tools Menu, Network Anomaly Monitoring (+13 more)
 
-### Community 18 - "Packet Loss Recording"
+### Community 18 - "Community 18"
 Cohesion: 0.12
 Nodes (21): Alert History Latest Events, BYE See You Next Time Keep Things Clean Message, Connection Status Panel, DNS Latency OK, Gateway Latency OK, Gateway OK But No Internet Provider Or DNS Issue, GoogleDriveFS.exe Top Connection, Varedura Mascot Exit Screen (+13 more)
 
-### Community 19 - "Docker Cleanup Commands"
-Cohesion: 0.18
-Nodes (5): Executa um comando e retorna o resultado, Versão sync para CLI., Verifica se o Docker está rodando, Run safe Docker cleanup without stopping running containers., Recreate Docker VHDX by renaming old and letting Docker Desktop create fresh one
+### Community 19 - "Community 19"
+Cohesion: 0.05
+Nodes (41): CleanupStepResult, get_docker_vhdx_paths(), main(), _powershell_encoded_command(), _ps_single_quoted(), Lógica principal do limpador WSL Docker (módulo)., Remove PowerShell CLIXML progress records from captured streams., Versão async de cleanup_recycle_bin com streaming. (+33 more)
 
-### Community 20 - "VHDX Compaction"
-Cohesion: 0.15
-Nodes (10): get_docker_vhdx_paths(), _powershell_encoded_command(), _ps_single_quoted(), Lógica principal do limpador WSL Docker (módulo)., Remove PowerShell CLIXML progress records from captured streams., Versão async de compact_vhdx_files com streaming., Build a RunAs command that captures child stdout/stderr/exit code.          Po, Discover Docker WSL VHDX files across supported layouts. (+2 more)
+### Community 20 - "Community 20"
+Cohesion: 0.05
+Nodes (37): 🤖 Animated Mascot, Available MCP Tools, 🤖 Built with GitHub Copilot CLI, code:powershell (irm https://raw.githubusercontent.com/joaosnet/Varedura/main), code:block10 (> How much Docker disk space am I using?        → calls dock), code:block11 (Varedura/), code:bash (uv run python -m pytest tests/ -v), code:bash (curl -fsSL https://raw.githubusercontent.com/joaosnet/Varedu) (+29 more)
 
-### Community 21 - "MD5 Utilities"
+### Community 21 - "Community 21"
 Cohesion: 0.25
 Nodes (19): b64_hmac_md5(), b64_md5(), binl_to_base64(), binl_to_hex(), binl_to_string(), core_hmac_md5(), hex_hmac_md5(), hex_md5() (+11 more)
 
-### Community 22 - "Main Menu Runtime"
-Cohesion: 0.16
-Nodes (18): _build_menu_layout(), main(), Varedura - System Monitor & Docker Cleanup Tool  Usage:     uv run main.py  Main, Build the full menu layout with a given mascot panel., Display the main menu with a continuously animated mascot.      Returns the user, Start recording the current user session if enabled., Stop session recording and save a single GIF for the whole run., Run the network stalker monitor. (+10 more)
+### Community 22 - "Community 22"
+Cohesion: 0.05
+Nodes (64): Run the Textual app, temporarily handing off to legacy Network Stalker., run_textual_app(), Mascot Frame Registry, Mascot module for Varedura — animated ASCII art character., MascotRenderer, Mascot Sprite Generation, _ask_recording_prompt(), _build_menu_layout() (+56 more)
 
-### Community 23 - "Speed Provider Interfaces"
-Cohesion: 0.13
-Nodes (10): ABC, BrasilBandaLargaProvider, ProgressState, V's Speed Test Providers - Múltiplos provedores de teste de velocidade  Proved, Estado de progresso em tempo real do teste de velocidade., Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium., Classe base abstrata para provedores de teste de velocidade., Provedor Ookla Speedtest.net usando speedtest-cli. (+2 more)
+### Community 23 - "Community 23"
+Cohesion: 0.07
+Nodes (23): ABC, BrasilBandaLargaProvider, FastComProvider, MultiProviderSpeedTester, ProgressState, V's Speed Test Providers - Múltiplos provedores de teste de velocidade  Proved, Provedor Netflix Fast.com usando requests., Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r (+15 more)
 
-### Community 24 - "SafeLogin Utilities"
+### Community 24 - "Community 24"
 Cohesion: 0.18
 Nodes (12): GetDescFormArrayById(), getDivInnerId(), getElById(), getElement(), getElementById(), getElementByName(), ParseBindTextByTagName(), setDisable() (+4 more)
 
-### Community 25 - "Recorded Stalker Session"
+### Community 25 - "Community 25"
 Cohesion: 0.16
 Nodes (18): Alert History Log, Connection Status Panel, Exit Farewell Screen, External DNS ec2.sa-east-1.amazonaws.com, Gateway 192.168.18.1, Keyboard-Driven Menu Selection, Varedura Main Menu, Varedura Pixel Mascot (+10 more)
 
-### Community 26 - "Network Monitoring Loop"
+### Community 26 - "Community 26"
 Cohesion: 0.18
 Nodes (18): Rich SVG to GIF Pipeline, Docker Cleanup MCP Tools, port_scan MCP Tool, Varedura FastMCP Server, Port Scanner Full Scan, PortScannerState, SessionRecorder, ContinuousSpeedTester (+10 more)
 
-### Community 27 - "Docker Cleanup Tests"
-Cohesion: 0.18
-Nodes (12): Versão async de cleanup_temp_files com streaming., WSLDockerCleaner, test_compact_vhdx_files_requests_elevation_and_falls_back(), test_compact_vhdx_reports_failure_when_diskpart_fails_without_optimize_vhd(), test_configure_wsl_sparse_elevates_manage_commands(), test_configure_wsl_sparse_skips_missing_docker_distros_and_keeps_config(), test_configure_wsl_sparse_warns_but_does_not_fail_when_manage_fails(), test_container_step_only_prunes_stopped_containers() (+4 more)
+### Community 27 - "Community 27"
+Cohesion: 0.05
+Nodes (37): code:powershell (irm https://raw.githubusercontent.com/joaosnet/Varedura/main), code:block10 (> Quanto espaço Docker estou usando?             → chama doc), code:block11 (Varedura/), code:bash (uv run python -m pytest tests/ -v), code:bash (curl -fsSL https://raw.githubusercontent.com/joaosnet/Varedu), code:bash (uv tool install git+https://github.com/joaosnet/Varedura.git), code:bash (git clone https://github.com/joaosnet/Varedura.git), code:bash (uv run python -m cli.quick_cleanup             # Limpeza ráp) (+29 more)
 
-### Community 28 - "Random Security Format"
+### Community 28 - "Community 28"
 Cohesion: 0.27
 Nodes (14): rnd_bin_to_hex(), rnd_bit_add(), rnd_encode_utf8(), rnd_gamma0256(), rnd_gamma1256(), rnd_round(), rnd_security_format(), rnd_shift() (+6 more)
 
-### Community 29 - "I18n Runtime"
-Cohesion: 0.17
-Nodes (15): _detect_system_language(), init(), _load_preference(), _load_translations(), Internationalization (i18n) module for Varedura.  Provides a simple JSON-based, Translate a key, with optional format arguments.      Args:         key: Dot-, Detect the system language and return a supported language code., Load user language preference from disk. (+7 more)
+### Community 29 - "Community 29"
+Cohesion: 0.09
+Nodes (28): _detect_system_language(), get_supported_languages(), init(), _load_preference(), _load_translations(), Internationalization (i18n) module for Varedura.  Provides a simple JSON-based, Return tuple of supported language codes., Return tuple of supported language codes. (+20 more)
 
-### Community 30 - "MCP Server Tools"
+### Community 30 - "Community 30"
 Cohesion: 0.15
 Nodes (15): docker_full_cleanup(), docker_quick_cleanup(), docker_status(), get_logs(), _is_docker_running(), port_scan(), Varedura MCP Server  Exposes Varedura tools via the Model Context Protocol so, Run full Docker cleanup including WSL shutdown and VHDX compaction (Windows). (+7 more)
 
-### Community 31 - "Port Scanner"
-Cohesion: 0.16
-Nodes (15): get_listening_ports(), get_process_connections_count(), get_system_network_stats(), PortInfo, ProcessConnections, Módulo de Escaneamento de Portas para Network Stalker  Funções para monitorar, Retorna os processos com mais conexões de rede.      Args:         limit: Núm, Informações de uma porta em listening. (+7 more)
+### Community 31 - "Community 31"
+Cohesion: 0.13
+Nodes (20): get_listening_ports(), get_process_connections_count(), get_system_network_stats(), PortInfo, PortScannerState, ProcessConnections, Módulo de Escaneamento de Portas para Network Stalker  Funções para monitorar, Retorna os processos com mais conexões de rede.      Args:         limit: Núm (+12 more)
 
-### Community 32 - "CLI Network Recording"
+### Community 32 - "Community 32"
 Cohesion: 0.15
 Nodes (16): ASCII Mascot Status Feedback, Connection Status Panel, Final Session Report Prompt, Gateway Ping Status, Goodbye Exit Screen, Main Menu Option Prompt, Scanning The Network Stay Calm Message, V's Network Stalker v3.1 Dashboard (+8 more)
 
-### Community 33 - "Router Phishing Server"
+### Community 33 - "Community 33"
 Cohesion: 0.18
 Nodes (15): capture_router_html(), create_app(), download_all_assets(), download_asset(), extract_asset_urls(), main(), Baixa um asset do roteador e salva localmente., Baixa todos os assets referenciados no HTML. (+7 more)
 
-### Community 34 - "Cleanup Safety Contracts"
+### Community 34 - "Community 34"
 Cohesion: 0.18
 Nodes (14): cleanup, Windows Firewall Rules, IP Forwarding Control, is_admin, restore, Safe ARP MITM Workflow, signal_handler, Central Cleaner Reuse Contract (+6 more)
 
-### Community 35 - "Speed Provider Fallback"
-Cohesion: 0.19
-Nodes (8): MultiProviderSpeedTester, Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We, Executa teste no SIMET usando Flutter Web.         Flutter renderiza em canvas,, Gerenciador de múltiplos provedores de teste de velocidade., Retorna lista de provedores disponíveis., Retorna o próximo provedor disponível (rotação round-robin)., Executa teste com o próximo provedor na rotação.         Cada chamada testa ape, SimetProvider
+### Community 35 - "Community 35"
+Cohesion: 0.06
+Nodes (35): code:powershell (& .\.venv\Scripts\Activate.ps1  # Use existing .venv or crea), code:python (def compose(self) -> ComposeResult:), code:python (import pytest), code:python (async with app.run_test() as pilot:), code:python (async def test_counter():), code:python (async def test_background_task():), code:python (# Install: pip install pytest-textual-snapshot), code:python (async def test_modal_dialog():) (+27 more)
 
-### Community 36 - "Continuous Speed Tester"
-Cohesion: 0.15
-Nodes (9): ContinuousSpeedTester, Executa um único teste de velocidade usando múltiplos provedores., Loop contínuo de testes em background - alterna entre provedores., Verifica se velocidade está conforme contrato.          Retorna:, Resultado de um teste de velocidade., Retorna porcentagem da velocidade contratada.          Retorna:             (, Retorna um snapshot thread-safe dos dados atuais.          Inclui resultados p, Testador de velocidade contínuo que roda em background.      Executa testes de (+1 more)
+### Community 36 - "Community 36"
+Cohesion: 0.07
+Nodes (22): get_multi_provider(), Retorna a instância global do gerenciador de provedores., ContinuousSpeedTester, V's Speed Tester - Monitor de Velocidade de Internet em Tempo Real  Funcionali, Executa um único teste de velocidade usando múltiplos provedores., Loop contínuo de testes em background - alterna entre provedores., Inicia o loop de testes em background., Para o loop de testes. (+14 more)
 
-### Community 37 - "Async Docker Cleaner"
-Cohesion: 0.18
-Nodes (6): Versão async de cleanup_recycle_bin com streaming., Versão async de stop_docker_wsl., Versão async com batch elevated., Executa um comando async com streaming de saída em tempo real.          Args:, Executa comando elevated (admin/root)., Ensure sparseVhd=true is set under [experimental] in .wslconfig.          Also
+### Community 37 - "Community 37"
+Cohesion: 0.12
+Nodes (21): build_cleanup_status_panel(), build_cleanup_steps_table(), cleanup_label(), cleanup_summary(), get_cleanup_steps(), is_mcp_configured(), load_cleanup_steps(), load_prefs() (+13 more)
 
-### Community 38 - "LMArena Generator"
+### Community 38 - "Community 38"
 Cohesion: 0.26
 Nodes (11): extract_image_models(), extract_initial_models(), extract_text_models(), extract_vision_models(), _format_capabilities(), format_models_python(), generate_full_code(), main() (+3 more)
 
-### Community 39 - "Settings Language UI"
-Cohesion: 0.20
-Nodes (12): get_language(), get_supported_languages(), Return the current language code., Return tuple of supported language codes., change_language(), _is_mcp_configured(), Check if the MCP server config exists for this workspace., Add or remove the Varedura MCP server from .vscode/mcp.json. (+4 more)
+### Community 39 - "Community 39"
+Cohesion: 0.18
+Nodes (12): build_dashboard_summary(), build_settings_status_table(), build_tool_option(), load_recording_pref(), Build the shared settings status table., Build the dashboard overview as a Rich renderable., Build a Rich renderable suitable for a Textual OptionList option., Load recording preference from disk. (+4 more)
 
-### Community 40 - "Speed Tester Lifecycle"
-Cohesion: 0.17
-Nodes (9): V's Speed Tester - Monitor de Velocidade de Internet em Tempo Real  Funcionali, Inicia o loop de testes em background., Para o loop de testes., Inicia testes contínuos de velocidade., Para testes de velocidade., Configuração de velocidade contratada., SpeedTestConfig, start_continuous_testing() (+1 more)
+### Community 40 - "Community 40"
+Cohesion: 0.10
+Nodes (8): _cleanup_checkbox_id(), on_tool_selected(), Textual application shell for Varedura., Main Textual TUI for Varedura., _run_scanner_worker(), VareduraTextualApp, build_scanner_tables(), Build Rich scanner tables from a PortScannerState-like object.
 
-### Community 41 - "Speed Test Providers"
-Cohesion: 0.20
-Nodes (5): FastComProvider, Provedor Netflix Fast.com usando requests., Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r, Resultado de um teste de velocidade., SpeedTestResult
-
-### Community 42 - "Quick Cleanup CLI"
-Cohesion: 0.22
-Nodes (5): quick_cleanup(), Entrypoint CLI para executar a limpeza rápida do WSL Docker., Perform a quick cleanup. If a `console` is provided, use it for output., console(), test_quick_cleanup_reuses_central_cleaner()
-
-### Community 43 - "Rich Console Logging"
-Cohesion: 0.33
-Nodes (3): DailyLogWriter, Rich/Local daily log writer used by the Textual UI.  This module exposes a `Da, File-like writer that writes log messages to a rotating daily file     and opti
-
-### Community 44 - "Docker Async Steps"
-Cohesion: 0.28
-Nodes (3): CleanupStepResult, Versão async de docker_cleanup com streaming de saída em tempo real., Parse the reclaimed space from Docker prune command output.          Handles b
-
-### Community 45 - "PDF Export Tests"
-Cohesion: 0.36
-Nodes (8): get_speed_tester(), Retorna a instância global do testador de velocidade., _generate_combined_pdf_worker(), Worker que gera o PDF formal completo em background.      Args:         full_, cleanup_exports(), Testa que o downsampling ocorre por padrão e que full_history True ainda gera ar, test_generate_small_pdf(), test_large_history_downsampling_and_full_flag()
-
-### Community 46 - "Cleanup Preferences"
-Cohesion: 0.32
-Nodes (8): _get_cleanup_steps(), _load_cleanup_steps(), Get cleanup steps, using defaults if not yet configured., Interactive toggle screen for cleanup step preferences.      Shows a numbered li, Run Docker cleanup using the user's saved step preferences.      On first run (n, Load cleanup step preferences. Returns None if never configured., run_docker_cleanup(), show_cleanup_prefs()
-
-### Community 47 - "Saved Preferences"
-Cohesion: 0.29
-Nodes (8): _load_prefs(), Load all preferences from disk., Save preferences to disk., Save recording preference to disk., Save cleanup step preferences., _save_cleanup_steps(), _save_prefs(), _save_recording_pref()
-
-### Community 48 - "Export Prompt Flow"
+### Community 41 - "Community 41"
 Cohesion: 0.36
 Nodes (7): export_combined_report(), prompt_export_report(), Inicia exportação do relatório combinado em thread separada.      Args:, Prompts the user whether to export a full history report.      Args:, cleanup_exports(), test_prompt_export_cancel(), test_prompt_export_confirm_triggers_export()
 
-### Community 49 - "Report State Models"
-Cohesion: 0.29
-Nodes (6): PortScannerState, Estado do scanner de portas., ContractInfo, PingStats, Informações do contrato de internet para relatório formal., Estatísticas de histórico de ping com timestamps.
+### Community 42 - "Community 42"
+Cohesion: 0.07
+Nodes (19): quick_cleanup(), Entrypoint CLI para executar a limpeza rápida do WSL Docker., Perform a quick cleanup. If a `console` is provided, use it for output., console(), Session recorder — captures Rich console output as SVG snapshots., Stop recording and capture final frame., Background loop taking periodic SVG snapshots., Background loop taking periodic SVG snapshots. (+11 more)
 
-### Community 50 - "Router Login Template"
+### Community 43 - "Community 43"
+Cohesion: 0.33
+Nodes (3): DailyLogWriter, Rich/Local daily log writer used by the Textual UI.  This module exposes a `Da, File-like writer that writes log messages to a rotating daily file     and opti
+
+### Community 44 - "Community 44"
+Cohesion: 0.18
+Nodes (10): on_button_pressed(), _run_cleanup_worker(), Return enabled cleanup step keys in configured display order., Save preferences to disk., Save recording preference to disk., Save cleanup step preferences., save_cleanup_steps(), save_prefs() (+2 more)
+
+### Community 45 - "Community 45"
+Cohesion: 0.17
+Nodes (14): get_speed_tester(), Retorna a instância global do testador de velocidade., _generate_combined_pdf_worker(), Worker que gera o PDF formal completo em background.      Args:         full_, cleanup_exports(), Testa que o downsampling ocorre por padrão e que full_history True ainda gera ar, Testa que o downsampling ocorre por padrão e que full_history True ainda gera ar, test_generate_small_pdf() (+6 more)
+
+### Community 46 - "Community 46"
+Cohesion: 0.25
+Nodes (5): ConfirmModal, Static widget that displays Rich renderables., Small reusable confirmation modal., RichRenderable, Static
+
+### Community 47 - "Community 47"
+Cohesion: 0.33
+Nodes (6): get_ping_command(), parse_ping(), Retorna o comando de ping adequado para o SO., Extrai o tempo em ms da resposta do ping., Executa o ping e retorna o tempo ou None se falhar., run_ping()
+
+### Community 48 - "Community 48"
+Cohesion: 0.40
+Nodes (4): Demo, My Experience with GitHub Copilot CLI, Varedura — safe Docker/WSL cleanup + network monitor 🧹⚡, What I Built
+
+### Community 49 - "Community 49"
+Cohesion: 0.40
+Nodes (4): test_textual_cleanup_preferences_are_saved(), test_textual_cleanup_worker_uses_fake_cleaner(), test_textual_dashboard_renders_and_menu_switches_to_cleanup(), wait_until()
+
+### Community 50 - "Community 50"
 Cohesion: 0.38
 Nodes (7): Empty Router Credentials File, Router Captcha and Verification Code Flow, Huawei EG8145V5-V2 Router Login Template, Router Language and ISP Branding Logic, Router LoginSubmit Flow, Router Password Change and Complexity Policy, Router Safelogin and Random Security Scripts
 
-### Community 51 - "Wave Mascot Frame 1"
+### Community 51 - "Community 51"
 Cohesion: 0.33
 Nodes (7): Friendly Greeting State, Wave 1 Mascot Sprite, Pixel Art Style, Pixel Robot Mascot, Red Antenna Accent, Turquoise Screen Body, Wave Pose
 
-### Community 52 - "Wave Mascot Frame 2"
+### Community 52 - "Community 52"
 Cohesion: 0.29
 Nodes (7): Friendly Greeting State, Wave 2 Mascot Sprite, Pixel Art Style, Red Antenna Status Light, Robot Mascot, Teal Body Palette, Waving Pose
 
-### Community 53 - "Admin Elevation"
-Cohesion: 0.40
-Nodes (3): main(), Verifica se o script está rodando como administrador/root, Reinicia o script com privilégios de administrador/root
-
-### Community 55 - "Idle Mascot Frame 2"
+### Community 55 - "Community 55"
 Cohesion: 0.33
 Nodes (6): Cyan Robot Body, Dark Display Face, Idle Animation Pose, Idle Mascot Sprite Frame, Pixel-Art Robot Mascot, Red Antenna Indicator
 
-### Community 56 - "Idle Mascot Frame 3"
+### Community 56 - "Community 56"
 Cohesion: 0.40
 Nodes (6): Cyan Expressive Eyes, Idle Animation Pose, Pixel Mascot Idle Frame 3, Red Antenna Status Dot, Teal Robot Mascot, Turquoise Rounded Body Shell
 
-### Community 57 - "Speed Stats Models"
-Cohesion: 0.33
-Nodes (4): get_multi_provider(), Retorna a instância global do gerenciador de provedores., Estatísticas de histórico de velocidade com suporte a múltiplos provedores., SpeedStats
-
-### Community 58 - "ARP Scan Helpers"
+### Community 58 - "Community 58"
 Cohesion: 0.40
 Nodes (5): arp_monitor, get_mac, scan_network, poison_worker, spoof
 
-### Community 59 - "Error Mascot Sprite"
+### Community 59 - "Community 59"
 Cohesion: 0.60
 Nodes (5): Error Mascot Sprite, Error State Visual Language, Red Alert Dots, Red X Error Symbol, Robot Mascot
 
-### Community 60 - "Mascot Module Exports"
-Cohesion: 0.50
-Nodes (4): Mascot Frame Registry, Mascot module for Varedura — animated ASCII art character., MascotRenderer, Mascot Sprite Generation
-
-### Community 61 - "Idle Mascot Frame 1"
+### Community 61 - "Community 61"
 Cohesion: 0.40
 Nodes (5): Idle Mascot Frame, Idle State, Pixel Art Sprite Style, Red Status Antenna Light, Teal Robot Mascot
 
-### Community 62 - "Telmex Login Background"
+### Community 62 - "Community 62"
 Cohesion: 0.50
 Nodes (5): Blue Gradient Background, Central Light Highlight, Dark Edge Vignette, Telmex Login Background Image Asset, Router Login UI Background Context
 
-### Community 63 - "Scanning Mascot Frame 1"
+### Community 63 - "Community 63"
 Cohesion: 0.50
 Nodes (5): Antenna Status Indicator, Robot Mascot Character, Scanning Animation State, Scanning Mascot Sprite, Teal Body and Dark Face Design
 
-### Community 64 - "Working Mascot Frame 1"
+### Community 64 - "Community 64"
 Cohesion: 0.50
 Nodes (5): Pixel Art Style, Robot Mascot Character, Status Spark Accent, Working Mascot Sprite Frame 1, Working Status State
 
-### Community 65 - "Working Mascot Frame 2"
+### Community 65 - "Community 65"
 Cohesion: 0.50
 Nodes (5): Dark Head Panel With Cyan Eyes, Working Mascot Frame 2, Teal Robot Mascot, Working Status Pose, Yellow Action Accent
 
-### Community 66 - "TIME Logo Asset"
+### Community 66 - "Community 66"
 Cohesion: 0.50
 Nodes (3): Magenta Stylized Wordmark, TIME Logo, Trademark Mark
 
-### Community 67 - "Recording Prompt Prefs"
-Cohesion: 0.50
-Nodes (4): _ask_recording_prompt(), _load_recording_pref(), Show a startup prompt asking whether to record the session as GIF.      Returns, Load recording preference from disk (default: enabled).
-
-### Community 68 - "LMArena Model Registry"
+### Community 68 - "Community 68"
 Cohesion: 0.67
 Nodes (4): Text Image and Vision Model Indexes, Generated LMArena Model Registry, ModelsGenerator, LMArena initialModels Payload
 
-### Community 69 - "MTS Logo Asset"
+### Community 69 - "Community 69"
 Cohesion: 0.50
 Nodes (4): MTS Logo, MTS Wordmark, Red Dotted Ring Symbol, Telecom Brand Identity
 
-### Community 70 - "Network Hogs Fallback"
-Cohesion: 0.50
-Nodes (4): get_top_network_hogs(), _get_top_network_hogs_fallback(), Identifica os processos (Top 5) com mais conexões de rede ativas.      NOTA: U, Fallback usando I/O counters (menos preciso, usado quando sem permissão).
-
-### Community 71 - "Ping Graph Panels"
-Cohesion: 0.50
-Nodes (4): make_ascii_graph(), make_graph_panel(), Cria gráfico ASCII de linha a partir do histórico de ping., Cria painel com ambos os gráficos de ping mostrando info de tempo.
-
-### Community 72 - "Scanning Mascot Frame 2"
+### Community 72 - "Community 72"
 Cohesion: 0.67
 Nodes (4): Active Scan Indicator, Antenna Sensor, Scanning Animation Frame, Teal Pixel Robot Mascot
 
-### Community 73 - "Success Mascot Sprite"
+### Community 73 - "Community 73"
 Cohesion: 0.67
 Nodes (4): Green Success Checkmarks, Pixel Art Robot Mascot, Positive Status Feedback, Success Mascot Sprite
 
-### Community 74 - "Export History Coverage"
+### Community 74 - "Community 74"
 Cohesion: 0.67
 Nodes (4): PDF Export Downsampling and Full History, Combined PDF Export Generation, Full History Export Preference Persistence, Export Prompt Choice Flow
 
-### Community 75 - "VS Code Settings"
+### Community 75 - "Community 75"
 Cohesion: 0.50
 Nodes (3): python.testing.pytestArgs, python.testing.pytestEnabled, python.testing.unittestEnabled
 
-### Community 76 - "Working Mascot Frame 3"
+### Community 76 - "Community 76"
 Cohesion: 0.67
 Nodes (4): Pixel Robot Mascot, Status Sparkle Indicator, Working Mascot Frame 3, Working State Animation
 
-### Community 77 - "Vodacom Logo Asset"
+### Community 77 - "Community 77"
 Cohesion: 1.00
 Nodes (3): Red Banner Layout, Router Branding Asset, Vodacom Header Logo
 
-### Community 78 - "Cyta Logo Asset"
+### Community 78 - "Community 78"
 Cohesion: 1.00
 Nodes (3): Cyta Brand, Cyta Logo Asset, Green And Orange Circular Mark
 
-### Community 79 - "Orange MT Logo Asset"
+### Community 79 - "Community 79"
 Cohesion: 1.00
 Nodes (3): hwlogo_orangemt.gif Image Asset, my.t Logo, Orange MT Router Branding Context
 
-### Community 80 - "Paraguay PSN Banner"
+### Community 80 - "Community 80"
 Cohesion: 1.00
 Nodes (3): Blank White Logo Banner, hwlogo_paraguaypsn.gif Image Asset, Paraguay PSN Huawei Branding
 
-### Community 81 - "Unifi Logo Asset"
+### Community 81 - "Community 81"
 Cohesion: 1.00
 Nodes (3): Orange and Blue Unifi Wordmark, Stylized Smile Mark, Unifi Logo
 
-### Community 82 - "Login Background Asset"
+### Community 82 - "Community 82"
 Cohesion: 1.00
 Nodes (3): Abstract Blue Login Background, Blue Gradient Palette, Blurred Full Width Backdrop
 
-### Community 83 - "YPT Logo Asset"
+### Community 83 - "Community 83"
 Cohesion: 1.00
 Nodes (3): Gray WE Wordmark, YPT Logo Asset, Purple Abstract Mark
 
@@ -543,9 +521,9 @@ Nodes (3): Gray WE Wordmark, YPT Logo Asset, Purple Abstract Mark
   tests/static/images/hwlogo_paraguaypsn.gif · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **919 isolated node(s):** `python.testing.pytestArgs`, `python.testing.unittestEnabled`, `python.testing.pytestEnabled`, `menu.title`, `menu.subtitle` (+914 more)
+- **1051 isolated node(s):** `PreToolUse`, `command`, `args`, `python.testing.pytestArgs`, `python.testing.unittestEnabled` (+1046 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **20 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -558,9 +536,9 @@ _Questions this graph is uniquely positioned to answer:_
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **What is the exact relationship between `Blank White Logo Banner` and `Paraguay PSN Huawei Branding`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `WSLDockerCleaner` connect `Docker Cleanup Tests` to `Project Overview`, `Async Docker Cleaner`, `Quick Cleanup CLI`, `Rich Console Logging`, `Docker Async Steps`, `Cleanup Preferences`, `Docker Cleanup Commands`, `VHDX Compaction`, `Admin Elevation`, `WSL Fstrim Helpers`, `MCP Server Tools`?**
-  _High betweenness centrality (0.040) - this node is a cross-community bridge._
-- **Why does `run_full_scan()` connect `Port Scanner` to `Network Stalker Core`, `Export Preferences`, `Report State Models`, `Main Menu Runtime`, `MCP Server Tools`?**
-  _High betweenness centrality (0.036) - this node is a cross-community bridge._
-- **Why does `main()` connect `Network Stalker Core` to `Network Hogs Fallback`, `Ping Graph Panels`, `Speed Tester Lifecycle`, `PDF Export Tests`, `Export Preferences`, `Export Prompt Flow`, `Report State Models`, `Port Scanner`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `WSLDockerCleaner` connect `Community 19` to `Community 2`, `Community 37`, `Community 42`, `Community 43`, `Community 22`, `Community 30`?**
+  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Why does `run_full_scan()` connect `Community 31` to `Community 5`, `Community 40`, `Community 15`, `Community 22`, `Community 30`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
+- **Why does `VareduraTextualApp` connect `Community 40` to `Community 37`, `Community 39`, `Community 43`, `Community 44`, `Community 46`, `Community 49`, `Community 22`, `Community 31`?**
+  _High betweenness centrality (0.020) - this node is a cross-community bridge._

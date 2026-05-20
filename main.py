@@ -4,10 +4,10 @@ Varedura - System Monitor & Docker Cleanup Tool
 Usage:
     uv run main.py
 
-Main entry point providing a Rich-based menu for all tools.
+Main entry point providing the Textual TUI, with a Rich legacy fallback.
 """
 
-import json
+import os
 import sys
 import threading
 import itertools
@@ -20,6 +20,19 @@ from rich.panel import Panel
 from rich.table import Table
 from rich import box
 from i18n import t, init as i18n_init, set_language, get_language, get_supported_languages
+from cli.ui_shared import (
+    CLEANUP_STEPS,
+    STEP_WEIGHT,
+    build_cleanup_steps_table,
+    build_scanner_tables,
+    get_cleanup_steps as _get_cleanup_steps,
+    is_mcp_configured as _is_mcp_configured,
+    load_cleanup_steps as _load_cleanup_steps,
+    load_recording_pref as _load_recording_pref,
+    save_cleanup_steps as _save_cleanup_steps,
+    save_recording_pref as _save_recording_pref,
+    toggle_mcp_config as _toggle_mcp_config_state,
+)
 from mascot.renderer import MascotRenderer
 from mascot.frames import STATES, FRAMES
 
@@ -27,8 +40,6 @@ console = Console(record=True)
 i18n_init()
 mascot = MascotRenderer(console)
 
-_PREFS_FILE = Path.home() / ".varedura_prefs.json"
-_MCP_CONFIG_FILE = Path(".vscode") / "mcp.json"
 _recording_enabled = True
 _session_recorder = None
 
@@ -40,72 +51,6 @@ _MENU_EMOJIS = {
     "settings": ["⚙️ ", "🔧", "🛠️ ", "⚙️ "],
     "quit":     ["👋", "🚪", "👋", "🚪"],
 }
-
-# All available cleanup steps with their i18n keys and default ON/OFF
-CLEANUP_STEPS = [
-    ("containers",   "cleanup_prefs.step_containers",  True),
-    ("images",       "cleanup_prefs.step_images",       True),
-    ("volumes",      "cleanup_prefs.step_volumes",      True),
-    ("networks",     "cleanup_prefs.step_networks",     True),
-    ("builder",      "cleanup_prefs.step_builder",      True),
-    ("stop_docker",  "cleanup_prefs.step_stop_docker",  False),
-    ("wsl_sparse",   "cleanup_prefs.step_wsl_sparse",   False),
-    ("compact_vhdx", "cleanup_prefs.step_compact_vhdx", False),
-    ("temp_files",   "cleanup_prefs.step_temp_files",   False),
-    ("recycle_bin",  "cleanup_prefs.step_recycle_bin",   False),
-]
-
-
-def _load_prefs() -> dict:
-    """Load all preferences from disk."""
-    try:
-        if _PREFS_FILE.exists():
-            return json.loads(_PREFS_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        pass
-    return {}
-
-
-def _save_prefs(data: dict) -> None:
-    """Save preferences to disk."""
-    try:
-        _PREFS_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    except Exception:
-        pass
-
-
-def _load_recording_pref() -> bool:
-    """Load recording preference from disk (default: enabled)."""
-    return bool(_load_prefs().get("recording_enabled", True))
-
-
-def _save_recording_pref(enabled: bool) -> None:
-    """Save recording preference to disk."""
-    data = _load_prefs()
-    data["recording_enabled"] = enabled
-    _save_prefs(data)
-
-
-def _load_cleanup_steps() -> dict[str, bool] | None:
-    """Load cleanup step preferences. Returns None if never configured."""
-    data = _load_prefs()
-    return data.get("cleanup_steps")
-
-
-def _save_cleanup_steps(steps: dict[str, bool]) -> None:
-    """Save cleanup step preferences."""
-    data = _load_prefs()
-    data["cleanup_steps"] = steps
-    _save_prefs(data)
-
-
-def _get_cleanup_steps() -> dict[str, bool]:
-    """Get cleanup steps, using defaults if not yet configured."""
-    saved = _load_cleanup_steps()
-    if saved is not None:
-        return saved
-    return {key: default for key, _, default in CLEANUP_STEPS}
-
 
 def show_cleanup_prefs(first_run: bool = False) -> dict[str, bool]:
     """Interactive toggle screen for cleanup step preferences.
@@ -128,18 +73,7 @@ def show_cleanup_prefs(first_run: bool = False) -> dict[str, bool]:
 
         console.print(f"  [dim]{t('cleanup_prefs.instructions')}[/]\n")
 
-        tbl = Table(box=box.ROUNDED, expand=True, show_header=False)
-        tbl.add_column("#", style="bold yellow", width=4)
-        tbl.add_column("", width=8)
-        tbl.add_column("Step", style="white")
-
-        for i, (key, label_key, _) in enumerate(CLEANUP_STEPS, 1):
-            on = steps.get(key, False)
-            icon = "[bold green]✓[/]" if on else "[dim]✗[/]"
-            status = f"[green]{t('cleanup_prefs.on')}[/]" if on else f"[dim]{t('cleanup_prefs.off')}[/]"
-            tbl.add_row(str(i), f"{icon} {status}", t(label_key))
-
-        console.print(tbl)
+        console.print(build_cleanup_steps_table(steps))
 
         enabled_count = sum(1 for v in steps.values() if v)
         console.print(
@@ -158,6 +92,7 @@ def show_cleanup_prefs(first_run: bool = False) -> dict[str, bool]:
             idx = int(choice) - 1
             if 0 <= idx < len(CLEANUP_STEPS):
                 key = CLEANUP_STEPS[idx][0]
+                label_key = CLEANUP_STEPS[idx][1]
                 old_val = steps.get(key, False)
                 steps[key] = not old_val
                 console.print(f"\n[green]✓ {t(label_key)}: {t('cleanup_prefs.on' if not old_val else 'cleanup_prefs.off')}[/]\n")
@@ -165,55 +100,11 @@ def show_cleanup_prefs(first_run: bool = False) -> dict[str, bool]:
             console.print(f"\n[red]{t('menu.invalid_option')}[/]\n")
 
 
-def _is_mcp_configured() -> bool:
-    """Check if the MCP server config exists for this workspace."""
-    try:
-        if _MCP_CONFIG_FILE.exists():
-            data = json.loads(_MCP_CONFIG_FILE.read_text(encoding="utf-8"))
-            return "varedura" in data.get("servers", {})
-    except Exception:
-        pass
-    return False
-
-
 def _toggle_mcp_config() -> None:
     """Add or remove the Varedura MCP server from .vscode/mcp.json."""
-    try:
-        if _is_mcp_configured():
-            # Remove config
-            data = json.loads(_MCP_CONFIG_FILE.read_text(encoding="utf-8"))
-            data.get("servers", {}).pop("varedura", None)
-            if not data.get("servers"):
-                _MCP_CONFIG_FILE.unlink(missing_ok=True)
-            else:
-                _MCP_CONFIG_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
-            console.print(f"\n[yellow]{t('mcp.removed')}[/]")
-        else:
-            # Add config
-            console.print(f"\n[cyan]{t('mcp.installing')}[/]")
-            _MCP_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-
-            data = {}
-            if _MCP_CONFIG_FILE.exists():
-                try:
-                    data = json.loads(_MCP_CONFIG_FILE.read_text(encoding="utf-8"))
-                except Exception:
-                    data = {}
-
-            data.setdefault("servers", {})
-            data["servers"]["varedura"] = {
-                "type": "stdio",
-                "command": "uv",
-                "args": ["run", "python", "-m", "mcp_server"],
-            }
-            _MCP_CONFIG_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
-
-            console.print(f"[green]{t('mcp.installed')}[/]")
-            console.print(f"[dim]{t('mcp.config_path', path=str(_MCP_CONFIG_FILE.resolve()))}[/]")
-            console.print(f"[dim]{t('mcp.usage_hint')}[/]")
-            console.print(f"[dim]{t('mcp.run_hint')}[/]")
-    except Exception as e:
-        console.print(f"[red]{t('mcp.error', error=str(e))}[/]")
+    for style, message in _toggle_mcp_config_state():
+        prefix = "\n" if style in {"yellow", "cyan", "red"} else ""
+        console.print(f"{prefix}[{style}]{message}[/]")
 
 
 def _build_menu_layout(mascot_panel: Panel, frame_idx: int = 0) -> Columns:
@@ -385,13 +276,7 @@ def run_docker_cleanup():
             "recycle_bin":  cleaner.cleanup_recycle_bin,
         }
 
-        step_weight = {
-            "containers": 10, "images": 15, "volumes": 10, "networks": 5,
-            "builder": 10, "stop_docker": 15, "wsl_sparse": 10,
-            "compact_vhdx": 20, "temp_files": 10, "recycle_bin": 5,
-        }
-
-        total_weight = sum(step_weight.get(k, 10) for k in enabled)
+        total_weight = sum(STEP_WEIGHT.get(k, 10) for k in enabled)
 
         progress = Progress(
             TextColumn("[progress.description]{task.description}"),
@@ -424,7 +309,7 @@ def run_docker_cleanup():
                         except Exception as e:
                             failures.append(label)
                             console.print(f"[red]  {label}: {e}[/]")
-                    progress.update(task_id, advance=step_weight.get(key, 10))
+                    progress.update(task_id, advance=STEP_WEIGHT.get(key, 10))
             finally:
                 cleaner.silent_console = False
 
@@ -465,48 +350,14 @@ def run_port_scanner():
     success = False
     try:
         from monitor.port_scanner import run_full_scan
-        from rich.table import Table
-        from rich.panel import Panel
 
         console.print(f"\n[bold cyan]{t('scanner.scanning')}[/]\n")
         state = run_full_scan()
 
-        # TCP table
-        tcp_table = Table(
-            title=t("scanner.tcp_listening", count=state.total_tcp), border_style="cyan"
-        )
-        tcp_table.add_column(t("scanner.port"), style="bold yellow", justify="center")
-        tcp_table.add_column(t("scanner.process"), style="bold green")
-        tcp_table.add_column(t("scanner.address"), style="dim")
-
-        for port in state.listening_tcp[:15]:
-            tcp_table.add_row(str(port.porta), port.processo, port.endereco)
-
+        tcp_table, conn_table, summary_panel = build_scanner_tables(state)
         console.print(tcp_table)
-
-        # Connections table
-        conn_table = Table(
-            title=f"\n{t('scanner.top_connections', count=state.total_established)}",
-            border_style="green",
-        )
-        conn_table.add_column(t("scanner.process"), style="bold cyan")
-        conn_table.add_column(t("scanner.connections"), style="bold yellow", justify="center")
-        conn_table.add_column(t("scanner.ram_mb"), style="dim", justify="right")
-
-        for proc in state.top_connections:
-            ram_str = f"{proc.memoria_mb:.1f}" if proc.memoria_mb > 0 else "N/A"
-            conn_table.add_row(proc.nome, str(proc.conexoes), ram_str)
-
         console.print(conn_table)
-
-        # Summary
-        console.print(
-            Panel(
-                f"[bold green]{t('scanner.summary')}[/] {t('scanner.summary_detail', tcp=state.total_tcp, udp=state.total_udp, established=state.total_established)}\n"
-                f"[{t('scanner.last_scan', time=state.last_scan_time)}]",
-                border_style="blue",
-            )
-        )
+        console.print(summary_panel)
         success = True
 
     except ImportError as e:
@@ -657,8 +508,8 @@ def _ask_recording_prompt() -> bool:
         return saved
 
 
-def main():
-    """Main entry point."""
+def run_legacy_rich():
+    """Run the original Rich-based interface."""
     global _recording_enabled, _session_recorder
     _recording_enabled = _ask_recording_prompt()
     _save_recording_pref(_recording_enabled)
@@ -687,7 +538,7 @@ def main():
                 run_port_scanner()
                 console.input(f"\n[dim]{t('menu.press_enter')}[/]")
             elif choice == "lmarena":
-                console.print(f"\n[bold green]✓ LMArena[/]\n")
+                console.print("\n[bold green]✓ LMArena[/]\n")
                 run_lmarena_models()
                 console.input(f"\n[dim]{t('menu.press_enter')}[/]")
             elif choice == "s":
@@ -704,6 +555,19 @@ def main():
             _stop_recording_session(_session_recorder)
             _session_recorder = None
     sys.exit(0)
+
+
+def main():
+    """Main entry point."""
+    argv = sys.argv[1:]
+    use_legacy = "--legacy-rich" in argv or os.environ.get("VAREDURA_UI", "").lower() == "rich"
+    if use_legacy:
+        run_legacy_rich()
+        return
+
+    from cli.textual_app import run_textual_app
+
+    run_textual_app(legacy_network_runner=run_network_stalker)
 
 
 if __name__ == "__main__":

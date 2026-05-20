@@ -263,8 +263,12 @@ def test_compact_vhdx_files_requests_elevation_and_falls_back(monkeypatch, tmp_p
     monkeypatch.setattr(core.time, "sleep", lambda *_args, **_kwargs: None)
 
     def fake_run_command(command: str, capture_output=True, shell=True):
+        if command == "wsl -l -v":
+            return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
         if command == "wsl --shutdown":
             return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
+        if command.startswith("wsl -d ") and "-- echo ok" in command:
+            return subprocess.CompletedProcess(args=command, returncode=0, stdout="ok", stderr="")
         if "Get-Command Optimize-VHD" in command:
             return subprocess.CompletedProcess(args=command, returncode=0, stdout="Optimize-VHD\n", stderr="")
         raise AssertionError(command)
@@ -312,8 +316,12 @@ def test_compact_vhdx_reports_failure_when_diskpart_fails_without_optimize_vhd(m
     monkeypatch.setattr(core.time, "sleep", lambda *_args, **_kwargs: None)
 
     def fake_run_command(command: str, capture_output=True, shell=True):
+        if command == "wsl -l -v":
+            return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
         if command == "wsl --shutdown":
             return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
+        if command.startswith("wsl -d ") and "-- echo ok" in command:
+            return subprocess.CompletedProcess(args=command, returncode=0, stdout="ok", stderr="")
         if "Get-Command Optimize-VHD" in command:
             return subprocess.CompletedProcess(args=command, returncode=0, stdout="", stderr="")
         raise AssertionError(command)

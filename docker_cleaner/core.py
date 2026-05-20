@@ -779,11 +779,68 @@ try {{
             "detach vdisk\n"
         )
 
+    def _ensure_wsl_distros_running(self) -> list[str]:
+        """Ensure Docker WSL distros are running so fstrim can execute inside them.
+
+        Returns list of distro names that are available, starting stopped ones.
+        """
+        self.log(t("cleanup.fstrim_wsl_starting"))
+        result = self.run_command("wsl -l -v", capture_output=True)
+        if not result or result.returncode != 0:
+            return []
+        distros = self._docker_wsl_sparse_distros(result.stdout)
+        if not distros:
+            return []
+        started: list[str] = []
+        for distro in distros:
+            # Try to start the distro with a no-op command
+            self.log(t("cleanup.fstrim_wsl_distro_start", distro=distro))
+            start_result = self.run_command(
+                f'wsl -d {distro} -u root -- echo ok', capture_output=True,
+            )
+            if start_result and start_result.returncode == 0:
+                self.log(t("cleanup.fstrim_wsl_distro_started", distro=distro))
+                started.append(distro)
+            else:
+                self.log(t("cleanup.fstrim_wsl_distro_start_failed", distro=distro), "WARNING")
+        return started
+
+    async def _ensure_wsl_distros_running_async(
+        self, stream_callback: Optional[Callable[[str], None]] = None
+    ) -> list[str]:
+        """Async version of _ensure_wsl_distros_running."""
+        if stream_callback:
+            stream_callback(f"{t('cleanup.fstrim_wsl_starting')}\n")
+        result = await self.run_command_async("wsl -l -v", shell=True, stream_callback=stream_callback)
+        if not result or result.returncode != 0:
+            return []
+        distros = self._docker_wsl_sparse_distros(result.stdout)
+        if not distros:
+            return []
+        started: list[str] = []
+        for distro in distros:
+            if stream_callback:
+                stream_callback(f"{t('cleanup.fstrim_wsl_distro_start', distro=distro)}\n")
+            start_result = await self.run_command_async(
+                f'wsl -d {distro} -u root -- echo ok', shell=True, stream_callback=stream_callback,
+            )
+            if start_result and start_result.returncode == 0:
+                if stream_callback:
+                    stream_callback(f"{t('cleanup.fstrim_wsl_distro_started', distro=distro)}\n")
+                started.append(distro)
+            else:
+                if stream_callback:
+                    stream_callback(f"{t('cleanup.fstrim_wsl_distro_start_failed', distro=distro)}\n")
+        return started
+
     def _fstrim_wsl_distros(self) -> bool:
         """Run fstrim on Docker WSL distros to discard unused filesystem blocks.
 
         Essential before diskpart compact: ext4 does not zero deleted data,
         so diskpart cannot reclaim space unless blocks are discarded first.
+
+        Note: Caller is responsible for wsl --shutdown AFTER this method returns.
+        WSL distros MUST be running when this method is called.
         """
         self.log(t("cleanup.fstrim_starting"))
         result = self.run_command("wsl -l -v", capture_output=True)
@@ -805,19 +862,24 @@ try {{
                 any_success = True
             else:
                 self.log(t("cleanup.fstrim_fallback_dd", distro=distro))
+                # dd fills free space with zeros so diskpart can reclaim it.
+                # ENOSPC (exit code 1) is expected — it means all free space was zeroed.
                 self.run_command(
-                    f'wsl -d {distro} -u root -- sh -c "dd if=/dev/zero of=/zero.tmp bs=1M 2>/dev/null; rm -f /zero.tmp; sync"',
+                    f'wsl -d {distro} -u root -- sh -c "dd if=/dev/zero of=/zero.tmp bs=1M conv=fdatasync 2>/dev/null; rm -f /zero.tmp; sync"',
                     capture_output=True,
                 )
+                self.log(t("cleanup.fstrim_dd_done", distro=distro))
                 any_success = True
-        self.run_command("wsl --shutdown", capture_output=True)
-        time.sleep(5)
         return any_success
 
     async def _fstrim_wsl_distros_async(
         self, stream_callback: Optional[Callable[[str], None]] = None
     ) -> bool:
-        """Async version of _fstrim_wsl_distros."""
+        """Async version of _fstrim_wsl_distros.
+
+        Note: Caller is responsible for wsl --shutdown AFTER this method returns.
+        WSL distros MUST be running when this method is called.
+        """
         if stream_callback:
             stream_callback(f"{t('cleanup.fstrim_starting')}\n")
         result = await self.run_command_async("wsl -l -v", shell=True, stream_callback=stream_callback)
@@ -844,13 +906,15 @@ try {{
             else:
                 if stream_callback:
                     stream_callback(f"{t('cleanup.fstrim_fallback_dd', distro=distro)}\n")
+                # dd fills free space with zeros so diskpart can reclaim it.
+                # ENOSPC (exit code 1) is expected — it means all free space was zeroed.
                 await self.run_command_async(
-                    f'wsl -d {distro} -u root -- sh -c "dd if=/dev/zero of=/zero.tmp bs=1M 2>/dev/null; rm -f /zero.tmp; sync"',
+                    f'wsl -d {distro} -u root -- sh -c "dd if=/dev/zero of=/zero.tmp bs=1M conv=fdatasync 2>/dev/null; rm -f /zero.tmp; sync"',
                     shell=True, stream_callback=stream_callback,
                 )
+                if stream_callback:
+                    stream_callback(f"{t('cleanup.fstrim_dd_done', distro=distro)}\n")
                 any_success = True
-        await self.run_command_async("wsl --shutdown", shell=True)
-        await asyncio.sleep(5)
         return any_success
 
     def _recreate_vhdx(self, vhdx_path: str) -> bool:
@@ -987,8 +1051,18 @@ try {{
             )
             return False
 
-        # Phase 1: fstrim — discard unused blocks so diskpart can reclaim them
-        self._fstrim_wsl_distros()
+        # Phase 1: Ensure WSL distros are running for fstrim
+        self._ensure_wsl_distros_running()
+
+        # Phase 2: fstrim — discard unused blocks so diskpart can reclaim them
+        fstrim_ok = self._fstrim_wsl_distros()
+        if not fstrim_ok:
+            self.log(t("cleanup.fstrim_warning"), "WARNING")
+
+        # Phase 3: Shutdown WSL to release VHDX files
+        self.log(t("cleanup.fstrim_wsl_shutdown"))
+        self.run_command("wsl --shutdown", capture_output=True)
+        time.sleep(5)
 
         success = False
         
@@ -997,9 +1071,6 @@ try {{
                 size_before = os.path.getsize(vhdx_path)
                 size_before_gb = size_before / (1024**3)
                 self.log(t("cleanup.compacting_file", path=vhdx_path, size=f"{size_before_gb:.2f}"))
-                
-                # Try to shutdown wsl again just in case
-                self.run_command("wsl --shutdown", capture_output=True)
                 
                 if not self._wait_for_vhdx_unlock(vhdx_path, timeout=90):
                     self.log(f"Timeout waiting for lock release: {vhdx_path}. O arquivo pode estar sendo usado por outro processo. Pulando compactação.", "ERROR")
@@ -1502,8 +1573,20 @@ try {{
             )
             return False
 
-        # Phase 1: fstrim — discard unused blocks so diskpart can reclaim them
-        await self._fstrim_wsl_distros_async(stream_callback=stream_callback)
+        # Phase 1: Ensure WSL distros are running for fstrim
+        await self._ensure_wsl_distros_running_async(stream_callback=stream_callback)
+
+        # Phase 2: fstrim — discard unused blocks so diskpart can reclaim them
+        fstrim_ok = await self._fstrim_wsl_distros_async(stream_callback=stream_callback)
+        if not fstrim_ok:
+            if stream_callback:
+                stream_callback(f"{t('cleanup.fstrim_warning')}\n")
+
+        # Phase 3: Shutdown WSL to release VHDX files
+        if stream_callback:
+            stream_callback(f"{t('cleanup.fstrim_wsl_shutdown')}\n")
+        await self.run_command_async("wsl --shutdown", shell=True)
+        await asyncio.sleep(5)
 
         success = False
         for vhdx_path in vhdx_paths:
@@ -1515,9 +1598,6 @@ try {{
                     stream_callback(
                         f"{t('cleanup.compacting_file', path=vhdx_path, size=f'{size_before_gb:.2f}')}\n"
                     )
-                
-                # Try to shutdown wsl again just in case
-                await self.run_command_async("wsl --shutdown", shell=True)
                 
                 unlocked = await self._wait_for_vhdx_unlock_async(vhdx_path, timeout=90)
                 if not unlocked:

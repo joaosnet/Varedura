@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import locale
-import os
 from pathlib import Path
 from typing import Optional
 

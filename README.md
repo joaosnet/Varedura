@@ -119,9 +119,10 @@ uv tool uninstall varedura
 
 ## 📌 Current Project Status
 
-Varedura is currently a **Rich-based terminal app** with modular tooling for Docker cleanup, network diagnostics, MCP integration, and session recording.
+Varedura is currently a **Textual + Rich terminal app** with modular tooling for Docker cleanup, network diagnostics, MCP integration, and session recording.
 
-- Main interface: animated menu in `main.py` (not Textual)
+- Main interface: Textual TUI in `cli/textual_app.py` with Rich renderables
+- Legacy Rich interface: `varedura --legacy-rich` or `VAREDURA_UI=rich varedura`
 - Docker engine cleanup: sync + async logic in `docker_cleaner/core.py`
 - Network tooling: `monitor/stalker.py`, `monitor/port_scanner.py`, `monitor/speed_tester.py`
 - MCP server: `mcp_server/server.py` (5 tools exposed to AI agents)

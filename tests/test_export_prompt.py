@@ -5,9 +5,7 @@ from monitor.stalker import (
     prompt_export_report,
     full_ping_history,
     get_speed_tester,
-    config,
 )
-from monitor.speed_tester import SpeedTestResult
 from i18n import t
 
 
@@ -46,8 +44,6 @@ def test_prompt_export_confirm_triggers_export(tmp_path):
     tester.stats.history_down.clear()
     tester.stats.history_up.clear()
     tester.stats.timestamps.clear()
-
-    result = SpeedTestResult = None
 
     # Simulate confirmation
     res = prompt_export_report(simulated_choice="s")

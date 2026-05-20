@@ -1,6 +1,5 @@
 import os
 import glob
-import time
 import datetime
 from monitor.stalker import (
     _generate_combined_pdf_worker,

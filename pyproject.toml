@@ -22,6 +22,7 @@ dependencies = [
     "cairosvg>=2.7.0",
     "mcp[cli]>=1.0.0",
     "rich-pixels>=3.0.1",
+    "textual>=6.6.0",
 ]
 
 [dependency-groups]
