@@ -246,6 +246,48 @@ def build_dashboard_summary(recording_enabled: bool, current_language: str) -> P
     return Panel(status_table, title=t("menu.title"), border_style="blue")
 
 
+def _fmt_ping(ms: float | None, threshold: int) -> Text:
+    """Format a latency value with a status color."""
+    if ms is None:
+        return Text(t("stalker.timeout"), style="bold red")
+    style = "green" if ms <= threshold else ("yellow" if ms <= threshold * 1.5 else "bold red")
+    return Text(f"{ms:.0f} ms", style=style)
+
+
+def build_dashboard_status(
+    recording_enabled: bool, current_language: str, network: dict | None = None
+) -> Panel:
+    """Build a live at-a-glance status overview for the dashboard."""
+    network = network or {}
+    threshold = int(network.get("lag_threshold_ms", 100))
+    gateway = str(network.get("gateway_ip") or "—")
+    running = bool(network.get("running"))
+
+    table = Table(box=box.SIMPLE, show_header=False, expand=True)
+    table.add_column(style="bold cyan", no_wrap=True)
+    table.add_column(style="white")
+
+    table.add_row(
+        t("dashboard.network"),
+        Text(t("dashboard.net_running"), style="green")
+        if running
+        else Text(t("dashboard.net_idle"), style="dim"),
+    )
+    table.add_row(t("dashboard.gateway", ip=gateway), _fmt_ping(network.get("local_ms"), threshold))
+    table.add_row(t("dashboard.external"), _fmt_ping(network.get("ext_ms"), threshold))
+    table.add_row(
+        t("settings.option_rec"),
+        t("settings.rec_on") if recording_enabled else t("settings.rec_off"),
+    )
+    table.add_row(t("settings.option_lang"), current_language)
+    table.add_row(t("settings.option_cleanup"), cleanup_summary())
+    table.add_row(
+        t("mcp.option"),
+        t("mcp.status_on") if is_mcp_configured() else t("mcp.status_off"),
+    )
+    return Panel(table, title=t("menu.title"), border_style="blue")
+
+
 def build_tool_option(title: str, description: str, accent: str = "cyan") -> Panel:
     """Build a Rich renderable suitable for a Textual OptionList option."""
     body = Group(Text(title, style=f"bold {accent}"), Text(description, style="dim"))

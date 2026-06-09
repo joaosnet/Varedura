@@ -51,7 +51,7 @@ async def test_textual_dashboard_renders_and_menu_switches_to_cleanup():
 async def test_textual_settings_save_recording_and_language():
     app = VareduraTextualApp()
 
-    async with app.run_test(size=(100, 40)) as pilot:
+    async with app.run_test(size=(100, 60)) as pilot:
         await pilot.pause()
         app.query_one("#main-tabs", TabbedContent).active = "settings"
         await pilot.pause()

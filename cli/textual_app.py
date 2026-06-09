@@ -38,7 +38,7 @@ from cli.richlog import DailyLogWriter
 from cli.ui_shared import (
     CLEANUP_STEPS,
     build_cleanup_status_panel,
-    build_dashboard_summary,
+    build_dashboard_status,
     build_scanner_tables,
     build_settings_status_table,
     build_tool_option,
@@ -261,7 +261,7 @@ class VareduraTextualApp(App[str | None]):
         Binding("escape", "dashboard", t("textual.bind_dashboard"), show=True),
     ]
 
-    TOOL_IDS = ("network", "docker", "scanner", "settings", "lmarena")
+    TOOL_IDS = ("network", "docker", "scanner", "settings")
 
     def __init__(self) -> None:
         super().__init__()
@@ -273,6 +273,7 @@ class VareduraTextualApp(App[str | None]):
         self._net_local_stats = None
         self._net_external_stats = None
         self._net_pool: ThreadPoolExecutor | None = None
+        self._net_scan_failed = False
 
     def compose(self) -> ComposeResult:
         self.title = "Varedura"
@@ -295,7 +296,9 @@ class VareduraTextualApp(App[str | None]):
         with Horizontal(id="dashboard-grid", classes="pane"):
             with Vertical(id="dashboard-left"):
                 yield RichRenderable(
-                    build_dashboard_summary(load_recording_pref(), get_language()),
+                    build_dashboard_status(
+                        load_recording_pref(), get_language(), self._network_status_snapshot()
+                    ),
                     id="dashboard-summary",
                 )
                 yield OptionList(
@@ -315,10 +318,6 @@ class VareduraTextualApp(App[str | None]):
                     Option(
                         build_tool_option(t("menu.option_settings"), t("menu.desc_settings"), "magenta"),
                         id="settings",
-                    ),
-                    Option(
-                        build_tool_option("LMArena", t("menu.starting_lmarena"), "blue"),
-                        id="lmarena",
                     ),
                     id="tool-menu",
                 )
@@ -440,6 +439,34 @@ class VareduraTextualApp(App[str | None]):
         self._init_network_config()
         self.query_one("#tool-menu", OptionList).focus()
         self._write_dashboard_log(t("textual.ready"))
+        self.set_interval(2.0, self._refresh_dashboard_status)
+
+    def _network_status_snapshot(self) -> dict:
+        """Cheap live snapshot of the network monitor for the dashboard."""
+        snapshot: dict = {"running": self.network_running}
+        try:
+            import monitor.stalker as stalker_mod
+
+            snapshot["gateway_ip"] = stalker_mod.config.gateway_ip
+            snapshot["lag_threshold_ms"] = stalker_mod.config.lag_threshold_ms
+            if stalker_mod.local_stats.history:
+                snapshot["local_ms"] = stalker_mod.local_stats.history[-1]
+            if stalker_mod.external_stats.history:
+                snapshot["ext_ms"] = stalker_mod.external_stats.history[-1]
+        except Exception:
+            pass
+        return snapshot
+
+    def _refresh_dashboard_status(self) -> None:
+        """Update the dashboard status panel with live network data."""
+        try:
+            self.query_one("#dashboard-summary", RichRenderable).update(
+                build_dashboard_status(
+                    load_recording_pref(), get_language(), self._network_status_snapshot()
+                )
+            )
+        except Exception:
+            pass
 
     def _init_network_config(self) -> None:
         """Resolve the network config (autodetect gateway) and apply it."""
@@ -487,9 +514,6 @@ class VareduraTextualApp(App[str | None]):
         option_id = str(event.option_id or "")
         if option_id in {"network", "docker", "scanner", "settings"}:
             self.query_one("#main-tabs", TabbedContent).active = option_id
-        elif option_id == "lmarena":
-            self._write_dashboard_log(t("menu.starting_lmarena"))
-            self.notify(t("textual.lmarena_legacy"))
 
     @on(TabbedContent.TabActivated, "#main-tabs")
     def on_main_tab_activated(self, event: TabbedContent.TabActivated) -> None:
@@ -796,7 +820,21 @@ class VareduraTextualApp(App[str | None]):
                 local_ms = self._future_result(f_local)
                 ext_ms = self._future_result(f_ext)
                 procs = self._future_result(f_procs) or []
-                scan_state = self._future_result(f_scan) if f_scan is not None else None
+
+                scan_state = None
+                if f_scan is not None:
+                    try:
+                        scan_state = f_scan.result()
+                        self._net_scan_failed = False
+                    except Exception as exc:
+                        # Surface the failure once (not every cycle) so a broken
+                        # scan does not look like a silently empty ports table.
+                        if not self._net_scan_failed:
+                            self._net_scan_failed = True
+                            self.call_from_thread(
+                                self._network_log,
+                                f"[yellow]{t('stalker.port_scan_error', error=exc)}[/]",
+                            )
 
                 # Agregação single-threaded (evita corrida no deque do PingStats).
                 self._net_local_stats.add(local_ms)
@@ -928,9 +966,16 @@ class VareduraTextualApp(App[str | None]):
                 min=f"{stats.min_ms:.0f}",
                 avg=f"{stats.avg_ms:.0f}",
                 max=f"{stats.max_ms:.0f}",
+                threshold=threshold,
             )
         else:
-            stats_text = t("textual.network_card_stats", min="--", avg="--", max="--")
+            stats_text = t(
+                "textual.network_card_stats",
+                min="--",
+                avg="--",
+                max="--",
+                threshold=threshold,
+            )
         self.query_one(f"#{prefix}-stats", Label).update(stats_text)
 
         cls = self._ping_status_class(ms, threshold)
@@ -941,14 +986,34 @@ class VareduraTextualApp(App[str | None]):
     def _render_speed_table(self, snapshot: dict) -> None:
         table = self.query_one("#network-speed-table", DataTable)
         table.clear()
+
+        # ANATEL compliance reference: at least `percentual_minimo`% of the
+        # contracted speed (Resolução 574/2011 mensal mínimo de 80%).
+        try:
+            from monitor.speed_tester import speed_config
+
+            factor = speed_config.percentual_minimo / 100
+            min_down = speed_config.velocidade_contratada_down * factor
+            min_up = speed_config.velocidade_contratada_up * factor
+        except Exception:
+            min_down = min_up = 0.0
+
         results = snapshot.get("results_by_provider", {})
         for provider, result in results.items():
             try:
-                down = f"{float(result.download_mbps):.0f} Mbps"
-                up = f"{float(result.upload_mbps):.0f} Mbps"
+                down_mbps = float(result.download_mbps)
+                up_mbps = float(result.upload_mbps)
                 ping = f"{float(result.ping_ms):.0f} ms"
             except (ValueError, TypeError, AttributeError):
                 continue
+            down = Text(
+                f"{down_mbps:.0f} Mbps",
+                style="green" if down_mbps >= min_down else "bold red",
+            )
+            up = Text(
+                f"{up_mbps:.0f} Mbps",
+                style="green" if up_mbps >= min_up else "bold red",
+            )
             table.add_row(str(provider)[:14], down, up, ping)
 
         if snapshot.get("is_testing"):
@@ -990,9 +1055,7 @@ class VareduraTextualApp(App[str | None]):
     def _refresh_status_renderables(self) -> None:
         recording = load_recording_pref()
         language = get_language()
-        self.query_one("#dashboard-summary", RichRenderable).update(
-            build_dashboard_summary(recording, language)
-        )
+        self._refresh_dashboard_status()
         self.query_one("#settings-status", RichRenderable).update(
             build_settings_status_table(recording, language)
         )

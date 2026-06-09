@@ -55,13 +55,13 @@
     "semantic_hash": "a3dc411d85402f361ad8c43cc99c827a"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\en.json": {
-    "mtime": 1780970745.7633939,
-    "ast_hash": "3f0382e1d8371d6fd658e705c1a0c62a",
+    "mtime": 1780972214.3946836,
+    "ast_hash": "0e6b1cdb6052301ed5707d56f2616b1a",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\pt.json": {
-    "mtime": 1780970748.2593791,
-    "ast_hash": "e9c12538474c9bdac47809abc53e4d49",
+    "mtime": 1780972234.8547466,
+    "ast_hash": "2cb601b2e57a53d30898a544a09e32af",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\__init__.py": {
@@ -430,18 +430,18 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\textual_app.py": {
-    "mtime": 1780970765.0539258,
-    "ast_hash": "1d03ace1fe4b4ffb2eb050c1b0d5abe2",
+    "mtime": 1780972202.3292649,
+    "ast_hash": "bf503204c3ec31e2a72795fc3ad96f26",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\ui_shared.py": {
-    "mtime": 1779245075.803849,
-    "ast_hash": "3f769057405d8c54fb4e7fcb7c9352fb",
+    "mtime": 1780972127.2505279,
+    "ast_hash": "4f166b343414534327e88d311601086b",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_textual_app.py": {
-    "mtime": 1780969357.021095,
-    "ast_hash": "21e3d6147bf8c7de23aaac7f14091084",
+    "mtime": 1780971713.3839295,
+    "ast_hash": "5b4146757456541d13d45b1894d7a6ef",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\AGENTS.md": {
@@ -467,6 +467,11 @@
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.agents\\workflows\\graphify.md": {
     "mtime": 1779246000.2288082,
     "ast_hash": "84de69efd46ab0b8430393bd4188f8f2",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\netinfo.py": {
+    "mtime": 1780971433.0122504,
+    "ast_hash": "c907c23959b9a68f0f1e898008d29bfb",
     "semantic_hash": ""
   }
 }
