@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import threading
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 
 from rich.console import Console
@@ -34,14 +35,28 @@ from textual.widgets import (
 )
 from textual.widgets.option_list import Option
 
+from cli.gamification import (
+    achievement_by_id,
+    check_achievements,
+    compute_health_score,
+    load_game_state,
+    save_game_state,
+    StreakTracker,
+    update_records,
+)
 from cli.richlog import DailyLogWriter
 from cli.ui_shared import (
+    CLEANUP_GROUPS,
     CLEANUP_STEPS,
+    QUICK_CLEANUP_KEYS,
+    build_achievements_row,
     build_cleanup_status_panel,
     build_dashboard_status,
+    build_records_panel,
     build_scanner_tables,
     build_settings_status_table,
     build_tool_option,
+    cleanup_label_key,
     get_cleanup_steps,
     is_mcp_configured,
     load_network_config,
@@ -59,6 +74,7 @@ from i18n import (
     set_language,
     t,
 )
+from mascot import FRAMES, MascotRenderer, STATES
 
 
 def _cleanup_checkbox_id(step_key: str) -> str:
@@ -114,7 +130,9 @@ class VareduraTextualApp(App[str | None]):
     }
 
     #dashboard-summary,
-    #activity-card,
+    #mascot-card,
+    #achievements-card,
+    #records-card,
     #cleanup-summary,
     #settings-status,
     #scanner-rich-summary {
@@ -164,11 +182,32 @@ class VareduraTextualApp(App[str | None]):
         margin-right: 1;
     }
 
-    #cleanup-checks {
-        height: 14;
-        border: solid $primary;
-        padding: 0 1;
+    #cleanup-config {
+        height: 1fr;
+    }
+
+    #cleanup-log {
+        height: 10;
+    }
+
+    #cleanup-top {
+        height: auto;
         margin-bottom: 1;
+    }
+
+    #cleanup-mascot {
+        width: auto;
+        height: auto;
+    }
+
+    #cleanup-reward {
+        width: 1fr;
+        height: auto;
+        content-align: center middle;
+    }
+
+    #cleanup-reward .ping-digits {
+        color: $success;
     }
 
     #cleanup-progress,
@@ -274,6 +313,14 @@ class VareduraTextualApp(App[str | None]):
         self._net_external_stats = None
         self._net_pool: ThreadPoolExecutor | None = None
         self._net_scan_failed = False
+        # Gamification state.
+        self._game = load_game_state()
+        self._streak = StreakTracker()
+        self._score_hist: deque[float] = deque(maxlen=100)
+        self._mascot = MascotRenderer()
+        self._mascot_state = STATES.IDLE
+        self._mascot_msg = ""
+        self._mascot_frame = 0
 
     def compose(self) -> ComposeResult:
         self.title = "Varedura"
@@ -295,6 +342,10 @@ class VareduraTextualApp(App[str | None]):
     def _compose_dashboard(self) -> ComposeResult:
         with Horizontal(id="dashboard-grid", classes="pane"):
             with Vertical(id="dashboard-left"):
+                yield RichRenderable(
+                    self._mascot.render_static(STATES.WAVE, t("mascot.welcome")),
+                    id="mascot-card",
+                )
                 yield RichRenderable(
                     build_dashboard_status(
                         load_recording_pref(), get_language(), self._network_status_snapshot()
@@ -322,20 +373,37 @@ class VareduraTextualApp(App[str | None]):
                     id="tool-menu",
                 )
             with Vertical(id="dashboard-right"):
-                yield RichRenderable(
-                    Panel(Text(t("textual.ready"), style="green"), border_style="green"),
-                    id="activity-card",
-                )
+                yield RichRenderable(build_achievements_row(self._game), id="achievements-card")
+                yield RichRenderable(build_records_panel(self._game), id="records-card")
                 yield RichLog(id="dashboard-log", highlight=True, markup=True, wrap=True)
 
     def _compose_cleanup(self) -> ComposeResult:
         steps = get_cleanup_steps()
-        with VerticalScroll(classes="pane"):
-            yield Label(t("cleanup_prefs.title"), classes="section-title")
-            yield RichRenderable(build_cleanup_status_panel(steps), id="cleanup-summary")
-            with VerticalScroll(id="cleanup-checks"):
-                for key, label_key, _default in CLEANUP_STEPS:
-                    yield Checkbox(t(label_key), value=steps.get(key, False), id=_cleanup_checkbox_id(key))
+        with Vertical(classes="pane"):
+            # Scrollable configuration area.
+            with VerticalScroll(id="cleanup-config"):
+                yield Label(t("cleanup_prefs.title"), classes="section-title")
+                with Horizontal(id="cleanup-top"):
+                    yield RichRenderable(
+                        self._mascot.render_static(STATES.IDLE, ""), id="cleanup-mascot"
+                    )
+                    with Vertical(id="cleanup-reward"):
+                        yield Label(t("cleanup_prefs.freed_label"), classes="card-title")
+                        yield Digits("0.0", id="cleanup-freed", classes="ping-digits")
+                        yield Label("GB", classes="card-unit")
+                with Horizontal(classes="button-row"):
+                    yield Button(t("cleanup_prefs.preset_quick"), id="preset-quick")
+                    yield Button(t("cleanup_prefs.preset_deep"), id="preset-deep")
+                yield RichRenderable(build_cleanup_status_panel(steps), id="cleanup-summary")
+                for group_key, icon, keys in CLEANUP_GROUPS:
+                    yield Label(f"{icon} {t(group_key)}", classes="section-title")
+                    for key in keys:
+                        yield Checkbox(
+                            t(cleanup_label_key(key)),
+                            value=steps.get(key, False),
+                            id=_cleanup_checkbox_id(key),
+                        )
+            # Fixed action + status + progress + log (always visible).
             with Horizontal(classes="button-row"):
                 yield Button(t("textual.cleanup_run"), id="run-cleanup", variant="primary")
                 yield Button(t("textual.cleanup_save"), id="save-cleanup")
@@ -368,6 +436,12 @@ class VareduraTextualApp(App[str | None]):
                 yield Button(t("textual.network_export"), id="network-export")
                 yield Label(t("textual.network_idle"), id="network-status")
             with Horizontal(id="network-cards"):
+                with Vertical(classes="ping-card", id="health-card"):
+                    yield Label(t("game.health_title"), classes="card-title")
+                    yield Digits("--", id="health-digits", classes="ping-digits")
+                    yield Label("", id="health-tier", classes="card-unit")
+                    yield Sparkline([], id="health-spark", summary_function=max)
+                    yield Label("", id="health-streak", classes="card-stats")
                 with Vertical(classes="ping-card", id="gateway-card"):
                     yield Label(t("stalker.graph_gateway"), classes="card-title")
                     yield Digits("--", id="gateway-digits", classes="ping-digits")
@@ -440,6 +514,7 @@ class VareduraTextualApp(App[str | None]):
         self.query_one("#tool-menu", OptionList).focus()
         self._write_dashboard_log(t("textual.ready"))
         self.set_interval(2.0, self._refresh_dashboard_status)
+        self.set_interval(0.5, self._animate_mascot)
 
     def _network_status_snapshot(self) -> dict:
         """Cheap live snapshot of the network monitor for the dashboard."""
@@ -458,15 +533,44 @@ class VareduraTextualApp(App[str | None]):
         return snapshot
 
     def _refresh_dashboard_status(self) -> None:
-        """Update the dashboard status panel with live network data."""
+        """Update the dashboard status + records panels with live data."""
         try:
             self.query_one("#dashboard-summary", RichRenderable).update(
                 build_dashboard_status(
                     load_recording_pref(), get_language(), self._network_status_snapshot()
                 )
             )
+            self.query_one("#records-card", RichRenderable).update(
+                build_records_panel(self._game)
+            )
         except Exception:
             pass
+
+    def _animate_mascot(self) -> None:
+        """Cycle the mascot sprite frames; only while the dashboard is visible."""
+        try:
+            if self.query_one("#main-tabs", TabbedContent).active != "dashboard":
+                return
+            frames = FRAMES.get(self._mascot_state) or FRAMES[STATES.IDLE]
+            path = frames[self._mascot_frame % len(frames)]
+            self._mascot_frame += 1
+            self.query_one("#mascot-card", RichRenderable).update(
+                self._mascot.render_static_from_path(path, self._mascot_msg, self._mascot_state)
+            )
+        except Exception:
+            pass
+
+    def _update_mascot_state(self, score: int, testing: bool) -> None:
+        if not self.network_running:
+            self._mascot_state, self._mascot_msg = STATES.IDLE, t("mascot.welcome")
+        elif testing:
+            self._mascot_state, self._mascot_msg = STATES.SCANNING, t("mascot.scanning")
+        elif score < 35:
+            self._mascot_state, self._mascot_msg = STATES.ERROR, ""
+        elif score < 70:
+            self._mascot_state, self._mascot_msg = STATES.WORKING, ""
+        else:
+            self._mascot_state, self._mascot_msg = STATES.IDLE, ""
 
     def _init_network_config(self) -> None:
         """Resolve the network config (autodetect gateway) and apply it."""
@@ -544,6 +648,18 @@ class VareduraTextualApp(App[str | None]):
             self._export_network_report()
         elif button_id == "net-detect-gateway":
             self._detect_gateway()
+        elif button_id == "preset-quick":
+            self._apply_cleanup_preset(QUICK_CLEANUP_KEYS)
+        elif button_id == "preset-deep":
+            self._apply_cleanup_preset([key for key, _l, _d in CLEANUP_STEPS])
+
+    def _apply_cleanup_preset(self, enabled_keys: list[str]) -> None:
+        wanted = set(enabled_keys)
+        for key, _label_key, _default in CLEANUP_STEPS:
+            self.query_one(f"#{_cleanup_checkbox_id(key)}", Checkbox).value = key in wanted
+        self.query_one("#cleanup-summary", RichRenderable).update(
+            build_cleanup_status_panel(self._cleanup_form_steps())
+        )
 
     def _detect_gateway(self) -> None:
         from monitor.netinfo import detect_default_gateway
@@ -629,10 +745,10 @@ class VareduraTextualApp(App[str | None]):
             self.call_from_thread(self._update_cleanup_progress, completed, total, label)
 
         try:
-            success, failures = run_cleanup_steps(step_keys, rich_console, progress)
-            self.call_from_thread(self._finish_cleanup, success, failures)
+            success, failures, freed = run_cleanup_steps(step_keys, rich_console, progress)
+            self.call_from_thread(self._finish_cleanup, success, failures, freed)
         except Exception as exc:
-            self.call_from_thread(self._finish_cleanup, False, [str(exc)])
+            self.call_from_thread(self._finish_cleanup, False, [str(exc)], 0.0)
         finally:
             writer.close()
             self.call_from_thread(self._set_cleanup_running, False)
@@ -641,6 +757,10 @@ class VareduraTextualApp(App[str | None]):
         self.cleanup_running = running
         self.query_one("#run-cleanup", Button).disabled = running
         self.query_one("#save-cleanup", Button).disabled = running
+        if running:
+            self.query_one("#cleanup-mascot", RichRenderable).update(
+                self._mascot.render_static(STATES.WORKING, t("mascot.scanning"))
+            )
 
     def _write_cleanup_log(self, line: str) -> None:
         self.query_one("#cleanup-log", RichLog).write(line)
@@ -651,7 +771,7 @@ class VareduraTextualApp(App[str | None]):
         bar.progress = min(completed, max(total, 1))
         self.query_one("#cleanup-status", Label).update(label)
 
-    def _finish_cleanup(self, success: bool, failures: list[str]) -> None:
+    def _finish_cleanup(self, success: bool, failures: list[str], freed: float = 0.0) -> None:
         if success:
             message = t("textual.cleanup_success")
             severity = "information"
@@ -662,6 +782,23 @@ class VareduraTextualApp(App[str | None]):
         self.query_one("#cleanup-status", Label).update(message)
         self._write_cleanup_log(message)
         self.notify(message, severity=severity)
+
+        # Gamified reward: show freed space + celebrate via the mascot.
+        self.query_one("#cleanup-freed", Digits).update(f"{freed:.1f}")
+        self.query_one("#cleanup-mascot", RichRenderable).update(
+            self._mascot.render_static(
+                STATES.SUCCESS if success else STATES.ERROR,
+                t("cleanup_prefs.freed_msg", gb=f"{freed:.1f}") if success else "",
+            )
+        )
+        if success:
+            update_records(self._game, space_freed_gb=freed, cleanups=1)
+            unlocked = check_achievements(self._game)
+            if unlocked:
+                self._unlock_achievements(unlocked)
+            else:
+                save_game_state(self._game)
+            self._refresh_dashboard_status()
 
     def _start_scanner(self) -> None:
         if self.scanner_running:
@@ -851,10 +988,33 @@ class VareduraTextualApp(App[str | None]):
                 except Exception:
                     speed_snapshot = {}
 
+                # Gamification: health score (read-only on the stats), streak.
+                threshold = stalker_config.lag_threshold_ms
+                compliant, best_down = self._speed_compliance(speed_snapshot)
+                score, tier, color = compute_health_score(
+                    list(self._net_local_stats.history),
+                    list(self._net_external_stats.history),
+                    threshold,
+                    compliant,
+                )
+                streak_ms = ext_ms if ext_ms is not None else local_ms
+                ok = streak_ms is not None and streak_ms <= threshold
+                streak_s = self._streak.update(ok, stalker_config.interval)
+                health = {
+                    "score": score,
+                    "tier": tier,
+                    "color": color,
+                    "streak_s": streak_s,
+                    "ping": ext_ms,
+                    "best_down": best_down,
+                    "compliant": compliant,
+                    "monitor_s": stalker_config.interval,
+                }
+
                 log_lines = self._build_network_alerts(
                     local_ms,
                     ext_ms,
-                    stalker_config.lag_threshold_ms,
+                    threshold,
                     procs,
                     analyze_lag_source,
                 )
@@ -867,6 +1027,7 @@ class VareduraTextualApp(App[str | None]):
                     scan_state,
                     speed_snapshot,
                     log_lines,
+                    health,
                 )
                 self._network_stop.wait(timeout=stalker_config.interval)
         finally:
@@ -916,12 +1077,21 @@ class VareduraTextualApp(App[str | None]):
         return lines
 
     def _render_network_tick(
-        self, local_ms, ext_ms, procs, scan_state, speed_snapshot, log_lines
+        self, local_ms, ext_ms, procs, scan_state, speed_snapshot, log_lines, health=None
     ) -> None:
         # The event log is cheap (append-only, fixed height) -> always flush it.
         log = self.query_one("#network-log", RichLog)
         for line in log_lines:
             log.write(line)
+
+        # Record gamification metrics regardless of the active tab (runs on the
+        # UI thread, so GameState is mutated from a single thread).
+        if health is not None:
+            self._record_and_check(health)
+            self._score_hist.append(float(health.get("score", 0)))
+            self._update_mascot_state(
+                int(health.get("score", 0)), bool((speed_snapshot or {}).get("is_testing"))
+            )
 
         # Skip the heavier visual updates when the network tab is not in front;
         # rebuilding tables every tick on a background tab triggers layout passes
@@ -937,6 +1107,8 @@ class VareduraTextualApp(App[str | None]):
         except Exception:
             pass
 
+        if health is not None:
+            self._render_health_card(health)
         self._render_ping_card("gateway", local_ms, self._net_local_stats, threshold)
         self._render_ping_card("external", ext_ms, self._net_external_stats, threshold)
 
@@ -982,6 +1154,106 @@ class VareduraTextualApp(App[str | None]):
         for widget in (digits, spark):
             widget.remove_class("ping-ok", "ping-warn", "ping-bad", "ping-timeout")
             widget.add_class(cls)
+
+    @staticmethod
+    def _speed_compliance(snapshot: dict) -> tuple[bool | None, float]:
+        """Return (ANATEL-compliant?, best download Mbps) from a speed snapshot."""
+        results = (snapshot or {}).get("results_by_provider", {})
+        if not results:
+            return None, 0.0
+        try:
+            from monitor.speed_tester import speed_config
+
+            factor = speed_config.percentual_minimo / 100
+            min_down = speed_config.velocidade_contratada_down * factor
+            min_up = speed_config.velocidade_contratada_up * factor
+        except Exception:
+            min_down = min_up = 0.0
+        best_down = 0.0
+        compliant = False
+        for result in results.values():
+            try:
+                down = float(result.download_mbps)
+                up = float(result.upload_mbps)
+            except (ValueError, TypeError, AttributeError):
+                continue
+            best_down = max(best_down, down)
+            if down >= min_down and up >= min_up:
+                compliant = True
+        return compliant, best_down
+
+    def _render_health_card(self, health: dict) -> None:
+        digits = self.query_one("#health-digits", Digits)
+        score = int(health.get("score", 0))
+        tier = str(health.get("tier", "—"))
+        color = str(health.get("color", "dim"))
+        digits.update(str(score))
+        self.query_one("#health-spark", Sparkline).data = list(self._score_hist) or [0.0]
+        self.query_one("#health-tier", Label).update(Text(f"{tier}", style=f"bold {color}"))
+
+        streak_s = float(health.get("streak_s", 0.0))
+        self.query_one("#health-streak", Label).update(
+            t("game.streak", time=self._fmt_duration(streak_s))
+        )
+
+        cls = (
+            "ping-ok" if score >= 75 else "ping-warn" if score >= 45 else "ping-bad"
+        )
+        for widget in (digits, self.query_one("#health-spark", Sparkline)):
+            widget.remove_class("ping-ok", "ping-warn", "ping-bad", "ping-timeout")
+            widget.add_class(cls)
+
+    @staticmethod
+    def _fmt_duration(seconds: float) -> str:
+        seconds = int(seconds)
+        if seconds < 60:
+            return f"{seconds}s"
+        if seconds < 3600:
+            return f"{seconds // 60}m{seconds % 60:02d}s"
+        return f"{seconds // 3600}h{(seconds % 3600) // 60:02d}m"
+
+    def _record_and_check(self, health: dict) -> None:
+        """Update persisted records and surface any newly unlocked achievements."""
+        update_records(
+            self._game,
+            ping=health.get("ping"),
+            download=health.get("best_down"),
+            streak_s=health.get("streak_s"),
+            pings=1,
+            monitor_s=health.get("monitor_s", 0.0),
+            anatel=bool(health.get("compliant")),
+        )
+        unlocked = check_achievements(self._game)
+        if unlocked:
+            self._unlock_achievements(unlocked)
+        elif self._network_tick % 30 == 0:
+            save_game_state(self._game)
+
+    def _unlock_achievements(self, ids: list[str]) -> None:
+        for ach_id in ids:
+            ach = achievement_by_id(ach_id)
+            if ach is None:
+                continue
+            self.notify(
+                f"{ach.emoji} {t(ach.name_key)} — {t(ach.desc_key)}",
+                title=t("game.unlocked"),
+            )
+            self._write_dashboard_log(
+                f"[bold yellow]{ach.emoji} {t('game.unlocked')}:[/] {t(ach.name_key)}"
+            )
+        save_game_state(self._game)
+        self._refresh_achievements()
+
+    def _refresh_achievements(self) -> None:
+        """Hook updated in the dashboard phase; safe no-op until then."""
+        try:
+            from cli.ui_shared import build_achievements_row
+
+            self.query_one("#achievements-card", RichRenderable).update(
+                build_achievements_row(self._game)
+            )
+        except Exception:
+            pass
 
     def _render_speed_table(self, snapshot: dict) -> None:
         table = self.query_one("#network-speed-table", DataTable)

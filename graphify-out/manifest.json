@@ -55,13 +55,13 @@
     "semantic_hash": "a3dc411d85402f361ad8c43cc99c827a"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\en.json": {
-    "mtime": 1780972214.3946836,
-    "ast_hash": "0e6b1cdb6052301ed5707d56f2616b1a",
+    "mtime": 1780973708.3620062,
+    "ast_hash": "2171c3159c58e1531befd13235151f03",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\pt.json": {
-    "mtime": 1780972234.8547466,
-    "ast_hash": "2cb601b2e57a53d30898a544a09e32af",
+    "mtime": 1780973710.7628195,
+    "ast_hash": "9f94597516fa3daefb3aef58f56838d6",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\__init__.py": {
@@ -430,18 +430,18 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\textual_app.py": {
-    "mtime": 1780972202.3292649,
-    "ast_hash": "bf503204c3ec31e2a72795fc3ad96f26",
+    "mtime": 1780974447.1506808,
+    "ast_hash": "160ab7f0b65ecf0d92842996a1ac97ee",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\ui_shared.py": {
-    "mtime": 1780972127.2505279,
-    "ast_hash": "4f166b343414534327e88d311601086b",
+    "mtime": 1780974180.7958865,
+    "ast_hash": "c5a041f1a75982466ce9c8bfe7a27fd4",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_textual_app.py": {
-    "mtime": 1780971713.3839295,
-    "ast_hash": "5b4146757456541d13d45b1894d7a6ef",
+    "mtime": 1780973925.5814795,
+    "ast_hash": "47ee56c80b037ecae53ab22401cef72e",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\AGENTS.md": {
@@ -472,6 +472,16 @@
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\netinfo.py": {
     "mtime": 1780971433.0122504,
     "ast_hash": "c907c23959b9a68f0f1e898008d29bfb",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\gamification.py": {
+    "mtime": 1780972915.011233,
+    "ast_hash": "0e4635c6911d9b497cfc36c9b8339e0a",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_gamification.py": {
+    "mtime": 1780974050.64725,
+    "ast_hash": "367f5fd4baef33b7d104be5e46b30690",
     "semantic_hash": ""
   }
 }

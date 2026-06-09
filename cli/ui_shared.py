@@ -45,6 +45,23 @@ STEP_WEIGHT = {
 
 CleanupProgressCallback = Callable[[int, int, str], None]
 
+# Cleanup steps grouped into sections for a clearer Docker tab.
+CLEANUP_GROUPS = [
+    ("cleanup_prefs.group_docker", "🐳", ["containers", "images", "volumes", "networks", "builder"]),
+    ("cleanup_prefs.group_wsl", "🐧", ["stop_docker", "wsl_sparse", "compact_vhdx"]),
+    ("cleanup_prefs.group_system", "🧹", ["temp_files", "recycle_bin"]),
+]
+# "Quick clean" preset: lightweight Docker prune only (no WSL/compaction).
+QUICK_CLEANUP_KEYS = ["containers", "images", "volumes", "networks", "builder"]
+
+
+def cleanup_label_key(step_key: str) -> str:
+    """Return the i18n label key for a cleanup step key."""
+    for key, label_key, _default in CLEANUP_STEPS:
+        if key == step_key:
+            return label_key
+    return step_key
+
 
 def load_prefs() -> dict:
     """Load all preferences from disk."""
@@ -247,9 +264,10 @@ def build_dashboard_summary(recording_enabled: bool, current_language: str) -> P
 
 
 def _fmt_ping(ms: float | None, threshold: int) -> Text:
-    """Format a latency value with a status color."""
+    """Format a latency value with a status color (dashboard glance)."""
     if ms is None:
-        return Text(t("stalker.timeout"), style="bold red")
+        # No data / idle -> neutral dash rather than an alarming TIMEOUT.
+        return Text("—", style="dim")
     style = "green" if ms <= threshold else ("yellow" if ms <= threshold * 1.5 else "bold red")
     return Text(f"{ms:.0f} ms", style=style)
 
@@ -286,6 +304,53 @@ def build_dashboard_status(
         t("mcp.status_on") if is_mcp_configured() else t("mcp.status_off"),
     )
     return Panel(table, title=t("menu.title"), border_style="blue")
+
+
+def _fmt_streak(seconds: float) -> str:
+    seconds = int(seconds)
+    if seconds < 60:
+        return f"{seconds}s"
+    if seconds < 3600:
+        return f"{seconds // 60}m{seconds % 60:02d}s"
+    return f"{seconds // 3600}h{(seconds % 3600) // 60:02d}m"
+
+
+def build_achievements_row(state) -> Panel:
+    """Build the achievements badge wall from a GameState."""
+    from cli.gamification import ACHIEVEMENTS
+
+    table = Table.grid(padding=(0, 1), expand=True)
+    table.add_column(justify="left", no_wrap=True)
+    table.add_column(ratio=1)
+    for ach in ACHIEVEMENTS:
+        unlocked = ach.id in state.achievements
+        icon = ach.emoji if unlocked else "🔒"
+        name_style = "bold green" if unlocked else "dim"
+        name = Text(t(ach.name_key), style=name_style)
+        if unlocked:
+            name.append(f"  {t(ach.desc_key)}", style="dim")
+        table.add_row(icon, name)
+
+    unlocked_count = sum(1 for a in ACHIEVEMENTS if a.id in state.achievements)
+    return Panel(
+        table,
+        title=t("game.achievements") + f"  [dim]{unlocked_count}/{len(ACHIEVEMENTS)}[/]",
+        border_style="yellow",
+    )
+
+
+def build_records_panel(state) -> Panel:
+    """Build the personal-bests panel from a GameState."""
+    table = Table(box=box.SIMPLE, show_header=False, expand=True)
+    table.add_column(style="bold cyan", no_wrap=True)
+    table.add_column(style="white")
+    best_ping = f"{state.best_ping:.0f} ms" if state.best_ping else "—"
+    best_down = f"{state.best_download:.0f} Mbps" if state.best_download else "—"
+    table.add_row(t("game.rec_best_ping"), best_ping)
+    table.add_row(t("game.rec_best_download"), best_down)
+    table.add_row(t("game.rec_best_streak"), _fmt_streak(state.best_streak_s))
+    table.add_row(t("game.rec_space_freed"), f"{state.total_space_freed_gb:.1f} GB")
+    return Panel(table, title=t("game.records"), border_style="magenta")
 
 
 def build_tool_option(title: str, description: str, accent: str = "cyan") -> Panel:
@@ -338,8 +403,11 @@ def run_cleanup_steps(
     step_keys: Iterable[str],
     console,
     progress_callback: CleanupProgressCallback | None = None,
-) -> tuple[bool, list[str]]:
-    """Run selected cleanup steps and report coarse progress."""
+) -> tuple[bool, list[str], float]:
+    """Run selected cleanup steps and report coarse progress.
+
+    Returns ``(success, failures, space_saved_gb)``.
+    """
     from docker_cleaner.core import WSLDockerCleaner
 
     selected = list(step_keys)
@@ -382,4 +450,5 @@ def run_cleanup_steps(
         if progress_callback:
             progress_callback(completed, total_weight, label)
 
-    return not failures, failures
+    space_saved = float(getattr(cleaner, "total_space_saved", 0) or 0)
+    return not failures, failures, space_saved

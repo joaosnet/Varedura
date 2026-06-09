@@ -59,7 +59,7 @@ async def test_textual_settings_save_recording_and_language():
         app.query_one("#recording-switch").value = False
         app.query_one("#language-select").value = "pt"
         # The settings form scrolls; bring the save button into view first.
-        app.query_one("#save-settings").scroll_visible()
+        app.query_one("#save-settings").scroll_visible(animate=False)
         await pilot.pause()
         await pilot.click("#save-settings")
         await pilot.pause()
@@ -89,7 +89,7 @@ async def test_textual_network_settings_detect_and_apply(monkeypatch):
 
         app.query_one("#net-threshold", Input).value = "175"
         app.query_one("#net-down", Input).value = "300"
-        app.query_one("#save-settings").scroll_visible()
+        app.query_one("#save-settings").scroll_visible(animate=False)
         await pilot.pause()
         await pilot.click("#save-settings")
         await pilot.pause()
@@ -102,12 +102,14 @@ async def test_textual_network_settings_detect_and_apply(monkeypatch):
 async def test_textual_cleanup_preferences_are_saved():
     app = VareduraTextualApp()
 
-    async with app.run_test(size=(100, 40)) as pilot:
+    async with app.run_test(size=(100, 60)) as pilot:
         await pilot.pause()
         app.query_one("#main-tabs", TabbedContent).active = "docker"
         await pilot.pause()
 
         app.query_one("#cleanup-containers").value = False
+        app.query_one("#save-cleanup").scroll_visible(animate=False)
+        await pilot.pause()
         await pilot.click("#save-cleanup")
         await pilot.pause()
 
@@ -200,6 +202,66 @@ async def test_textual_network_tab_updates(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_textual_network_health_card_updates(monkeypatch):
+    _patch_network(monkeypatch)
+    app = VareduraTextualApp()
+    async with app.run_test(size=(140, 50)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "network"
+        await pilot.pause()
+        await wait_until(
+            lambda: app.query_one("#health-digits", Digits).value not in ("", "--"),
+            pilot,
+        )
+        assert int(app.query_one("#health-digits", Digits).value) >= 80  # 12ms ping -> top tier
+        assert "sub20" in app._game.achievements
+
+
+@pytest.mark.asyncio
+async def test_textual_docker_reward_and_achievement(monkeypatch):
+    class FakeCleaner:
+        def __init__(self, console=None):
+            self.console = console
+            self.daily_log_writer = None
+            self.total_space_saved = 6.0
+
+        def docker_cleanup(self, prune_only=None, steps=None):
+            return True
+
+        def stop_docker_wsl(self):
+            return True
+
+        def configure_wsl_sparse(self):
+            return True
+
+        def compact_vhdx_files(self):
+            return True
+
+        def cleanup_temp_files(self):
+            return True
+
+        def cleanup_recycle_bin(self):
+            return True
+
+    import docker_cleaner.core as core
+
+    monkeypatch.setattr(core, "WSLDockerCleaner", FakeCleaner)
+    app = VareduraTextualApp()
+    async with app.run_test(size=(100, 60)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "docker"
+        await pilot.pause()
+        app.query_one("#run-cleanup").scroll_visible(animate=False)
+        await pilot.pause()
+        await pilot.click("#run-cleanup")
+        await wait_until(lambda: not app.cleanup_running, pilot)
+
+        assert app.query_one("#cleanup-freed", Digits).value == "6.0"
+        assert "docker_first" in app._game.achievements
+        assert "docker5gb" in app._game.achievements
+
+
+@pytest.mark.asyncio
 async def test_textual_network_option_activates_tab_without_modal(monkeypatch):
     _patch_network(monkeypatch)
     app = VareduraTextualApp()
@@ -254,9 +316,11 @@ async def test_textual_cleanup_worker_uses_fake_cleaner(monkeypatch):
     monkeypatch.setattr(core, "WSLDockerCleaner", FakeCleaner)
     app = VareduraTextualApp()
 
-    async with app.run_test(size=(100, 40)) as pilot:
+    async with app.run_test(size=(100, 60)) as pilot:
         await pilot.pause()
         app.query_one("#main-tabs", TabbedContent).active = "docker"
+        await pilot.pause()
+        app.query_one("#run-cleanup").scroll_visible(animate=False)
         await pilot.pause()
         await pilot.click("#run-cleanup")
 
