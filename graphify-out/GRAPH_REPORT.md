@@ -1,16 +1,16 @@
-# Graph Report - Varedura  (2026-05-19)
+# Graph Report - Varedura  (2026-06-08)
 
 ## Corpus Check
-- 53 files · ~262,100 words
+- 51 files · ~97,702 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2238 nodes · 2963 edges · 102 communities (79 shown, 23 thin omitted)
-- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 198 edges (avg confidence: 0.78)
+- 2322 nodes · 3083 edges · 120 communities (91 shown, 29 thin omitted)
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 211 edges (avg confidence: 0.78)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `debaedb7`
+- Built from commit: `06e6114a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -82,8 +82,11 @@
 - [[_COMMUNITY_Community 64|Community 64]]
 - [[_COMMUNITY_Community 65|Community 65]]
 - [[_COMMUNITY_Community 66|Community 66]]
+- [[_COMMUNITY_Community 67|Community 67]]
 - [[_COMMUNITY_Community 68|Community 68]]
 - [[_COMMUNITY_Community 69|Community 69]]
+- [[_COMMUNITY_Community 70|Community 70]]
+- [[_COMMUNITY_Community 71|Community 71]]
 - [[_COMMUNITY_Community 72|Community 72]]
 - [[_COMMUNITY_Community 73|Community 73]]
 - [[_COMMUNITY_Community 74|Community 74]]
@@ -115,10 +118,25 @@
 - [[_COMMUNITY_Community 101|Community 101]]
 - [[_COMMUNITY_Community 103|Community 103]]
 - [[_COMMUNITY_Community 104|Community 104]]
+- [[_COMMUNITY_Community 105|Community 105]]
+- [[_COMMUNITY_Community 106|Community 106]]
+- [[_COMMUNITY_Community 107|Community 107]]
+- [[_COMMUNITY_Community 108|Community 108]]
+- [[_COMMUNITY_Community 109|Community 109]]
+- [[_COMMUNITY_Community 110|Community 110]]
+- [[_COMMUNITY_Community 111|Community 111]]
+- [[_COMMUNITY_Community 112|Community 112]]
+- [[_COMMUNITY_Community 113|Community 113]]
+- [[_COMMUNITY_Community 114|Community 114]]
+- [[_COMMUNITY_Community 115|Community 115]]
+- [[_COMMUNITY_Community 116|Community 116]]
+- [[_COMMUNITY_Community 118|Community 118]]
+- [[_COMMUNITY_Community 119|Community 119]]
+- [[_COMMUNITY_Community 120|Community 120]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `WSLDockerCleaner` - 64 edges
-2. `VareduraTextualApp` - 36 edges
+1. `WSLDockerCleaner` - 66 edges
+2. `VareduraTextualApp` - 53 edges
 3. `main()` - 23 edges
 4. `do_install()` - 19 edges
 5. `MascotRenderer` - 15 edges
@@ -200,15 +218,15 @@
 - **Login Background Visual Composition** — loginbg_abstract_blue_login_background, loginbg_blue_gradient_palette, loginbg_blurred_full_width_backdrop [EXTRACTED 1.00]
 - **YPT Logo Brand Identity Elements** — yptlogo_logo_asset, yptlogo_purple_abstract_mark, yptlogo_gray_we_wordmark [EXTRACTED 1.00]
 
-## Communities (102 total, 23 thin omitted)
+## Communities (120 total, 29 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.00
-Nodes (416): admin.compact_result, admin.must_be_admin, admin.sparse_result, cleanup.admin_error, cleanup.admin_no, cleanup.admin_recommended, cleanup.admin_single_uac, cleanup.admin_yes (+408 more)
+Nodes (436): admin.compact_result, admin.must_be_admin, admin.sparse_result, cleanup.admin_error, cleanup.admin_no, cleanup.admin_recommended, cleanup.admin_single_uac, cleanup.admin_yes (+428 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.00
-Nodes (416): admin.compact_result, admin.must_be_admin, admin.sparse_result, cleanup.admin_error, cleanup.admin_no, cleanup.admin_recommended, cleanup.admin_single_uac, cleanup.admin_yes (+408 more)
+Nodes (436): admin.compact_result, admin.must_be_admin, admin.sparse_result, cleanup.admin_error, cleanup.admin_no, cleanup.admin_recommended, cleanup.admin_single_uac, cleanup.admin_yes (+428 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.06
@@ -219,12 +237,12 @@ Cohesion: 0.08
 Nodes (35): A(), Ae(), b(), be(), Bt(), ce(), D(), Dt() (+27 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.08
-Nodes (29): _expand_for_constant_fps(), _finalize_durations(), generate_gif(), _prepare_images(), GIF generator — converts Rich SVG snapshots to animated GIF.  Backends tried i, Remove CSS animations from SVG so each frame is a static snapshot., Remove CSS animations from SVG so each frame is a static snapshot., Convert SVG frames to normalised RGBA images + per-frame durations. (+21 more)
+Cohesion: 0.17
+Nodes (15): _expand_for_constant_fps(), _finalize_durations(), generate_gif(), GIF generator — converts Rich SVG snapshots to animated GIF.  Backends tried i, High-quality Pillow GIF with per-frame median-cut + Floyd-Steinberg., High-quality Pillow GIF with per-frame median-cut + Floyd-Steinberg., Use gifski for the best possible GIF quality (lossy encoder)., Use gifski for the best possible GIF quality (lossy encoder). (+7 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.07
-Nodes (39): analyze_lag_source(), check_keyboard(), _flush_stdin(), get_export_status(), get_top_network_hogs(), _get_top_network_hogs_fallback(), is_android(), main() (+31 more)
+Cohesion: 0.09
+Nodes (21): get_export_status(), is_android(), main(), make_connections_panel(), make_header(), make_help_panel(), make_log_panel(), make_ping_table() (+13 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.08
@@ -263,8 +281,8 @@ Cohesion: 0.11
 Nodes (25): Alert History Latest Events Panel, AnyDesk.exe Connection Activity, Background Port Scan, Code-Insiders.exe Local TCP Port, Connection Status Panel, External AWS DNS Ping Check, Gateway 192.168.18.1 Ping Check, GoogleDriveFS.exe Network Activity (+17 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.11
-Nodes (21): handle_key(), load_prefs(), prompt_change_contracted_speed(), prompt_change_external(), prompt_change_gateway(), prompt_change_interval(), prompt_change_threshold(), Persiste preferências relevantes para exportação em JSON. (+13 more)
+Cohesion: 0.14
+Nodes (19): export_combined_report(), handle_key(), load_prefs(), prompt_change_contracted_speed(), prompt_change_external(), prompt_change_interval(), prompt_export_report(), Carrega preferências salvas, se o arquivo existir. (+11 more)
 
 ### Community 16 - "Community 16"
 Cohesion: 0.10
@@ -279,8 +297,8 @@ Cohesion: 0.12
 Nodes (21): Alert History Latest Events, BYE See You Next Time Keep Things Clean Message, Connection Status Panel, DNS Latency OK, Gateway Latency OK, Gateway OK But No Internet Provider Or DNS Issue, GoogleDriveFS.exe Top Connection, Varedura Mascot Exit Screen (+13 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.05
-Nodes (41): CleanupStepResult, get_docker_vhdx_paths(), main(), _powershell_encoded_command(), _ps_single_quoted(), Lógica principal do limpador WSL Docker (módulo)., Remove PowerShell CLIXML progress records from captured streams., Versão async de cleanup_recycle_bin com streaming. (+33 more)
+Cohesion: 0.12
+Nodes (13): get_docker_vhdx_paths(), _powershell_encoded_command(), _ps_single_quoted(), Lógica principal do limpador WSL Docker (módulo)., Remove PowerShell CLIXML progress records from captured streams., Versão async de compact_vhdx_files com streaming., Versão async de compact_vhdx_files com streaming., Build a RunAs command that captures child stdout/stderr/exit code.          Po (+5 more)
 
 ### Community 20 - "Community 20"
 Cohesion: 0.05
@@ -327,8 +345,8 @@ Cohesion: 0.15
 Nodes (15): docker_full_cleanup(), docker_quick_cleanup(), docker_status(), get_logs(), _is_docker_running(), port_scan(), Varedura MCP Server  Exposes Varedura tools via the Model Context Protocol so, Run full Docker cleanup including WSL shutdown and VHDX compaction (Windows). (+7 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.13
-Nodes (20): get_listening_ports(), get_process_connections_count(), get_system_network_stats(), PortInfo, PortScannerState, ProcessConnections, Módulo de Escaneamento de Portas para Network Stalker  Funções para monitorar, Retorna os processos com mais conexões de rede.      Args:         limit: Núm (+12 more)
+Cohesion: 0.15
+Nodes (18): get_listening_ports(), get_process_connections_count(), get_system_network_stats(), PortInfo, PortScannerState, ProcessConnections, Módulo de Escaneamento de Portas para Network Stalker  Funções para monitorar, Retorna os processos com mais conexões de rede.      Args:         limit: Núm (+10 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.15
@@ -347,32 +365,32 @@ Cohesion: 0.06
 Nodes (35): code:powershell (& .\.venv\Scripts\Activate.ps1  # Use existing .venv or crea), code:python (def compose(self) -> ComposeResult:), code:python (import pytest), code:python (async with app.run_test() as pilot:), code:python (async def test_counter():), code:python (async def test_background_task():), code:python (# Install: pip install pytest-textual-snapshot), code:python (async def test_modal_dialog():) (+27 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.07
-Nodes (22): get_multi_provider(), Retorna a instância global do gerenciador de provedores., ContinuousSpeedTester, V's Speed Tester - Monitor de Velocidade de Internet em Tempo Real  Funcionali, Executa um único teste de velocidade usando múltiplos provedores., Loop contínuo de testes em background - alterna entre provedores., Inicia o loop de testes em background., Para o loop de testes. (+14 more)
+Cohesion: 0.08
+Nodes (19): get_multi_provider(), Retorna a instância global do gerenciador de provedores., ContinuousSpeedTester, V's Speed Tester - Monitor de Velocidade de Internet em Tempo Real  Funcionali, Executa um único teste de velocidade usando múltiplos provedores., Loop contínuo de testes em background - alterna entre provedores., Inicia o loop de testes em background., Verifica se velocidade está conforme contrato.          Retorna: (+11 more)
 
 ### Community 37 - "Community 37"
-Cohesion: 0.12
-Nodes (21): build_cleanup_status_panel(), build_cleanup_steps_table(), cleanup_label(), cleanup_summary(), get_cleanup_steps(), is_mcp_configured(), load_cleanup_steps(), load_prefs() (+13 more)
+Cohesion: 0.10
+Nodes (29): build_cleanup_status_panel(), build_cleanup_steps_table(), build_dashboard_summary(), build_settings_status_table(), cleanup_summary(), get_cleanup_steps(), is_mcp_configured(), load_cleanup_steps() (+21 more)
 
 ### Community 38 - "Community 38"
 Cohesion: 0.26
 Nodes (11): extract_image_models(), extract_initial_models(), extract_text_models(), extract_vision_models(), _format_capabilities(), format_models_python(), generate_full_code(), main() (+3 more)
 
 ### Community 39 - "Community 39"
-Cohesion: 0.18
-Nodes (12): build_dashboard_summary(), build_settings_status_table(), build_tool_option(), load_recording_pref(), Build the shared settings status table., Build the dashboard overview as a Rich renderable., Build a Rich renderable suitable for a Textual OptionList option., Load recording preference from disk. (+4 more)
+Cohesion: 0.24
+Nodes (5): Static widget that displays Rich renderables., Static widget that displays Rich renderables., RichRenderable, build_tool_option(), Build a Rich renderable suitable for a Textual OptionList option.
 
 ### Community 40 - "Community 40"
-Cohesion: 0.10
-Nodes (8): _cleanup_checkbox_id(), on_tool_selected(), Textual application shell for Varedura., Main Textual TUI for Varedura., _run_scanner_worker(), VareduraTextualApp, build_scanner_tables(), Build Rich scanner tables from a PortScannerState-like object.
+Cohesion: 0.11
+Nodes (6): _ping_status_class(), Main Textual TUI for Varedura., Main Textual TUI for Varedura., VareduraTextualApp, build_scanner_tables(), Build Rich scanner tables from a PortScannerState-like object.
 
 ### Community 41 - "Community 41"
-Cohesion: 0.36
-Nodes (7): export_combined_report(), prompt_export_report(), Inicia exportação do relatório combinado em thread separada.      Args:, Prompts the user whether to export a full history report.      Args:, cleanup_exports(), test_prompt_export_cancel(), test_prompt_export_confirm_triggers_export()
+Cohesion: 0.83
+Nodes (3): cleanup_exports(), test_prompt_export_cancel(), test_prompt_export_confirm_triggers_export()
 
 ### Community 42 - "Community 42"
-Cohesion: 0.07
-Nodes (19): quick_cleanup(), Entrypoint CLI para executar a limpeza rápida do WSL Docker., Perform a quick cleanup. If a `console` is provided, use it for output., console(), Session recorder — captures Rich console output as SVG snapshots., Stop recording and capture final frame., Background loop taking periodic SVG snapshots., Background loop taking periodic SVG snapshots. (+11 more)
+Cohesion: 0.15
+Nodes (9): Stop recording and capture final frame., Records a Rich console session by taking periodic SVG snapshots.      Usage:, Records a Rich console session by taking periodic SVG snapshots.      Usage:, Set a live renderable to snapshot directly.          When set, each snapshot r, Set a live renderable to snapshot directly.          When set, each snapshot r, Begin recording with periodic snapshots., Begin recording with periodic snapshots., Stop recording and capture final frame. (+1 more)
 
 ### Community 43 - "Community 43"
 Cohesion: 0.33
@@ -380,27 +398,27 @@ Nodes (3): DailyLogWriter, Rich/Local daily log writer used by the Textual UI.  
 
 ### Community 44 - "Community 44"
 Cohesion: 0.18
-Nodes (10): on_button_pressed(), _run_cleanup_worker(), Return enabled cleanup step keys in configured display order., Save preferences to disk., Save recording preference to disk., Save cleanup step preferences., save_cleanup_steps(), save_prefs() (+2 more)
+Nodes (8): _cleanup_checkbox_id(), _run_cleanup_worker(), cleanup_label(), Return the localized label for a cleanup step key., Return enabled cleanup step keys in configured display order., Run selected cleanup steps and report coarse progress., run_cleanup_steps(), selected_cleanup_keys()
 
 ### Community 45 - "Community 45"
-Cohesion: 0.17
-Nodes (14): get_speed_tester(), Retorna a instância global do testador de velocidade., _generate_combined_pdf_worker(), Worker que gera o PDF formal completo em background.      Args:         full_, cleanup_exports(), Testa que o downsampling ocorre por padrão e que full_history True ainda gera ar, Testa que o downsampling ocorre por padrão e que full_history True ainda gera ar, test_generate_small_pdf() (+6 more)
+Cohesion: 0.24
+Nodes (11): get_speed_tester(), Retorna a instância global do testador de velocidade., _generate_combined_pdf_worker(), make_speed_panel(), Cria painel de velocidade mostrando todos provedores em tempo real., Worker que gera o PDF formal completo em background.      Args:         full_, cleanup_exports(), Testa que o downsampling ocorre por padrão e que full_history True ainda gera ar (+3 more)
 
 ### Community 46 - "Community 46"
-Cohesion: 0.25
-Nodes (5): ConfirmModal, Static widget that displays Rich renderables., Small reusable confirmation modal., RichRenderable, Static
+Cohesion: 0.12
+Nodes (9): ConfirmModal, _future_result(), on_button_pressed(), on_main_tab_activated(), on_tool_selected(), Textual application shell for Varedura., Small reusable confirmation modal., _run_scanner_worker() (+1 more)
 
 ### Community 47 - "Community 47"
-Cohesion: 0.33
-Nodes (6): get_ping_command(), parse_ping(), Retorna o comando de ping adequado para o SO., Extrai o tempo em ms da resposta do ping., Executa o ping e retorna o tempo ou None se falhar., run_ping()
+Cohesion: 0.08
+Nodes (28): check_keyboard(), ContractInfo, _flush_stdin(), get_ping_command(), get_top_network_hogs(), _get_top_network_hogs_fallback(), make_ascii_graph(), make_graph_panel() (+20 more)
 
 ### Community 48 - "Community 48"
 Cohesion: 0.40
 Nodes (4): Demo, My Experience with GitHub Copilot CLI, Varedura — safe Docker/WSL cleanup + network monitor 🧹⚡, What I Built
 
 ### Community 49 - "Community 49"
-Cohesion: 0.40
-Nodes (4): test_textual_cleanup_preferences_are_saved(), test_textual_cleanup_worker_uses_fake_cleaner(), test_textual_dashboard_renders_and_menu_switches_to_cleanup(), wait_until()
+Cohesion: 0.19
+Nodes (12): get_language(), Return the current language code., Return the current language code., _patch_network(), Make the network worker deterministic and offline., test_textual_cleanup_preferences_are_saved(), test_textual_cleanup_worker_uses_fake_cleaner(), test_textual_dashboard_renders_and_menu_switches_to_cleanup() (+4 more)
 
 ### Community 50 - "Community 50"
 Cohesion: 0.38
@@ -454,6 +472,10 @@ Nodes (5): Dark Head Panel With Cyan Eyes, Working Mascot Frame 2, Teal Robot Ma
 Cohesion: 0.50
 Nodes (3): Magenta Stylized Wordmark, TIME Logo, Trademark Mark
 
+### Community 67 - "Community 67"
+Cohesion: 0.10
+Nodes (12): Versão async de cleanup_recycle_bin com streaming., Versão async de cleanup_recycle_bin com streaming., Versão async de stop_docker_wsl., Versão async com batch elevated., Versão async de stop_docker_wsl., Versão async com batch elevated., Executa um comando async com streaming de saída em tempo real.          Args:, Executa comando elevated (admin/root). (+4 more)
+
 ### Community 68 - "Community 68"
 Cohesion: 0.67
 Nodes (4): Text Image and Vision Model Indexes, Generated LMArena Model Registry, ModelsGenerator, LMArena initialModels Payload
@@ -461,6 +483,14 @@ Nodes (4): Text Image and Vision Model Indexes, Generated LMArena Model Registry
 ### Community 69 - "Community 69"
 Cohesion: 0.50
 Nodes (4): MTS Logo, MTS Wordmark, Red Dotted Ring Symbol, Telecom Brand Identity
+
+### Community 70 - "Community 70"
+Cohesion: 0.16
+Nodes (6): CleanupStepResult, Versão async de docker_cleanup com streaming de saída em tempo real., Versão async de docker_cleanup com streaming de saída em tempo real., Verifica se o Docker está rodando, Parse the reclaimed space from Docker prune command output.          Handles b, Run safe Docker cleanup without stopping running containers.
+
+### Community 71 - "Community 71"
+Cohesion: 0.22
+Nodes (11): WSLDockerCleaner, test_compact_vhdx_files_requests_elevation_and_falls_back(), test_compact_vhdx_reports_failure_when_diskpart_fails_without_optimize_vhd(), test_configure_wsl_sparse_elevates_manage_commands(), test_configure_wsl_sparse_skips_missing_docker_distros_and_keeps_config(), test_configure_wsl_sparse_warns_but_does_not_fail_when_manage_fails(), test_container_step_only_prunes_stopped_containers(), test_docker_cleanup_preserves_running_containers() (+3 more)
 
 ### Community 72 - "Community 72"
 Cohesion: 0.67
@@ -510,6 +540,42 @@ Nodes (3): Abstract Blue Login Background, Blue Gradient Palette, Blurred Full W
 Cohesion: 1.00
 Nodes (3): Gray WE Wordmark, YPT Logo Asset, Purple Abstract Mark
 
+### Community 105 - "Community 105"
+Cohesion: 0.23
+Nodes (4): Executa um comando e retorna o resultado, Versão sync para CLI., Ensure Docker WSL distros are running so fstrim can execute inside them., Run fstrim on Docker WSL distros to discard unused filesystem blocks.
+
+### Community 106 - "Community 106"
+Cohesion: 0.33
+Nodes (6): _prepare_images(), Remove CSS animations from SVG so each frame is a static snapshot., Remove CSS animations from SVG so each frame is a static snapshot., Convert SVG frames to normalised RGBA images + per-frame durations., Convert SVG frames to normalised RGBA images + per-frame durations., _strip_svg_animation()
+
+### Community 107 - "Community 107"
+Cohesion: 0.25
+Nodes (6): _run_network_worker(), Para o loop de testes., Para testes de velocidade., stop_continuous_testing(), analyze_lag_source(), Analisa a origem provável do lag com mais inteligência.      Retorna: (suspeit
+
+### Community 108 - "Community 108"
+Cohesion: 0.25
+Nodes (3): console(), Session recorder — captures Rich console output as SVG snapshots., test_quick_cleanup_reuses_central_cleaner()
+
+### Community 109 - "Community 109"
+Cohesion: 0.40
+Nodes (3): main(), Verifica se o script está rodando como administrador/root, Reinicia o script com privilégios de administrador/root
+
+### Community 110 - "Community 110"
+Cohesion: 0.33
+Nodes (6): Convert SVG string to high-quality PNG bytes.      Renders at ``width * scale`, Convert SVG string to high-quality PNG bytes.      Renders at ``width * scale`, Low-level SVG → PNG using best available renderer., Low-level SVG → PNG using best available renderer., _render_svg_raw(), _svg_to_png_bytes()
+
+### Community 111 - "Community 111"
+Cohesion: 0.33
+Nodes (5): servers, varedura, args, command, type
+
+### Community 112 - "Community 112"
+Cohesion: 0.40
+Nodes (3): quick_cleanup(), Entrypoint CLI para executar a limpeza rápida do WSL Docker., Perform a quick cleanup. If a `console` is provided, use it for output.
+
+### Community 115 - "Community 115"
+Cohesion: 0.33
+Nodes (4): Background loop taking periodic SVG snapshots., Background loop taking periodic SVG snapshots., Capture current console state as SVG., Capture current console state as SVG.
+
 ## Ambiguous Edges - Review These
 - `Rich Main Menu Application` → `Copilot Instructions Textual UI Guidelines`  [AMBIGUOUS]
   .github/copilot-instructions.md · relation: conceptually_related_to
@@ -521,9 +587,9 @@ Nodes (3): Gray WE Wordmark, YPT Logo Asset, Purple Abstract Mark
   tests/static/images/hwlogo_paraguaypsn.gif · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **1051 isolated node(s):** `PreToolUse`, `command`, `args`, `python.testing.pytestArgs`, `python.testing.unittestEnabled` (+1046 more)
+- **1095 isolated node(s):** `PreToolUse`, `PreToolUse`, `python.testing.pytestArgs`, `python.testing.unittestEnabled`, `python.testing.pytestEnabled` (+1090 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **23 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **29 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -536,9 +602,9 @@ _Questions this graph is uniquely positioned to answer:_
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **What is the exact relationship between `Blank White Logo Banner` and `Paraguay PSN Huawei Branding`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `WSLDockerCleaner` connect `Community 19` to `Community 2`, `Community 37`, `Community 42`, `Community 43`, `Community 22`, `Community 30`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
-- **Why does `run_full_scan()` connect `Community 31` to `Community 5`, `Community 40`, `Community 15`, `Community 22`, `Community 30`?**
+- **Why does `WSLDockerCleaner` connect `Community 71` to `Community 2`, `Community 67`, `Community 70`, `Community 105`, `Community 43`, `Community 108`, `Community 109`, `Community 44`, `Community 112`, `Community 114`, `Community 19`, `Community 22`, `Community 30`?**
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+- **Why does `VareduraTextualApp` connect `Community 40` to `Community 37`, `Community 5`, `Community 39`, `Community 107`, `Community 44`, `Community 43`, `Community 46`, `Community 49`, `Community 22`, `Community 31`?**
   _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Why does `VareduraTextualApp` connect `Community 40` to `Community 37`, `Community 39`, `Community 43`, `Community 44`, `Community 46`, `Community 49`, `Community 22`, `Community 31`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
+- **Why does `DailyLogWriter` connect `Community 43` to `Community 70`, `Community 71`, `Community 40`, `Community 39`, `Community 44`, `Community 108`, `Community 46`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._

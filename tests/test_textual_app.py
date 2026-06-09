@@ -6,7 +6,7 @@ from cli import ui_shared
 from cli.textual_app import VareduraTextualApp
 from i18n import get_language, init as i18n_init
 from monitor.port_scanner import PortInfo, PortScannerState, ProcessConnections
-from textual.widgets import DataTable, ProgressBar, TabbedContent
+from textual.widgets import DataTable, Digits, ProgressBar, Sparkline, TabbedContent
 
 
 @pytest.fixture(autouse=True)
@@ -110,6 +110,76 @@ async def test_textual_scanner_worker_populates_tables(monkeypatch):
         )
 
         assert app.query_one("#connections-table", DataTable).row_count == 1
+
+
+def _patch_network(monkeypatch):
+    """Make the network worker deterministic and offline."""
+    import monitor.stalker as stalker
+    import monitor.speed_tester as speed_tester
+    import monitor.port_scanner as scanner
+
+    monkeypatch.setattr(stalker, "run_ping", lambda host: 12.0)
+    monkeypatch.setattr(
+        stalker, "get_top_network_hogs", lambda: [(111, "chrome.exe", 3 * 1024 * 1024)]
+    )
+    monkeypatch.setattr(speed_tester, "start_continuous_testing", lambda: None)
+    monkeypatch.setattr(speed_tester, "stop_continuous_testing", lambda: None)
+    monkeypatch.setattr(
+        speed_tester.ContinuousSpeedTester,
+        "get_stats_snapshot",
+        lambda self: {
+            "results_by_provider": {},
+            "is_testing": False,
+            "current_provider": "",
+            "progress_mbps": 0.0,
+            "progress_phase": "",
+            "test_count": 0,
+            "last_error": None,
+        },
+    )
+    monkeypatch.setattr(scanner, "run_full_scan", lambda: PortScannerState())
+
+
+@pytest.mark.asyncio
+async def test_textual_network_tab_updates(monkeypatch):
+    _patch_network(monkeypatch)
+    app = VareduraTextualApp()
+
+    async with app.run_test(size=(120, 45)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "network"
+        await pilot.pause()
+
+        # Widgets exist
+        assert app.query_one("#gateway-digits", Digits)
+        assert app.query_one("#external-spark", Sparkline)
+
+        # Tab activation auto-starts monitoring; ensure a tick rendered.
+        await wait_until(
+            lambda: app.query_one("#gateway-digits", Digits).value == "12",
+            pilot,
+        )
+        assert app.query_one("#network-procs-table", DataTable).row_count >= 1
+
+        app.query_one("#network-stop").disabled is False
+        await pilot.click("#network-stop")
+        await wait_until(lambda: not app.network_running, pilot)
+
+
+@pytest.mark.asyncio
+async def test_textual_network_option_activates_tab_without_modal(monkeypatch):
+    _patch_network(monkeypatch)
+    app = VareduraTextualApp()
+
+    async with app.run_test(size=(120, 45)) as pilot:
+        await pilot.pause()
+        # First option in the tool menu is "network".
+        app.query_one("#tool-menu").focus()
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert app.query_one("#main-tabs", TabbedContent).active == "network"
+        assert len(app.screen_stack) == 1  # no modal pushed
 
 
 @pytest.mark.asyncio

@@ -10,8 +10,8 @@
     "semantic_hash": "89c7af602920e8ef93162eef1eaa8945"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\main.py": {
-    "mtime": 1779245310.1044552,
-    "ast_hash": "52966a60c95d4b16ab9cefefcb8d404c",
+    "mtime": 1780969279.1412363,
+    "ast_hash": "f5c79ac574b94b828de1698798d3d211",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.vscode\\settings.json": {
@@ -45,9 +45,9 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\docker_cleaner\\core.py": {
-    "mtime": 1777940501.1918306,
-    "ast_hash": "7527444b1c9b1fecbd851dcf55151589",
-    "semantic_hash": "7527444b1c9b1fecbd851dcf55151589"
+    "mtime": 1779246830.5743885,
+    "ast_hash": "ef39b4aa701511d6548beeaf12fbacc6",
+    "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\docker_cleaner\\__init__.py": {
     "mtime": 1763240054.253031,
@@ -55,13 +55,13 @@
     "semantic_hash": "a3dc411d85402f361ad8c43cc99c827a"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\en.json": {
-    "mtime": 1779244786.0206919,
-    "ast_hash": "2608006a6c9ef823e2eb4e1ddcbc1d0b",
+    "mtime": 1780969010.8813484,
+    "ast_hash": "d954b2d505b77777b391531ebd62b6bb",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\pt.json": {
-    "mtime": 1779244793.4132395,
-    "ast_hash": "cd3aad65bb49cad29145510dba124d69",
+    "mtime": 1780969045.830554,
+    "ast_hash": "3192b9f64f822e6bc0c1dca2f1b74ab5",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\__init__.py": {
@@ -170,8 +170,8 @@
     "semantic_hash": "6108aa95fd0b3c80178ecd4e0a2a056e"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_docker_cleanup.py": {
-    "mtime": 1779245040.909558,
-    "ast_hash": "b527615ed628894d4b04ee4083471ea5",
+    "mtime": 1779246853.25656,
+    "ast_hash": "83af29419fe923293350cb90aa070ace",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_export_pdf.py": {
@@ -430,8 +430,8 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\textual_app.py": {
-    "mtime": 1779244830.5773728,
-    "ast_hash": "a20244014019fc8b6f89c58dc2b57827",
+    "mtime": 1780970135.5738583,
+    "ast_hash": "e55493e588aac63fb8c2237cb98c665c",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\ui_shared.py": {
@@ -440,8 +440,8 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_textual_app.py": {
-    "mtime": 1779244976.910609,
-    "ast_hash": "bd39214440fa50cec7968524a96e1642",
+    "mtime": 1780969357.021095,
+    "ast_hash": "21e3d6147bf8c7de23aaac7f14091084",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\AGENTS.md": {
@@ -449,14 +449,24 @@
     "ast_hash": "9a229949cad617368a70280213ebd61a",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.vscode\\mcp.json": {
-    "mtime": 1779245219.447844,
-    "ast_hash": "b6e4681d162486be541967143386d601",
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.claude\\settings.json": {
+    "mtime": 1780967478.753023,
+    "ast_hash": "5d6ecd96cf065b16e8bb9fbf5d7d8f0d",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\relatorio_formal_20260519_234926.pdf": {
-    "mtime": 1779245368.1110697,
-    "ast_hash": "aa9c28930ac8b6aaf6ba9fc12ee87e3d",
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\CLAUDE.md": {
+    "mtime": 1780967478.7459214,
+    "ast_hash": "8a6643a420fdad6bfb583523bc6cef16",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.agents\\rules\\graphify.md": {
+    "mtime": 1779246000.2288082,
+    "ast_hash": "a0e4d192b9e2e17256124dbfc8e24e6a",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.agents\\workflows\\graphify.md": {
+    "mtime": 1779246000.2288082,
+    "ast_hash": "84de69efd46ab0b8430393bd4188f8f2",
     "semantic_hash": ""
   }
 }

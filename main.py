@@ -567,7 +567,7 @@ def main():
 
     from cli.textual_app import run_textual_app
 
-    run_textual_app(legacy_network_runner=run_network_stalker)
+    run_textual_app()
 
 
 if __name__ == "__main__":
