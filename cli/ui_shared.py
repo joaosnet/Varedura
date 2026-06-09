@@ -76,6 +76,37 @@ def save_recording_pref(enabled: bool) -> None:
     save_prefs(data)
 
 
+# Default network monitor settings (mirror monitor.stalker.StalkerConfig /
+# monitor.speed_tester.SpeedTestConfig so we don't import those heavy modules).
+NETWORK_DEFAULTS: dict[str, object] = {
+    "gateway_ip": "",  # empty -> autodetect on first run
+    "external_host": "ec2.sa-east-1.amazonaws.com",
+    "lag_threshold_ms": 100,
+    "contracted_down": 500.0,
+    "contracted_up": 100.0,
+}
+
+
+def load_network_config() -> dict:
+    """Load the network monitor configuration, merged over defaults."""
+    saved = load_prefs().get("network", {})
+    config = dict(NETWORK_DEFAULTS)
+    if isinstance(saved, dict):
+        config.update({k: saved[k] for k in NETWORK_DEFAULTS if k in saved})
+    return config
+
+
+def save_network_config(config: dict) -> None:
+    """Persist the network monitor configuration."""
+    data = load_prefs()
+    current = data.get("network", {})
+    if not isinstance(current, dict):
+        current = {}
+    current.update({k: config[k] for k in NETWORK_DEFAULTS if k in config})
+    data["network"] = current
+    save_prefs(data)
+
+
 def load_cleanup_steps() -> dict[str, bool] | None:
     """Load cleanup step preferences, if they were configured."""
     return load_prefs().get("cleanup_steps")

@@ -20,6 +20,7 @@ from textual.widgets import (
     Digits,
     Footer,
     Header,
+    Input,
     Label,
     OptionList,
     ProgressBar,
@@ -43,9 +44,11 @@ from cli.ui_shared import (
     build_tool_option,
     get_cleanup_steps,
     is_mcp_configured,
+    load_network_config,
     load_recording_pref,
     run_cleanup_steps,
     save_cleanup_steps,
+    save_network_config,
     save_recording_pref,
     selected_cleanup_keys,
     toggle_mcp_config,
@@ -140,6 +143,15 @@ class VareduraTextualApp(App[str | None]):
     .form-row > Label {
         width: 28;
         content-align: left middle;
+    }
+
+    .form-row > Input {
+        width: 1fr;
+    }
+
+    .form-row > Button {
+        margin-left: 1;
+        width: auto;
     }
 
     .button-row {
@@ -242,11 +254,11 @@ class VareduraTextualApp(App[str | None]):
     """
 
     BINDINGS = [
-        Binding("q", "quit", "Quit", show=True),
-        Binding("d", "toggle_dark", "Dark", show=True),
-        Binding("s", "show_settings", "Settings", show=True),
-        Binding("r", "run_scanner", "Scan", show=True),
-        Binding("escape", "dashboard", "Dashboard", show=True),
+        Binding("q", "quit", t("textual.bind_quit"), show=True),
+        Binding("d", "toggle_dark", t("textual.bind_dark"), show=True),
+        Binding("s", "show_settings", t("textual.bind_settings"), show=True),
+        Binding("r", "run_scanner", t("textual.bind_scan"), show=True),
+        Binding("escape", "dashboard", t("textual.bind_dashboard"), show=True),
     ]
 
     TOOL_IDS = ("network", "docker", "scanner", "settings", "lmarena")
@@ -394,6 +406,26 @@ class VareduraTextualApp(App[str | None]):
             with Horizontal(classes="form-row"):
                 yield Label(t("settings.option_lang"))
                 yield Select(language_options, value=get_language(), id="language-select")
+
+            net = load_network_config()
+            yield Label(t("settings.network_title"), classes="section-title")
+            with Horizontal(classes="form-row"):
+                yield Label(t("settings.net_gateway"))
+                yield Input(value=str(net["gateway_ip"]), id="net-gateway")
+                yield Button(t("settings.net_detect"), id="net-detect-gateway")
+            with Horizontal(classes="form-row"):
+                yield Label(t("settings.net_external"))
+                yield Input(value=str(net["external_host"]), id="net-external")
+            with Horizontal(classes="form-row"):
+                yield Label(t("settings.net_threshold"))
+                yield Input(value=str(net["lag_threshold_ms"]), id="net-threshold", type="integer")
+            with Horizontal(classes="form-row"):
+                yield Label(t("settings.net_contracted_down"))
+                yield Input(value=str(net["contracted_down"]), id="net-down", type="number")
+            with Horizontal(classes="form-row"):
+                yield Label(t("settings.net_contracted_up"))
+                yield Input(value=str(net["contracted_up"]), id="net-up", type="number")
+
             with Horizontal(classes="button-row"):
                 yield Button(t("textual.settings_save"), id="save-settings", variant="primary")
                 yield Button(t("mcp.option"), id="toggle-mcp")
@@ -405,8 +437,41 @@ class VareduraTextualApp(App[str | None]):
     def on_mount(self) -> None:
         self._setup_scanner_tables()
         self._setup_network_tables()
+        self._init_network_config()
         self.query_one("#tool-menu", OptionList).focus()
         self._write_dashboard_log(t("textual.ready"))
+
+    def _init_network_config(self) -> None:
+        """Resolve the network config (autodetect gateway) and apply it."""
+        cfg = load_network_config()
+        if not str(cfg.get("gateway_ip", "")).strip():
+            from monitor.netinfo import detect_default_gateway
+
+            detected = detect_default_gateway()
+            if detected:
+                cfg["gateway_ip"] = detected
+                save_network_config(cfg)
+                self._write_dashboard_log(t("settings.net_gateway_detected", ip=detected))
+                try:
+                    self.query_one("#net-gateway", Input).value = detected
+                except Exception:
+                    pass
+        self._apply_network_config(cfg)
+
+    def _apply_network_config(self, cfg: dict) -> None:
+        """Push the config dict onto the live stalker/speed singletons."""
+        try:
+            import monitor.stalker as stalker_mod
+            from monitor.speed_tester import speed_config
+
+            if str(cfg.get("gateway_ip", "")).strip():
+                stalker_mod.config.gateway_ip = str(cfg["gateway_ip"]).strip()
+            stalker_mod.config.external_ip = str(cfg["external_host"]).strip()
+            stalker_mod.config.lag_threshold_ms = int(cfg["lag_threshold_ms"])
+            speed_config.velocidade_contratada_down = float(cfg["contracted_down"])
+            speed_config.velocidade_contratada_up = float(cfg["contracted_up"])
+        except Exception:
+            pass
 
     def action_show_settings(self) -> None:
         self.query_one("#main-tabs", TabbedContent).active = "settings"
@@ -453,6 +518,18 @@ class VareduraTextualApp(App[str | None]):
             self._stop_network()
         elif button_id == "network-export":
             self._export_network_report()
+        elif button_id == "net-detect-gateway":
+            self._detect_gateway()
+
+    def _detect_gateway(self) -> None:
+        from monitor.netinfo import detect_default_gateway
+
+        detected = detect_default_gateway()
+        if detected:
+            self.query_one("#net-gateway", Input).value = detected
+            self.notify(t("settings.net_gateway_detected", ip=detected))
+        else:
+            self.notify(t("settings.net_gateway_not_found"), severity="warning")
 
     def _save_settings(self) -> None:
         recording = self.query_one("#recording-switch", Switch).value
@@ -460,9 +537,25 @@ class VareduraTextualApp(App[str | None]):
         save_recording_pref(bool(recording))
         if isinstance(selected_language, str):
             set_language(selected_language)
+        self._save_network_settings()
         self._refresh_status_renderables()
         self.notify(t("textual.settings_saved"))
         self._write_dashboard_log(t("textual.settings_saved"))
+
+    def _save_network_settings(self) -> None:
+        """Read the network form, validate, persist and apply it."""
+        cfg = load_network_config()
+        cfg["gateway_ip"] = self.query_one("#net-gateway", Input).value.strip()
+        cfg["external_host"] = self.query_one("#net-external", Input).value.strip()
+        try:
+            cfg["lag_threshold_ms"] = int(self.query_one("#net-threshold", Input).value or 0)
+            cfg["contracted_down"] = float(self.query_one("#net-down", Input).value or 0)
+            cfg["contracted_up"] = float(self.query_one("#net-up", Input).value or 0)
+        except ValueError:
+            self.notify(t("settings.net_invalid"), severity="error")
+            return
+        save_network_config(cfg)
+        self._apply_network_config(cfg)
 
     def _toggle_mcp(self) -> None:
         for style, message in toggle_mcp_config():
@@ -787,6 +880,17 @@ class VareduraTextualApp(App[str | None]):
     def _render_network_tick(
         self, local_ms, ext_ms, procs, scan_state, speed_snapshot, log_lines
     ) -> None:
+        # The event log is cheap (append-only, fixed height) -> always flush it.
+        log = self.query_one("#network-log", RichLog)
+        for line in log_lines:
+            log.write(line)
+
+        # Skip the heavier visual updates when the network tab is not in front;
+        # rebuilding tables every tick on a background tab triggers layout passes
+        # that make the whole screen flicker.
+        if self.query_one("#main-tabs", TabbedContent).active != "network":
+            return
+
         threshold = 100
         try:
             from monitor.stalker import config as stalker_config
@@ -800,27 +904,17 @@ class VareduraTextualApp(App[str | None]):
 
         if scan_state is not None:
             ports_table = self.query_one("#network-ports-table", DataTable)
-            ports_table.clear(columns=True)
-            ports_table.add_columns(
-                t("scanner.port"), t("scanner.process"), t("scanner.address")
-            )
+            ports_table.clear()
             for port in scan_state.listening_tcp[:50]:
                 ports_table.add_row(str(port.porta), port.processo, port.endereco)
 
         procs_table = self.query_one("#network-procs-table", DataTable)
-        procs_table.clear(columns=True)
-        procs_table.add_columns(
-            t("stalker.process_col"), t("stalker.connections_col"), t("stalker.pid_col")
-        )
+        procs_table.clear()
         for pid, name, raw in procs:
             conns = raw // (1024 * 1024)
             procs_table.add_row(name or t("stalker.unknown_process"), str(conns), str(pid))
 
         self._render_speed_table(speed_snapshot or {})
-
-        log = self.query_one("#network-log", RichLog)
-        for line in log_lines:
-            log.write(line)
 
     def _render_ping_card(self, prefix: str, ms, stats, threshold: int) -> None:
         digits = self.query_one(f"#{prefix}-digits", Digits)
@@ -846,13 +940,7 @@ class VareduraTextualApp(App[str | None]):
 
     def _render_speed_table(self, snapshot: dict) -> None:
         table = self.query_one("#network-speed-table", DataTable)
-        table.clear(columns=True)
-        table.add_columns(
-            t("stalker.speed_provider"),
-            t("stalker.speed_download"),
-            t("stalker.speed_upload"),
-            t("stalker.speed_ping"),
-        )
+        table.clear()
         results = snapshot.get("results_by_provider", {})
         for provider, result in results.items():
             try:

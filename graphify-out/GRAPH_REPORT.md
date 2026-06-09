@@ -1,16 +1,16 @@
 # Graph Report - Varedura  (2026-06-08)
 
 ## Corpus Check
-- 51 files · ~97,702 words
+- 51 files · ~97,758 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2322 nodes · 3083 edges · 120 communities (91 shown, 29 thin omitted)
+- 2332 nodes · 3093 edges · 115 communities (86 shown, 29 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 211 edges (avg confidence: 0.78)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `06e6114a`
+- Built from commit: `13ff5467`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -121,15 +121,10 @@
 - [[_COMMUNITY_Community 105|Community 105]]
 - [[_COMMUNITY_Community 106|Community 106]]
 - [[_COMMUNITY_Community 107|Community 107]]
-- [[_COMMUNITY_Community 108|Community 108]]
 - [[_COMMUNITY_Community 109|Community 109]]
-- [[_COMMUNITY_Community 110|Community 110]]
 - [[_COMMUNITY_Community 111|Community 111]]
-- [[_COMMUNITY_Community 112|Community 112]]
 - [[_COMMUNITY_Community 113|Community 113]]
 - [[_COMMUNITY_Community 114|Community 114]]
-- [[_COMMUNITY_Community 115|Community 115]]
-- [[_COMMUNITY_Community 116|Community 116]]
 - [[_COMMUNITY_Community 118|Community 118]]
 - [[_COMMUNITY_Community 119|Community 119]]
 - [[_COMMUNITY_Community 120|Community 120]]
@@ -218,15 +213,15 @@
 - **Login Background Visual Composition** — loginbg_abstract_blue_login_background, loginbg_blue_gradient_palette, loginbg_blurred_full_width_backdrop [EXTRACTED 1.00]
 - **YPT Logo Brand Identity Elements** — yptlogo_logo_asset, yptlogo_purple_abstract_mark, yptlogo_gray_we_wordmark [EXTRACTED 1.00]
 
-## Communities (120 total, 29 thin omitted)
+## Communities (115 total, 29 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.00
-Nodes (436): admin.compact_result, admin.must_be_admin, admin.sparse_result, cleanup.admin_error, cleanup.admin_no, cleanup.admin_recommended, cleanup.admin_single_uac, cleanup.admin_yes (+428 more)
+Nodes (441): admin.compact_result, admin.must_be_admin, admin.sparse_result, cleanup.admin_error, cleanup.admin_no, cleanup.admin_recommended, cleanup.admin_single_uac, cleanup.admin_yes (+433 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.00
-Nodes (436): admin.compact_result, admin.must_be_admin, admin.sparse_result, cleanup.admin_error, cleanup.admin_no, cleanup.admin_recommended, cleanup.admin_single_uac, cleanup.admin_yes (+428 more)
+Nodes (441): admin.compact_result, admin.must_be_admin, admin.sparse_result, cleanup.admin_error, cleanup.admin_no, cleanup.admin_recommended, cleanup.admin_single_uac, cleanup.admin_yes (+433 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.06
@@ -237,8 +232,8 @@ Cohesion: 0.08
 Nodes (35): A(), Ae(), b(), be(), Bt(), ce(), D(), Dt() (+27 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.17
-Nodes (15): _expand_for_constant_fps(), _finalize_durations(), generate_gif(), GIF generator — converts Rich SVG snapshots to animated GIF.  Backends tried i, High-quality Pillow GIF with per-frame median-cut + Floyd-Steinberg., High-quality Pillow GIF with per-frame median-cut + Floyd-Steinberg., Use gifski for the best possible GIF quality (lossy encoder)., Use gifski for the best possible GIF quality (lossy encoder). (+7 more)
+Cohesion: 0.08
+Nodes (29): _expand_for_constant_fps(), _finalize_durations(), generate_gif(), _prepare_images(), GIF generator — converts Rich SVG snapshots to animated GIF.  Backends tried i, Remove CSS animations from SVG so each frame is a static snapshot., Remove CSS animations from SVG so each frame is a static snapshot., Convert SVG frames to normalised RGBA images + per-frame durations. (+21 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.09
@@ -389,8 +384,8 @@ Cohesion: 0.83
 Nodes (3): cleanup_exports(), test_prompt_export_cancel(), test_prompt_export_confirm_triggers_export()
 
 ### Community 42 - "Community 42"
-Cohesion: 0.15
-Nodes (9): Stop recording and capture final frame., Records a Rich console session by taking periodic SVG snapshots.      Usage:, Records a Rich console session by taking periodic SVG snapshots.      Usage:, Set a live renderable to snapshot directly.          When set, each snapshot r, Set a live renderable to snapshot directly.          When set, each snapshot r, Begin recording with periodic snapshots., Begin recording with periodic snapshots., Stop recording and capture final frame. (+1 more)
+Cohesion: 0.07
+Nodes (19): quick_cleanup(), Entrypoint CLI para executar a limpeza rápida do WSL Docker., Perform a quick cleanup. If a `console` is provided, use it for output., console(), Session recorder — captures Rich console output as SVG snapshots., Stop recording and capture final frame., Background loop taking periodic SVG snapshots., Background loop taking periodic SVG snapshots. (+11 more)
 
 ### Community 43 - "Community 43"
 Cohesion: 0.33
@@ -473,8 +468,8 @@ Cohesion: 0.50
 Nodes (3): Magenta Stylized Wordmark, TIME Logo, Trademark Mark
 
 ### Community 67 - "Community 67"
-Cohesion: 0.10
-Nodes (12): Versão async de cleanup_recycle_bin com streaming., Versão async de cleanup_recycle_bin com streaming., Versão async de stop_docker_wsl., Versão async com batch elevated., Versão async de stop_docker_wsl., Versão async com batch elevated., Executa um comando async com streaming de saída em tempo real.          Args:, Executa comando elevated (admin/root). (+4 more)
+Cohesion: 0.14
+Nodes (9): Versão async de cleanup_recycle_bin com streaming., Versão async de cleanup_recycle_bin com streaming., Versão async de stop_docker_wsl., Versão async com batch elevated., Versão async de stop_docker_wsl., Versão async com batch elevated., Executa um comando async com streaming de saída em tempo real.          Args:, Executa comando elevated (admin/root). (+1 more)
 
 ### Community 68 - "Community 68"
 Cohesion: 0.67
@@ -540,41 +535,21 @@ Nodes (3): Abstract Blue Login Background, Blue Gradient Palette, Blurred Full W
 Cohesion: 1.00
 Nodes (3): Gray WE Wordmark, YPT Logo Asset, Purple Abstract Mark
 
-### Community 105 - "Community 105"
-Cohesion: 0.23
-Nodes (4): Executa um comando e retorna o resultado, Versão sync para CLI., Ensure Docker WSL distros are running so fstrim can execute inside them., Run fstrim on Docker WSL distros to discard unused filesystem blocks.
-
 ### Community 106 - "Community 106"
-Cohesion: 0.33
-Nodes (6): _prepare_images(), Remove CSS animations from SVG so each frame is a static snapshot., Remove CSS animations from SVG so each frame is a static snapshot., Convert SVG frames to normalised RGBA images + per-frame durations., Convert SVG frames to normalised RGBA images + per-frame durations., _strip_svg_animation()
+Cohesion: 0.20
+Nodes (5): Ensure Docker WSL distros are running so fstrim can execute inside them., Async version of _ensure_wsl_distros_running., Async version of _fstrim_wsl_distros., Run fstrim on Docker WSL distros to discard unused filesystem blocks., Async version of _fstrim_wsl_distros.          Note: Caller is responsible for
 
 ### Community 107 - "Community 107"
 Cohesion: 0.25
 Nodes (6): _run_network_worker(), Para o loop de testes., Para testes de velocidade., stop_continuous_testing(), analyze_lag_source(), Analisa a origem provável do lag com mais inteligência.      Retorna: (suspeit
 
-### Community 108 - "Community 108"
-Cohesion: 0.25
-Nodes (3): console(), Session recorder — captures Rich console output as SVG snapshots., test_quick_cleanup_reuses_central_cleaner()
-
 ### Community 109 - "Community 109"
 Cohesion: 0.40
 Nodes (3): main(), Verifica se o script está rodando como administrador/root, Reinicia o script com privilégios de administrador/root
 
-### Community 110 - "Community 110"
-Cohesion: 0.33
-Nodes (6): Convert SVG string to high-quality PNG bytes.      Renders at ``width * scale`, Convert SVG string to high-quality PNG bytes.      Renders at ``width * scale`, Low-level SVG → PNG using best available renderer., Low-level SVG → PNG using best available renderer., _render_svg_raw(), _svg_to_png_bytes()
-
 ### Community 111 - "Community 111"
 Cohesion: 0.33
 Nodes (5): servers, varedura, args, command, type
-
-### Community 112 - "Community 112"
-Cohesion: 0.40
-Nodes (3): quick_cleanup(), Entrypoint CLI para executar a limpeza rápida do WSL Docker., Perform a quick cleanup. If a `console` is provided, use it for output.
-
-### Community 115 - "Community 115"
-Cohesion: 0.33
-Nodes (4): Background loop taking periodic SVG snapshots., Background loop taking periodic SVG snapshots., Capture current console state as SVG., Capture current console state as SVG.
 
 ## Ambiguous Edges - Review These
 - `Rich Main Menu Application` → `Copilot Instructions Textual UI Guidelines`  [AMBIGUOUS]
@@ -587,7 +562,7 @@ Nodes (4): Background loop taking periodic SVG snapshots., Background loop takin
   tests/static/images/hwlogo_paraguaypsn.gif · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **1095 isolated node(s):** `PreToolUse`, `PreToolUse`, `python.testing.pytestArgs`, `python.testing.unittestEnabled`, `python.testing.pytestEnabled` (+1090 more)
+- **1105 isolated node(s):** `PreToolUse`, `PreToolUse`, `python.testing.pytestArgs`, `python.testing.unittestEnabled`, `python.testing.pytestEnabled` (+1100 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **29 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -602,9 +577,9 @@ _Questions this graph is uniquely positioned to answer:_
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **What is the exact relationship between `Blank White Logo Banner` and `Paraguay PSN Huawei Branding`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `WSLDockerCleaner` connect `Community 71` to `Community 2`, `Community 67`, `Community 70`, `Community 105`, `Community 43`, `Community 108`, `Community 109`, `Community 44`, `Community 112`, `Community 114`, `Community 19`, `Community 22`, `Community 30`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Why does `VareduraTextualApp` connect `Community 40` to `Community 37`, `Community 5`, `Community 39`, `Community 107`, `Community 44`, `Community 43`, `Community 46`, `Community 49`, `Community 22`, `Community 31`?**
   _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Why does `DailyLogWriter` connect `Community 43` to `Community 70`, `Community 71`, `Community 40`, `Community 39`, `Community 44`, `Community 108`, `Community 46`?**
-  _High betweenness centrality (0.015) - this node is a cross-community bridge._
+- **Why does `WSLDockerCleaner` connect `Community 71` to `Community 2`, `Community 67`, `Community 70`, `Community 105`, `Community 42`, `Community 106`, `Community 43`, `Community 109`, `Community 44`, `Community 114`, `Community 19`, `Community 22`, `Community 30`?**
+  _High betweenness centrality (0.022) - this node is a cross-community bridge._
+- **Why does `get_speed_tester()` connect `Community 45` to `Community 36`, `Community 5`, `Community 41`, `Community 107`, `Community 15`, `Community 22`?**
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._

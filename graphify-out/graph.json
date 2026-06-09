@@ -1565,7 +1565,7 @@
       "source_file": "cli/quick_cleanup.py",
       "source_location": "L1",
       "id": "cli_quick_cleanup_py",
-      "community": 112,
+      "community": 42,
       "norm_label": "quick_cleanup.py"
     },
     {
@@ -1574,7 +1574,7 @@
       "source_file": "cli/quick_cleanup.py",
       "source_location": "L13",
       "id": "cli_quick_cleanup_run_cmd",
-      "community": 112,
+      "community": 42,
       "norm_label": "run_cmd()"
     },
     {
@@ -1583,7 +1583,7 @@
       "source_file": "cli/quick_cleanup.py",
       "source_location": "L34",
       "id": "cli_quick_cleanup_quick_cleanup",
-      "community": 112,
+      "community": 42,
       "norm_label": "quick_cleanup()"
     },
     {
@@ -1592,7 +1592,7 @@
       "source_file": "cli/quick_cleanup.py",
       "source_location": "L1",
       "id": "cli_quick_cleanup_rationale_1",
-      "community": 112,
+      "community": 42,
       "norm_label": "entrypoint cli para executar a limpeza rapida do wsl docker."
     },
     {
@@ -1601,7 +1601,7 @@
       "source_file": "cli/quick_cleanup.py",
       "source_location": "L35",
       "id": "cli_quick_cleanup_rationale_35",
-      "community": 112,
+      "community": 42,
       "norm_label": "perform a quick cleanup. if a `console` is provided, use it for output."
     },
     {
@@ -2094,7 +2094,7 @@
       "label": "._render_ping_card()",
       "file_type": "code",
       "source_file": "cli/textual_app.py",
-      "source_location": "L825",
+      "source_location": "L826",
       "id": "cli_textual_app_vareduratextualapp_render_ping_card",
       "community": 40,
       "norm_label": "._render_ping_card()"
@@ -2103,7 +2103,7 @@
       "label": "._render_speed_table()",
       "file_type": "code",
       "source_file": "cli/textual_app.py",
-      "source_location": "L847",
+      "source_location": "L848",
       "id": "cli_textual_app_vareduratextualapp_render_speed_table",
       "community": 40,
       "norm_label": "._render_speed_table()"
@@ -2112,7 +2112,7 @@
       "label": "._export_network_report()",
       "file_type": "code",
       "source_file": "cli/textual_app.py",
-      "source_location": "L883",
+      "source_location": "L878",
       "id": "cli_textual_app_vareduratextualapp_export_network_report",
       "community": 46,
       "norm_label": "._export_network_report()"
@@ -2121,7 +2121,7 @@
       "label": "._poll_export_status()",
       "file_type": "code",
       "source_file": "cli/textual_app.py",
-      "source_location": "L891",
+      "source_location": "L886",
       "id": "cli_textual_app_vareduratextualapp_poll_export_status",
       "community": 5,
       "norm_label": "._poll_export_status()"
@@ -2130,7 +2130,7 @@
       "label": "._network_log()",
       "file_type": "code",
       "source_file": "cli/textual_app.py",
-      "source_location": "L899",
+      "source_location": "L894",
       "id": "cli_textual_app_vareduratextualapp_network_log",
       "community": 46,
       "norm_label": "._network_log()"
@@ -2139,7 +2139,7 @@
       "label": "._refresh_status_renderables()",
       "file_type": "code",
       "source_file": "cli/textual_app.py",
-      "source_location": "L902",
+      "source_location": "L897",
       "id": "cli_textual_app_vareduratextualapp_refresh_status_renderables",
       "community": 37,
       "norm_label": "._refresh_status_renderables()"
@@ -2148,7 +2148,7 @@
       "label": "._write_dashboard_log()",
       "file_type": "code",
       "source_file": "cli/textual_app.py",
-      "source_location": "L915",
+      "source_location": "L910",
       "id": "cli_textual_app_vareduratextualapp_write_dashboard_log",
       "community": 40,
       "norm_label": "._write_dashboard_log()"
@@ -2157,7 +2157,7 @@
       "label": "run_textual_app()",
       "file_type": "code",
       "source_file": "cli/textual_app.py",
-      "source_location": "L919",
+      "source_location": "L914",
       "id": "cli_textual_app_run_textual_app",
       "community": 22,
       "norm_label": "run_textual_app()"
@@ -2654,7 +2654,7 @@
       "source_file": "docker_cleaner/core.py",
       "source_location": "L123",
       "id": "docker_cleaner_core_wsldockercleaner_init",
-      "community": 108,
+      "community": 42,
       "norm_label": ".__init__()"
     },
     {
@@ -2843,7 +2843,7 @@
       "source_file": "docker_cleaner/core.py",
       "source_location": "L754",
       "id": "docker_cleaner_core_wsldockercleaner_parse_wsl_distros",
-      "community": 67,
+      "community": 106,
       "norm_label": "._parse_wsl_distros()"
     },
     {
@@ -2852,7 +2852,7 @@
       "source_file": "docker_cleaner/core.py",
       "source_location": "L765",
       "id": "docker_cleaner_core_wsldockercleaner_docker_wsl_sparse_distros",
-      "community": 67,
+      "community": 106,
       "norm_label": "._docker_wsl_sparse_distros()"
     },
     {
@@ -2879,7 +2879,7 @@
       "source_file": "docker_cleaner/core.py",
       "source_location": "L782",
       "id": "docker_cleaner_core_wsldockercleaner_ensure_wsl_distros_running",
-      "community": 105,
+      "community": 106,
       "norm_label": "._ensure_wsl_distros_running()"
     },
     {
@@ -2888,7 +2888,7 @@
       "source_file": "docker_cleaner/core.py",
       "source_location": "L808",
       "id": "docker_cleaner_core_wsldockercleaner_ensure_wsl_distros_running_async",
-      "community": 67,
+      "community": 106,
       "norm_label": "._ensure_wsl_distros_running_async()"
     },
     {
@@ -2897,7 +2897,7 @@
       "source_file": "docker_cleaner/core.py",
       "source_location": "L836",
       "id": "docker_cleaner_core_wsldockercleaner_fstrim_wsl_distros",
-      "community": 105,
+      "community": 106,
       "norm_label": "._fstrim_wsl_distros()"
     },
     {
@@ -2906,7 +2906,7 @@
       "source_file": "docker_cleaner/core.py",
       "source_location": "L875",
       "id": "docker_cleaner_core_wsldockercleaner_fstrim_wsl_distros_async",
-      "community": 67,
+      "community": 106,
       "norm_label": "._fstrim_wsl_distros_async()"
     },
     {
@@ -3212,7 +3212,7 @@
       "source_file": "docker_cleaner/core.py",
       "source_location": "L783",
       "id": "docker_cleaner_core_rationale_783",
-      "community": 105,
+      "community": 106,
       "norm_label": "ensure docker wsl distros are running so fstrim can execute inside them."
     },
     {
@@ -3221,7 +3221,7 @@
       "source_file": "docker_cleaner/core.py",
       "source_location": "L811",
       "id": "docker_cleaner_core_rationale_811",
-      "community": 67,
+      "community": 106,
       "norm_label": "async version of _ensure_wsl_distros_running."
     },
     {
@@ -3230,7 +3230,7 @@
       "source_file": "docker_cleaner/core.py",
       "source_location": "L837",
       "id": "docker_cleaner_core_rationale_837",
-      "community": 105,
+      "community": 106,
       "norm_label": "run fstrim on docker wsl distros to discard unused filesystem blocks."
     },
     {
@@ -3239,7 +3239,7 @@
       "source_file": "docker_cleaner/core.py",
       "source_location": "L878",
       "id": "docker_cleaner_core_rationale_878",
-      "community": 67,
+      "community": 106,
       "norm_label": "async version of _fstrim_wsl_distros.          note: caller is responsible for"
     },
     {
@@ -7059,10 +7059,55 @@
       "norm_label": "textual.network_card_stats"
     },
     {
-      "label": "textual.cleanup_run",
+      "label": "textual.bind_quit",
       "file_type": "code",
       "source_file": "i18n/en.json",
       "source_location": "L431",
+      "id": "i18n_en_textual_bind_quit",
+      "community": 0,
+      "norm_label": "textual.bind_quit"
+    },
+    {
+      "label": "textual.bind_dark",
+      "file_type": "code",
+      "source_file": "i18n/en.json",
+      "source_location": "L432",
+      "id": "i18n_en_textual_bind_dark",
+      "community": 0,
+      "norm_label": "textual.bind_dark"
+    },
+    {
+      "label": "textual.bind_settings",
+      "file_type": "code",
+      "source_file": "i18n/en.json",
+      "source_location": "L433",
+      "id": "i18n_en_textual_bind_settings",
+      "community": 0,
+      "norm_label": "textual.bind_settings"
+    },
+    {
+      "label": "textual.bind_scan",
+      "file_type": "code",
+      "source_file": "i18n/en.json",
+      "source_location": "L434",
+      "id": "i18n_en_textual_bind_scan",
+      "community": 0,
+      "norm_label": "textual.bind_scan"
+    },
+    {
+      "label": "textual.bind_dashboard",
+      "file_type": "code",
+      "source_file": "i18n/en.json",
+      "source_location": "L435",
+      "id": "i18n_en_textual_bind_dashboard",
+      "community": 0,
+      "norm_label": "textual.bind_dashboard"
+    },
+    {
+      "label": "textual.cleanup_run",
+      "file_type": "code",
+      "source_file": "i18n/en.json",
+      "source_location": "L436",
       "id": "i18n_en_textual_cleanup_run",
       "community": 0,
       "norm_label": "textual.cleanup_run"
@@ -7071,7 +7116,7 @@
       "label": "textual.cleanup_save",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L432",
+      "source_location": "L437",
       "id": "i18n_en_textual_cleanup_save",
       "community": 0,
       "norm_label": "textual.cleanup_save"
@@ -7080,7 +7125,7 @@
       "label": "textual.cleanup_success",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L433",
+      "source_location": "L438",
       "id": "i18n_en_textual_cleanup_success",
       "community": 0,
       "norm_label": "textual.cleanup_success"
@@ -7089,7 +7134,7 @@
       "label": "textual.scanner_run",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L434",
+      "source_location": "L439",
       "id": "i18n_en_textual_scanner_run",
       "community": 0,
       "norm_label": "textual.scanner_run"
@@ -7098,7 +7143,7 @@
       "label": "textual.scanner_hint",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L435",
+      "source_location": "L440",
       "id": "i18n_en_textual_scanner_hint",
       "community": 0,
       "norm_label": "textual.scanner_hint"
@@ -7107,7 +7152,7 @@
       "label": "textual.scanner_tcp",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L436",
+      "source_location": "L441",
       "id": "i18n_en_textual_scanner_tcp",
       "community": 0,
       "norm_label": "textual.scanner_tcp"
@@ -7116,7 +7161,7 @@
       "label": "textual.scanner_connections",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L437",
+      "source_location": "L442",
       "id": "i18n_en_textual_scanner_connections",
       "community": 0,
       "norm_label": "textual.scanner_connections"
@@ -7125,7 +7170,7 @@
       "label": "textual.scanner_rich",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L438",
+      "source_location": "L443",
       "id": "i18n_en_textual_scanner_rich",
       "community": 0,
       "norm_label": "textual.scanner_rich"
@@ -7134,7 +7179,7 @@
       "label": "textual.scanner_empty",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L439",
+      "source_location": "L444",
       "id": "i18n_en_textual_scanner_empty",
       "community": 0,
       "norm_label": "textual.scanner_empty"
@@ -7143,7 +7188,7 @@
       "label": "textual.scanner_done",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L440",
+      "source_location": "L445",
       "id": "i18n_en_textual_scanner_done",
       "community": 0,
       "norm_label": "textual.scanner_done"
@@ -7152,7 +7197,7 @@
       "label": "textual.settings_save",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L441",
+      "source_location": "L446",
       "id": "i18n_en_textual_settings_save",
       "community": 0,
       "norm_label": "textual.settings_save"
@@ -7161,7 +7206,7 @@
       "label": "textual.settings_saved",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L442",
+      "source_location": "L447",
       "id": "i18n_en_textual_settings_saved",
       "community": 0,
       "norm_label": "textual.settings_saved"
@@ -7170,7 +7215,7 @@
       "label": "recorder.prompt_title",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L444",
+      "source_location": "L449",
       "id": "i18n_en_recorder_prompt_title",
       "community": 0,
       "norm_label": "recorder.prompt_title"
@@ -7179,7 +7224,7 @@
       "label": "recorder.prompt_question",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L445",
+      "source_location": "L450",
       "id": "i18n_en_recorder_prompt_question",
       "community": 0,
       "norm_label": "recorder.prompt_question"
@@ -7188,7 +7233,7 @@
       "label": "recorder.prompt_note",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L446",
+      "source_location": "L451",
       "id": "i18n_en_recorder_prompt_note",
       "community": 0,
       "norm_label": "recorder.prompt_note"
@@ -7197,7 +7242,7 @@
       "label": "recorder.prompt_why",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L447",
+      "source_location": "L452",
       "id": "i18n_en_recorder_prompt_why",
       "community": 0,
       "norm_label": "recorder.prompt_why"
@@ -7206,7 +7251,7 @@
       "label": "recorder.prompt_options",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L448",
+      "source_location": "L453",
       "id": "i18n_en_recorder_prompt_options",
       "community": 0,
       "norm_label": "recorder.prompt_options"
@@ -7215,7 +7260,7 @@
       "label": "recorder.prompt_saved_on",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L449",
+      "source_location": "L454",
       "id": "i18n_en_recorder_prompt_saved_on",
       "community": 0,
       "norm_label": "recorder.prompt_saved_on"
@@ -7224,7 +7269,7 @@
       "label": "recorder.prompt_saved_off",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L450",
+      "source_location": "L455",
       "id": "i18n_en_recorder_prompt_saved_off",
       "community": 0,
       "norm_label": "recorder.prompt_saved_off"
@@ -7233,7 +7278,7 @@
       "label": "recorder.chosen_recording",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L451",
+      "source_location": "L456",
       "id": "i18n_en_recorder_chosen_recording",
       "community": 0,
       "norm_label": "recorder.chosen_recording"
@@ -7242,7 +7287,7 @@
       "label": "recorder.chosen_streaming",
       "file_type": "code",
       "source_file": "i18n/en.json",
-      "source_location": "L452",
+      "source_location": "L457",
       "id": "i18n_en_recorder_chosen_streaming",
       "community": 0,
       "norm_label": "recorder.chosen_streaming"
@@ -10983,10 +11028,55 @@
       "norm_label": "textual.network_card_stats"
     },
     {
-      "label": "textual.cleanup_run",
+      "label": "textual.bind_quit",
       "file_type": "code",
       "source_file": "i18n/pt.json",
       "source_location": "L431",
+      "id": "i18n_pt_textual_bind_quit",
+      "community": 1,
+      "norm_label": "textual.bind_quit"
+    },
+    {
+      "label": "textual.bind_dark",
+      "file_type": "code",
+      "source_file": "i18n/pt.json",
+      "source_location": "L432",
+      "id": "i18n_pt_textual_bind_dark",
+      "community": 1,
+      "norm_label": "textual.bind_dark"
+    },
+    {
+      "label": "textual.bind_settings",
+      "file_type": "code",
+      "source_file": "i18n/pt.json",
+      "source_location": "L433",
+      "id": "i18n_pt_textual_bind_settings",
+      "community": 1,
+      "norm_label": "textual.bind_settings"
+    },
+    {
+      "label": "textual.bind_scan",
+      "file_type": "code",
+      "source_file": "i18n/pt.json",
+      "source_location": "L434",
+      "id": "i18n_pt_textual_bind_scan",
+      "community": 1,
+      "norm_label": "textual.bind_scan"
+    },
+    {
+      "label": "textual.bind_dashboard",
+      "file_type": "code",
+      "source_file": "i18n/pt.json",
+      "source_location": "L435",
+      "id": "i18n_pt_textual_bind_dashboard",
+      "community": 1,
+      "norm_label": "textual.bind_dashboard"
+    },
+    {
+      "label": "textual.cleanup_run",
+      "file_type": "code",
+      "source_file": "i18n/pt.json",
+      "source_location": "L436",
       "id": "i18n_pt_textual_cleanup_run",
       "community": 1,
       "norm_label": "textual.cleanup_run"
@@ -10995,7 +11085,7 @@
       "label": "textual.cleanup_save",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L432",
+      "source_location": "L437",
       "id": "i18n_pt_textual_cleanup_save",
       "community": 1,
       "norm_label": "textual.cleanup_save"
@@ -11004,7 +11094,7 @@
       "label": "textual.cleanup_success",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L433",
+      "source_location": "L438",
       "id": "i18n_pt_textual_cleanup_success",
       "community": 1,
       "norm_label": "textual.cleanup_success"
@@ -11013,7 +11103,7 @@
       "label": "textual.scanner_run",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L434",
+      "source_location": "L439",
       "id": "i18n_pt_textual_scanner_run",
       "community": 1,
       "norm_label": "textual.scanner_run"
@@ -11022,7 +11112,7 @@
       "label": "textual.scanner_hint",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L435",
+      "source_location": "L440",
       "id": "i18n_pt_textual_scanner_hint",
       "community": 1,
       "norm_label": "textual.scanner_hint"
@@ -11031,7 +11121,7 @@
       "label": "textual.scanner_tcp",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L436",
+      "source_location": "L441",
       "id": "i18n_pt_textual_scanner_tcp",
       "community": 1,
       "norm_label": "textual.scanner_tcp"
@@ -11040,7 +11130,7 @@
       "label": "textual.scanner_connections",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L437",
+      "source_location": "L442",
       "id": "i18n_pt_textual_scanner_connections",
       "community": 1,
       "norm_label": "textual.scanner_connections"
@@ -11049,7 +11139,7 @@
       "label": "textual.scanner_rich",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L438",
+      "source_location": "L443",
       "id": "i18n_pt_textual_scanner_rich",
       "community": 1,
       "norm_label": "textual.scanner_rich"
@@ -11058,7 +11148,7 @@
       "label": "textual.scanner_empty",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L439",
+      "source_location": "L444",
       "id": "i18n_pt_textual_scanner_empty",
       "community": 1,
       "norm_label": "textual.scanner_empty"
@@ -11067,7 +11157,7 @@
       "label": "textual.scanner_done",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L440",
+      "source_location": "L445",
       "id": "i18n_pt_textual_scanner_done",
       "community": 1,
       "norm_label": "textual.scanner_done"
@@ -11076,7 +11166,7 @@
       "label": "textual.settings_save",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L441",
+      "source_location": "L446",
       "id": "i18n_pt_textual_settings_save",
       "community": 1,
       "norm_label": "textual.settings_save"
@@ -11085,7 +11175,7 @@
       "label": "textual.settings_saved",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L442",
+      "source_location": "L447",
       "id": "i18n_pt_textual_settings_saved",
       "community": 1,
       "norm_label": "textual.settings_saved"
@@ -11094,7 +11184,7 @@
       "label": "recorder.prompt_title",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L444",
+      "source_location": "L449",
       "id": "i18n_pt_recorder_prompt_title",
       "community": 1,
       "norm_label": "recorder.prompt_title"
@@ -11103,7 +11193,7 @@
       "label": "recorder.prompt_question",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L445",
+      "source_location": "L450",
       "id": "i18n_pt_recorder_prompt_question",
       "community": 1,
       "norm_label": "recorder.prompt_question"
@@ -11112,7 +11202,7 @@
       "label": "recorder.prompt_note",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L446",
+      "source_location": "L451",
       "id": "i18n_pt_recorder_prompt_note",
       "community": 1,
       "norm_label": "recorder.prompt_note"
@@ -11121,7 +11211,7 @@
       "label": "recorder.prompt_why",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L447",
+      "source_location": "L452",
       "id": "i18n_pt_recorder_prompt_why",
       "community": 1,
       "norm_label": "recorder.prompt_why"
@@ -11130,7 +11220,7 @@
       "label": "recorder.prompt_options",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L448",
+      "source_location": "L453",
       "id": "i18n_pt_recorder_prompt_options",
       "community": 1,
       "norm_label": "recorder.prompt_options"
@@ -11139,7 +11229,7 @@
       "label": "recorder.prompt_saved_on",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L449",
+      "source_location": "L454",
       "id": "i18n_pt_recorder_prompt_saved_on",
       "community": 1,
       "norm_label": "recorder.prompt_saved_on"
@@ -11148,7 +11238,7 @@
       "label": "recorder.prompt_saved_off",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L450",
+      "source_location": "L455",
       "id": "i18n_pt_recorder_prompt_saved_off",
       "community": 1,
       "norm_label": "recorder.prompt_saved_off"
@@ -11157,7 +11247,7 @@
       "label": "recorder.chosen_recording",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L451",
+      "source_location": "L456",
       "id": "i18n_pt_recorder_chosen_recording",
       "community": 1,
       "norm_label": "recorder.chosen_recording"
@@ -11166,7 +11256,7 @@
       "label": "recorder.chosen_streaming",
       "file_type": "code",
       "source_file": "i18n/pt.json",
-      "source_location": "L452",
+      "source_location": "L457",
       "id": "i18n_pt_recorder_chosen_streaming",
       "community": 1,
       "norm_label": "recorder.chosen_streaming"
@@ -11708,7 +11798,7 @@
       "source_file": "mascot/renderer.py",
       "source_location": "L26",
       "id": "mascot_renderer_mascotrenderer_init",
-      "community": 108,
+      "community": 42,
       "norm_label": ".__init__()"
     },
     {
@@ -13724,7 +13814,7 @@
       "source_file": "recorder/gif_generator.py",
       "source_location": "L27",
       "id": "recorder_gif_generator_svg_to_png_bytes",
-      "community": 110,
+      "community": 4,
       "norm_label": "_svg_to_png_bytes()"
     },
     {
@@ -13733,7 +13823,7 @@
       "source_file": "recorder/gif_generator.py",
       "source_location": "L62",
       "id": "recorder_gif_generator_render_svg_raw",
-      "community": 110,
+      "community": 4,
       "norm_label": "_render_svg_raw()"
     },
     {
@@ -13742,7 +13832,7 @@
       "source_file": "recorder/gif_generator.py",
       "source_location": "L101",
       "id": "recorder_gif_generator_strip_svg_animation",
-      "community": 106,
+      "community": 4,
       "norm_label": "_strip_svg_animation()"
     },
     {
@@ -13751,7 +13841,7 @@
       "source_file": "recorder/gif_generator.py",
       "source_location": "L108",
       "id": "recorder_gif_generator_prepare_images",
-      "community": 106,
+      "community": 4,
       "norm_label": "_prepare_images()"
     },
     {
@@ -13823,7 +13913,7 @@
       "source_file": "recorder/gif_generator.py",
       "source_location": "L33",
       "id": "recorder_gif_generator_rationale_33",
-      "community": 110,
+      "community": 4,
       "norm_label": "convert svg string to high-quality png bytes.      renders at ``width * scale`"
     },
     {
@@ -13832,7 +13922,7 @@
       "source_file": "recorder/gif_generator.py",
       "source_location": "L63",
       "id": "recorder_gif_generator_rationale_63",
-      "community": 110,
+      "community": 4,
       "norm_label": "low-level svg \u2192 png using best available renderer."
     },
     {
@@ -13841,7 +13931,7 @@
       "source_file": "recorder/gif_generator.py",
       "source_location": "L102",
       "id": "recorder_gif_generator_rationale_102",
-      "community": 106,
+      "community": 4,
       "norm_label": "remove css animations from svg so each frame is a static snapshot."
     },
     {
@@ -13850,7 +13940,7 @@
       "source_file": "recorder/gif_generator.py",
       "source_location": "L113",
       "id": "recorder_gif_generator_rationale_113",
-      "community": 106,
+      "community": 4,
       "norm_label": "convert svg frames to normalised rgba images + per-frame durations."
     },
     {
@@ -13895,7 +13985,7 @@
       "source_file": "recorder/session_recorder.py",
       "source_location": "L1",
       "id": "recorder_session_recorder_py",
-      "community": 108,
+      "community": 42,
       "norm_label": "session_recorder.py"
     },
     {
@@ -13922,7 +14012,7 @@
       "source_file": "recorder/session_recorder.py",
       "source_location": "L46",
       "id": "recorder_session_recorder_console",
-      "community": 108,
+      "community": 42,
       "norm_label": "console()"
     },
     {
@@ -13931,7 +14021,7 @@
       "source_file": "recorder/session_recorder.py",
       "source_location": "L53",
       "id": "recorder_session_recorder_frames",
-      "community": 108,
+      "community": 42,
       "norm_label": "frames()"
     },
     {
@@ -13940,7 +14030,7 @@
       "source_file": "recorder/session_recorder.py",
       "source_location": "L58",
       "id": "recorder_session_recorder_is_recording",
-      "community": 108,
+      "community": 42,
       "norm_label": "is_recording()"
     },
     {
@@ -13994,7 +14084,7 @@
       "source_file": "recorder/session_recorder.py",
       "source_location": "L110",
       "id": "recorder_session_recorder_sessionrecorder_snapshot_loop",
-      "community": 115,
+      "community": 42,
       "norm_label": "._snapshot_loop()"
     },
     {
@@ -14003,7 +14093,7 @@
       "source_file": "recorder/session_recorder.py",
       "source_location": "L116",
       "id": "recorder_session_recorder_sessionrecorder_take_snapshot",
-      "community": 115,
+      "community": 42,
       "norm_label": "._take_snapshot()"
     },
     {
@@ -14012,7 +14102,7 @@
       "source_file": "recorder/session_recorder.py",
       "source_location": "L147",
       "id": "recorder_session_recorder_sessionrecorder_save_gif",
-      "community": 116,
+      "community": 4,
       "norm_label": ".save_gif()"
     },
     {
@@ -14021,7 +14111,7 @@
       "source_file": "recorder/session_recorder.py",
       "source_location": "L1",
       "id": "recorder_session_recorder_rationale_1",
-      "community": 108,
+      "community": 42,
       "norm_label": "session recorder \u2014 captures rich console output as svg snapshots."
     },
     {
@@ -14084,7 +14174,7 @@
       "source_file": "recorder/session_recorder.py",
       "source_location": "L111",
       "id": "recorder_session_recorder_rationale_111",
-      "community": 115,
+      "community": 42,
       "norm_label": "background loop taking periodic svg snapshots."
     },
     {
@@ -14093,7 +14183,7 @@
       "source_file": "recorder/session_recorder.py",
       "source_location": "L117",
       "id": "recorder_session_recorder_rationale_117",
-      "community": 115,
+      "community": 42,
       "norm_label": "capture current console state as svg."
     },
     {
@@ -14102,7 +14192,7 @@
       "source_file": "recorder/session_recorder.py",
       "source_location": "L153",
       "id": "recorder_session_recorder_rationale_153",
-      "community": 116,
+      "community": 4,
       "norm_label": "generate animated gif from recorded frames.          returns:             pat"
     },
     {
@@ -14237,7 +14327,7 @@
       "source_file": "tests/test_docker_cleanup.py",
       "source_location": "L341",
       "id": "tests_test_docker_cleanup_test_quick_cleanup_reuses_central_cleaner",
-      "community": 108,
+      "community": 42,
       "norm_label": "test_quick_cleanup_reuses_central_cleaner()"
     },
     {
@@ -16702,7 +16792,7 @@
       "file_type": "rationale",
       "source_file": "docker_cleaner/core.py",
       "source_location": "L820",
-      "community": 67,
+      "community": 106,
       "norm_label": "async version of _fstrim_wsl_distros.",
       "id": "docker_cleaner_core_rationale_820"
     },
@@ -17665,7 +17755,7 @@
       "file_type": "rationale",
       "source_file": "recorder/gif_generator.py",
       "source_location": "L32",
-      "community": 110,
+      "community": 4,
       "norm_label": "convert svg string to high-quality png bytes.      renders at ``width * scale`",
       "id": "recorder_gif_generator_rationale_32"
     },
@@ -17674,7 +17764,7 @@
       "file_type": "rationale",
       "source_file": "recorder/gif_generator.py",
       "source_location": "L62",
-      "community": 110,
+      "community": 4,
       "norm_label": "low-level svg \u2192 png using best available renderer.",
       "id": "recorder_gif_generator_rationale_62"
     },
@@ -17683,7 +17773,7 @@
       "file_type": "rationale",
       "source_file": "recorder/gif_generator.py",
       "source_location": "L101",
-      "community": 106,
+      "community": 4,
       "norm_label": "remove css animations from svg so each frame is a static snapshot.",
       "id": "recorder_gif_generator_rationale_101"
     },
@@ -17692,7 +17782,7 @@
       "file_type": "rationale",
       "source_file": "recorder/gif_generator.py",
       "source_location": "L112",
-      "community": 106,
+      "community": 4,
       "norm_label": "convert svg frames to normalised rgba images + per-frame durations.",
       "id": "recorder_gif_generator_rationale_112"
     },
@@ -17791,7 +17881,7 @@
       "file_type": "rationale",
       "source_file": "recorder/session_recorder.py",
       "source_location": "L112",
-      "community": 115,
+      "community": 42,
       "norm_label": "background loop taking periodic svg snapshots.",
       "id": "recorder_session_recorder_rationale_112"
     },
@@ -17800,7 +17890,7 @@
       "file_type": "rationale",
       "source_file": "recorder/session_recorder.py",
       "source_location": "L118",
-      "community": 115,
+      "community": 42,
       "norm_label": "capture current console state as svg.",
       "id": "recorder_session_recorder_rationale_118"
     },
@@ -17809,7 +17899,7 @@
       "file_type": "rationale",
       "source_file": "recorder/session_recorder.py",
       "source_location": "L154",
-      "community": 116,
+      "community": 4,
       "norm_label": "generate animated gif from recorded frames.          returns:             pat",
       "id": "recorder_session_recorder_rationale_154"
     },
@@ -34793,6 +34883,56 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "i18n/en.json",
+      "source_location": "L431",
+      "weight": 1.0,
+      "source": "i18n_en_json",
+      "target": "i18n_en_textual_bind_quit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "i18n/en.json",
+      "source_location": "L432",
+      "weight": 1.0,
+      "source": "i18n_en_json",
+      "target": "i18n_en_textual_bind_dark",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "i18n/en.json",
+      "source_location": "L433",
+      "weight": 1.0,
+      "source": "i18n_en_json",
+      "target": "i18n_en_textual_bind_settings",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "i18n/en.json",
+      "source_location": "L434",
+      "weight": 1.0,
+      "source": "i18n_en_json",
+      "target": "i18n_en_textual_bind_scan",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "i18n/en.json",
+      "source_location": "L435",
+      "weight": 1.0,
+      "source": "i18n_en_json",
+      "target": "i18n_en_textual_bind_dashboard",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "i18n/en.json",
       "source_location": "L412",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -39148,6 +39288,56 @@
       "confidence_score": 1.0,
       "source": "i18n_pt_json",
       "target": "i18n_pt_textual_network_card_stats"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "i18n/pt.json",
+      "source_location": "L431",
+      "weight": 1.0,
+      "source": "i18n_pt_json",
+      "target": "i18n_pt_textual_bind_quit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "i18n/pt.json",
+      "source_location": "L432",
+      "weight": 1.0,
+      "source": "i18n_pt_json",
+      "target": "i18n_pt_textual_bind_dark",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "i18n/pt.json",
+      "source_location": "L433",
+      "weight": 1.0,
+      "source": "i18n_pt_json",
+      "target": "i18n_pt_textual_bind_settings",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "i18n/pt.json",
+      "source_location": "L434",
+      "weight": 1.0,
+      "source": "i18n_pt_json",
+      "target": "i18n_pt_textual_bind_scan",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "i18n/pt.json",
+      "source_location": "L435",
+      "weight": 1.0,
+      "source": "i18n_pt_json",
+      "target": "i18n_pt_textual_bind_dashboard",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -55926,5 +56116,5 @@
       "source_file": "tests/static/images/yptlogo.jpg"
     }
   ],
-  "built_at_commit": "06e6114ab44a7d2c4a1c1f18c6a7a534edbebdaf"
+  "built_at_commit": "13ff54675c44b79054bc6caeb9d83b8cfe0ec4af"
 }

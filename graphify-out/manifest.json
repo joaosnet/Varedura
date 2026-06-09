@@ -55,13 +55,13 @@
     "semantic_hash": "a3dc411d85402f361ad8c43cc99c827a"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\en.json": {
-    "mtime": 1780969010.8813484,
-    "ast_hash": "d954b2d505b77777b391531ebd62b6bb",
+    "mtime": 1780970745.7633939,
+    "ast_hash": "3f0382e1d8371d6fd658e705c1a0c62a",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\pt.json": {
-    "mtime": 1780969045.830554,
-    "ast_hash": "3192b9f64f822e6bc0c1dca2f1b74ab5",
+    "mtime": 1780970748.2593791,
+    "ast_hash": "e9c12538474c9bdac47809abc53e4d49",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\__init__.py": {
@@ -430,8 +430,8 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\textual_app.py": {
-    "mtime": 1780970135.5738583,
-    "ast_hash": "e55493e588aac63fb8c2237cb98c665c",
+    "mtime": 1780970765.0539258,
+    "ast_hash": "1d03ace1fe4b4ffb2eb050c1b0d5abe2",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\ui_shared.py": {

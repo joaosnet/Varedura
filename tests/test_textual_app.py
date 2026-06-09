@@ -58,11 +58,44 @@ async def test_textual_settings_save_recording_and_language():
 
         app.query_one("#recording-switch").value = False
         app.query_one("#language-select").value = "pt"
+        # The settings form scrolls; bring the save button into view first.
+        app.query_one("#save-settings").scroll_visible()
+        await pilot.pause()
         await pilot.click("#save-settings")
         await pilot.pause()
 
         assert ui_shared.load_recording_pref() is False
         assert get_language() == "pt"
+
+
+@pytest.mark.asyncio
+async def test_textual_network_settings_detect_and_apply(monkeypatch):
+    import monitor.netinfo as netinfo
+    import monitor.stalker as stalker
+    from monitor.speed_tester import speed_config
+    from textual.widgets import Input
+
+    monkeypatch.setattr(netinfo, "detect_default_gateway", lambda: "10.1.2.3")
+
+    app = VareduraTextualApp()
+    async with app.run_test(size=(100, 60)) as pilot:
+        await pilot.pause()
+        # Autodetected gateway is applied to the live config and prefilled.
+        assert stalker.config.gateway_ip == "10.1.2.3"
+
+        app.query_one("#main-tabs", TabbedContent).active = "settings"
+        await pilot.pause()
+        assert app.query_one("#net-gateway", Input).value == "10.1.2.3"
+
+        app.query_one("#net-threshold", Input).value = "175"
+        app.query_one("#net-down", Input).value = "300"
+        app.query_one("#save-settings").scroll_visible()
+        await pilot.pause()
+        await pilot.click("#save-settings")
+        await pilot.pause()
+
+        assert stalker.config.lag_threshold_ms == 175
+        assert speed_config.velocidade_contratada_down == 300.0
 
 
 @pytest.mark.asyncio
