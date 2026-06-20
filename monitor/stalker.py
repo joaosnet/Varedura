@@ -137,6 +137,31 @@ full_ping_history: list = []  # [(timestamp, local_ms, external_ms), ...]
 full_speed_history: list = []  # [(timestamp, down, up, ping, provider, servidor), ...]
 test_session_start: Optional[datetime.datetime] = None
 
+# Protege full_ping_history e test_session_start contra acesso concorrente: a
+# thread de monitoramento (loop do stalker ou worker da TUI) escreve enquanto a
+# thread de exportação lê. Crítico sob free-threading (Python 3.14t), onde
+# list.append e a iteração não são garantidamente atômicos.
+_history_lock = threading.Lock()
+
+
+def record_ping_sample(
+    when: datetime.datetime,
+    local_ms: Optional[float],
+    ext_ms: Optional[float],
+) -> None:
+    """Registra uma amostra de ping no histórico completo de forma thread-safe."""
+    global test_session_start
+    with _history_lock:
+        if test_session_start is None:
+            test_session_start = when
+        full_ping_history.append((when, local_ms, ext_ms))
+
+
+def snapshot_ping_history() -> list:
+    """Retorna uma cópia consistente do histórico de ping para leitura segura."""
+    with _history_lock:
+        return list(full_ping_history)
+
 
 def save_prefs() -> None:
     """Persiste preferências relevantes para exportação em JSON."""
@@ -578,7 +603,8 @@ def prompt_export_report(simulated_choice: str | None = None) -> str:
         A status message string to be logged/displayed.
     """
     # Contagem de pontos estimada
-    total_points = len(full_ping_history) if full_ping_history else len(local_stats.timestamps)
+    _ping_snapshot = snapshot_ping_history()
+    total_points = len(_ping_snapshot) if _ping_snapshot else len(local_stats.timestamps)
     # Mensagem de aviso
     warning = t("stalker.export_warning")
 
@@ -647,10 +673,11 @@ def _generate_combined_pdf_worker(full_history: bool = False):
         csv_ping_filename = f"exports/ping_history_{timestamp}.csv"
         csv_speed_filename = f"exports/speed_history_{timestamp}.csv"
 
-        # Usar histórico completo ao invés do limitado
+        # Snapshot consistente do histórico (thread-safe) ao invés do limitado
+        _ping_snapshot = snapshot_ping_history()
         ping_data = (
-            full_ping_history
-            if full_ping_history
+            _ping_snapshot
+            if _ping_snapshot
             else [
                 (ts, local, ext)
                 for ts, local, ext in zip(
@@ -2652,7 +2679,6 @@ def main(external_console: Console | None = None, session_recorder=None):
     with Live(layout, console=console, refresh_per_second=4, screen=True):
         while running:
             try:
-                global test_session_start
                 # Verificar entrada de teclado
                 key = check_keyboard()
                 if key:
@@ -2679,11 +2705,9 @@ def main(external_console: Console | None = None, session_recorder=None):
                 local_stats.add(local_ms)
                 external_stats.add(ext_ms)
 
-                # Registrar no histórico completo para relatório formal
+                # Registrar no histórico completo para relatório formal (thread-safe)
                 now = datetime.datetime.now()
-                if test_session_start is None:
-                    test_session_start = now
-                full_ping_history.append((now, local_ms, ext_ms))
+                record_ping_sample(now, local_ms, ext_ms)
 
                 # 2. Verifica Processos de Rede
                 procs = get_top_network_hogs()

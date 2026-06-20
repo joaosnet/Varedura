@@ -188,6 +188,7 @@ class WSLDockerCleaner:
         command: str,
         shell: bool = True,
         stream_callback: Optional[Callable[[str], None]] = None,
+        timeout: float = 300.0,
     ) -> subprocess.CompletedProcess:
         """Executa um comando async com streaming de saída em tempo real.
 
@@ -238,15 +239,18 @@ class WSLDockerCleaner:
                         prefix = "[stderr] " if is_stderr else ""
                         stream_callback(f"{prefix}{text}\n")
 
-            # Executar leitores em paralelo
-            await asyncio.gather(
-                stream_reader(process.stdout, is_stderr=False),
-                stream_reader(process.stderr, is_stderr=True),
-                return_exceptions=True,
-            )
+            async def _drain_and_wait() -> int:
+                # Lê stdout/stderr em paralelo e aguarda o término do processo.
+                await asyncio.gather(
+                    stream_reader(process.stdout, is_stderr=False),
+                    stream_reader(process.stderr, is_stderr=True),
+                    return_exceptions=True,
+                )
+                return await process.wait()
 
-            # Aguardar término do processo
-            returncode = await process.wait()
+            # Timeout defensivo: um processo travado não pode pendurar a app
+            # indefinidamente (o except asyncio.TimeoutError abaixo mata o processo).
+            returncode = await asyncio.wait_for(_drain_and_wait(), timeout=timeout)
 
             # Log de erros se houver
             stdout_text = _strip_powershell_clixml("\n".join(stdout_lines))
@@ -268,6 +272,12 @@ class WSLDockerCleaner:
             )
 
         except asyncio.TimeoutError:
+            # Matar o processo travado para não deixar zumbis segurando recursos.
+            try:
+                process.kill()
+                await process.wait()
+            except Exception:
+                pass
             msg = f"{t('cleanup.timeout', cmd=command)}\n"
             if stream_callback:
                 stream_callback(msg)
@@ -751,6 +761,11 @@ try {{
         Path(wslconfig_path).write_text("\n".join(cleaned) + "\n", encoding="utf-8")
         return wslconfig_path
 
+    # Allowlist de nomes de distro WSL: bloqueia metacaracteres de shell para
+    # impedir injeção de comando quando o nome é interpolado em comandos com
+    # shell=True (defesa em profundidade, além do quoting nos call sites).
+    _SAFE_DISTRO_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
     def _parse_wsl_distros(self, output: str) -> list[str]:
         distros: list[str] = []
         for raw_line in (output or "").replace("\x00", "").splitlines():
@@ -758,7 +773,7 @@ try {{
             if not line or line.lower().startswith("name"):
                 continue
             name = line.split()[0]
-            if name and name not in distros:
+            if name and self._SAFE_DISTRO_RE.match(name) and name not in distros:
                 distros.append(name)
         return distros
 
@@ -796,7 +811,7 @@ try {{
             # Try to start the distro with a no-op command
             self.log(t("cleanup.fstrim_wsl_distro_start", distro=distro))
             start_result = self.run_command(
-                f'wsl -d {distro} -u root -- echo ok', capture_output=True,
+                f'wsl -d "{distro}" -u root -- echo ok', capture_output=True,
             )
             if start_result and start_result.returncode == 0:
                 self.log(t("cleanup.fstrim_wsl_distro_started", distro=distro))
@@ -822,7 +837,7 @@ try {{
             if stream_callback:
                 stream_callback(f"{t('cleanup.fstrim_wsl_distro_start', distro=distro)}\n")
             start_result = await self.run_command_async(
-                f'wsl -d {distro} -u root -- echo ok', shell=True, stream_callback=stream_callback,
+                f'wsl -d "{distro}" -u root -- echo ok', shell=True, stream_callback=stream_callback,
             )
             if start_result and start_result.returncode == 0:
                 if stream_callback:
@@ -855,7 +870,7 @@ try {{
         for distro in distros:
             self.log(t("cleanup.fstrim_distro", distro=distro))
             trim_result = self.run_command(
-                f'wsl -d {distro} -u root -- fstrim / 2>&1', capture_output=True,
+                f'wsl -d "{distro}" -u root -- fstrim / 2>&1', capture_output=True,
             )
             if trim_result and trim_result.returncode == 0:
                 self.log(t("cleanup.fstrim_success", distro=distro))
@@ -865,7 +880,7 @@ try {{
                 # dd fills free space with zeros so diskpart can reclaim it.
                 # ENOSPC (exit code 1) is expected — it means all free space was zeroed.
                 self.run_command(
-                    f'wsl -d {distro} -u root -- sh -c "dd if=/dev/zero of=/zero.tmp bs=1M conv=fdatasync 2>/dev/null; rm -f /zero.tmp; sync"',
+                    f'wsl -d "{distro}" -u root -- sh -c "dd if=/dev/zero of=/zero.tmp bs=1M conv=fdatasync 2>/dev/null; rm -f /zero.tmp; sync"',
                     capture_output=True,
                 )
                 self.log(t("cleanup.fstrim_dd_done", distro=distro))
@@ -897,7 +912,7 @@ try {{
             if stream_callback:
                 stream_callback(f"{t('cleanup.fstrim_distro', distro=distro)}\n")
             trim_result = await self.run_command_async(
-                f'wsl -d {distro} -u root -- fstrim / 2>&1', shell=True, stream_callback=stream_callback,
+                f'wsl -d "{distro}" -u root -- fstrim / 2>&1', shell=True, stream_callback=stream_callback,
             )
             if trim_result and trim_result.returncode == 0:
                 if stream_callback:
@@ -909,7 +924,7 @@ try {{
                 # dd fills free space with zeros so diskpart can reclaim it.
                 # ENOSPC (exit code 1) is expected — it means all free space was zeroed.
                 await self.run_command_async(
-                    f'wsl -d {distro} -u root -- sh -c "dd if=/dev/zero of=/zero.tmp bs=1M conv=fdatasync 2>/dev/null; rm -f /zero.tmp; sync"',
+                    f'wsl -d "{distro}" -u root -- sh -c "dd if=/dev/zero of=/zero.tmp bs=1M conv=fdatasync 2>/dev/null; rm -f /zero.tmp; sync"',
                     shell=True, stream_callback=stream_callback,
                 )
                 if stream_callback:

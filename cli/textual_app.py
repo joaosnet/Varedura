@@ -313,6 +313,9 @@ class VareduraTextualApp(App[str | None]):
         self._net_external_stats = None
         self._net_pool: ThreadPoolExecutor | None = None
         self._net_scan_failed = False
+        # Timers periódicos (criados em on_mount, parados em on_unmount).
+        self._dashboard_timer = None
+        self._mascot_timer = None
         # Gamification state.
         self._game = load_game_state()
         self._streak = StreakTracker()
@@ -513,8 +516,8 @@ class VareduraTextualApp(App[str | None]):
         self._init_network_config()
         self.query_one("#tool-menu", OptionList).focus()
         self._write_dashboard_log(t("textual.ready"))
-        self.set_interval(2.0, self._refresh_dashboard_status)
-        self.set_interval(0.5, self._animate_mascot)
+        self._dashboard_timer = self.set_interval(2.0, self._refresh_dashboard_status)
+        self._mascot_timer = self.set_interval(0.5, self._animate_mascot)
 
     def _network_status_snapshot(self) -> dict:
         """Cheap live snapshot of the network monitor for the dashboard."""
@@ -625,7 +628,13 @@ class VareduraTextualApp(App[str | None]):
             self._start_network()
 
     def on_unmount(self) -> None:
+        # Sinaliza a parada do worker de rede (que encerra o ThreadPoolExecutor
+        # no seu finally) e para os timers periódicos para que não disparem
+        # durante o teardown da aplicação.
         self._network_stop.set()
+        for timer in (self._dashboard_timer, self._mascot_timer):
+            if timer is not None:
+                timer.stop()
 
     @on(Button.Pressed)
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -979,9 +988,7 @@ class VareduraTextualApp(App[str | None]):
                 stalker_mod.local_stats.add(local_ms)
                 stalker_mod.external_stats.add(ext_ms)
                 now = datetime.datetime.now()
-                if stalker_mod.test_session_start is None:
-                    stalker_mod.test_session_start = now
-                stalker_mod.full_ping_history.append((now, local_ms, ext_ms))
+                stalker_mod.record_ping_sample(now, local_ms, ext_ms)
 
                 try:
                     speed_snapshot = get_speed_tester().get_stats_snapshot()
