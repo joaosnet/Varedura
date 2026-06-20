@@ -3,6 +3,7 @@ import io
 import json
 import re
 import subprocess
+import sys
 
 import pytest
 from rich.console import Console
@@ -466,6 +467,11 @@ def test_parse_wsl_distros_drops_shell_metacharacters():
     assert all(re.match(r"^[A-Za-z0-9._-]+$", name) for name in distros)
 
 
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Exercises Windows %VAR% expansion and the WSL2 VHDX disk layout "
+    "(os.path.expandvars only expands %VAR% on Windows)",
+)
 def test_get_docker_vhdx_paths_discovers_disk_layout(monkeypatch, tmp_path):
     monkeypatch.setattr(core, "IS_WINDOWS", True)
 
