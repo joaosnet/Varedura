@@ -61,6 +61,10 @@ extend-exclude = ["build", "lmarena", "tests/static"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Run against the source tree: put the repo root on sys.path so the top-level
+# packages (cli, monitor, ...) import without an editable install (needed under
+# `uv run pytest` in CI, which does not add the cwd to sys.path).
+pythonpath = ["."]
 # Async tests opt in explicitly via @pytest.mark.asyncio (strict mode).
 asyncio_mode = "strict"
 
