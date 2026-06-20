@@ -45,8 +45,8 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\docker_cleaner\\core.py": {
-    "mtime": 1779246830.5743885,
-    "ast_hash": "ef39b4aa701511d6548beeaf12fbacc6",
+    "mtime": 1781978629.3454676,
+    "ast_hash": "e84d305bc14c8e705c89ec1ee6b1adfe",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\docker_cleaner\\__init__.py": {
@@ -105,9 +105,9 @@
     "semantic_hash": "c39cd891e5f9f14f4afaf9eef7b1a5de"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mcp_server\\server.py": {
-    "mtime": 1777693878.9474204,
-    "ast_hash": "829462c35da10812cb69c96859563573",
-    "semantic_hash": "829462c35da10812cb69c96859563573"
+    "mtime": 1781977014.0356264,
+    "ast_hash": "481d6105f72b539c76ab7378f844e5cf",
+    "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mcp_server\\__init__.py": {
     "mtime": 1771182470.418116,
@@ -135,9 +135,9 @@
     "semantic_hash": "dcf30bed75060a0052483e7aa128e3b6"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\stalker.py": {
-    "mtime": 1771194308.3407178,
-    "ast_hash": "169cb440761fa7e0d461d2869004ebc7",
-    "semantic_hash": "169cb440761fa7e0d461d2869004ebc7"
+    "mtime": 1781978688.043359,
+    "ast_hash": "c1933a6dbeb0d1fccaea781ec20bfab9",
+    "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\__init__.py": {
     "mtime": 1767292519.5070202,
@@ -170,8 +170,8 @@
     "semantic_hash": "6108aa95fd0b3c80178ecd4e0a2a056e"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_docker_cleanup.py": {
-    "mtime": 1779246853.25656,
-    "ast_hash": "83af29419fe923293350cb90aa070ace",
+    "mtime": 1781978786.2204483,
+    "ast_hash": "798987408eedf75d95d31406e36b604f",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_export_pdf.py": {
@@ -430,8 +430,8 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\textual_app.py": {
-    "mtime": 1780974447.1506808,
-    "ast_hash": "160ab7f0b65ecf0d92842996a1ac97ee",
+    "mtime": 1781978714.4286985,
+    "ast_hash": "6cf6c8f993f88e536bbb60a6e5d2b227",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\ui_shared.py": {
@@ -482,6 +482,21 @@
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_gamification.py": {
     "mtime": 1780974050.64725,
     "ast_hash": "367f5fd4baef33b7d104be5e46b30690",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.github\\workflows\\ci.yml": {
+    "mtime": 1781976972.679148,
+    "ast_hash": "258aae74ce367af6bc1d644b31a50b31",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_netinfo.py": {
+    "mtime": 1781985381.512255,
+    "ast_hash": "3a7173730116a28a53105ed61ac9d286",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_port_scanner.py": {
+    "mtime": 1781985368.306353,
+    "ast_hash": "d68f00430bd87127c780f8bc08bb55bc",
     "semantic_hash": ""
   }
 }
