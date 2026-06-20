@@ -56,6 +56,46 @@ def _is_docker_running() -> bool:
     return r["returncode"] == 0
 
 
+def _confirmation_required(tool: str, actions: list[str]) -> str:
+    """Response returned when a destructive tool is called without confirmation.
+
+    The calling agent MUST surface these actions to the human user and obtain
+    explicit consent before re-invoking the tool with ``confirmed=True``.
+    """
+    return json.dumps(
+        {
+            "executed": False,
+            "requires_confirmation": True,
+            "tool": tool,
+            "destructive": True,
+            "actions": actions,
+            "message": (
+                "This is a destructive operation and was NOT executed. Present the "
+                "listed actions to the user, obtain explicit confirmation, then call "
+                "this tool again with confirmed=true. Use dry_run=true to preview "
+                "the impact without executing."
+            ),
+        },
+        indent=2,
+        ensure_ascii=False,
+    )
+
+
+def _dry_run_preview(tool: str, actions: list[str], extra: dict[str, Any] | None = None) -> str:
+    """Response returned for a dry run: lists impact without executing anything."""
+    payload: dict[str, Any] = {
+        "executed": False,
+        "dry_run": True,
+        "tool": tool,
+        "destructive": True,
+        "actions": actions,
+        "timestamp": datetime.now().isoformat(),
+    }
+    if extra:
+        payload.update(extra)
+    return json.dumps(payload, indent=2, ensure_ascii=False)
+
+
 # ---------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------
@@ -83,22 +123,59 @@ def docker_status() -> str:
     )
 
 
+_QUICK_CLEANUP_ACTIONS = [
+    "Remove all stopped containers",
+    "Remove unused (dangling) images",
+    "Remove unused volumes",
+    "Remove unused networks",
+    "Prune build cache",
+]
+
+
 @mcp.tool()
-def docker_quick_cleanup() -> str:
+def docker_quick_cleanup(confirmed: bool = False, dry_run: bool = False) -> str:
     """Run a quick Docker cleanup: prune containers, images, volumes, networks, and build cache.
 
-    ⚠️  DESTRUCTIVE: This removes all stopped containers, unused images,
-    unused volumes, unused networks, and build cache. Running containers
-    are preserved.
+    ⚠️  DESTRUCTIVE: removes all stopped containers, unused images, unused
+    volumes, unused networks, and build cache. Running containers are preserved.
 
-    Returns the space reclaimed by each step.
+    Guardrails (the agent MUST respect these):
+    - Without ``confirmed=True`` the tool does NOT execute; it returns the list
+      of actions so you can ask the user for explicit confirmation first.
+    - ``dry_run=True`` previews the impact (and current disk usage) without
+      removing anything.
+
+    Args:
+        confirmed: Set True only after the user has explicitly approved the cleanup.
+        dry_run: Preview the actions and current Docker disk usage without executing.
+
+    Returns the space reclaimed by each step (when executed).
     """
+    if dry_run:
+        usage = _run_cmd("docker system df")["stdout"] if _is_docker_running() else None
+        return _dry_run_preview(
+            "docker_quick_cleanup",
+            _QUICK_CLEANUP_ACTIONS,
+            {"current_disk_usage": usage or "Docker is not running"},
+        )
+
+    if not confirmed:
+        return _confirmation_required("docker_quick_cleanup", _QUICK_CLEANUP_ACTIONS)
+
+    if not _is_docker_running():
+        return json.dumps(
+            {"executed": False, "success": False, "error": "Docker is not running"},
+            indent=2,
+            ensure_ascii=False,
+        )
+
     cleaner = WSLDockerCleaner()
     success = cleaner.docker_cleanup(
         steps=("containers", "images", "volumes", "networks", "system", "builder")
     )
     return json.dumps(
         {
+            "executed": True,
             "success": success,
             "running_containers_preserved": True,
             "steps": [result.to_dict() for result in cleaner.last_cleanup_results],
@@ -109,8 +186,15 @@ def docker_quick_cleanup() -> str:
     )
 
 
+_FULL_CLEANUP_ACTIONS = [
+    *_QUICK_CLEANUP_ACTIONS,
+    "Stop Docker Desktop and shut down WSL",
+    "Compact VHDX disk files (Windows, requires administrator privileges)",
+]
+
+
 @mcp.tool()
-def docker_full_cleanup() -> str:
+def docker_full_cleanup(confirmed: bool = False, dry_run: bool = False) -> str:
     """Run full Docker cleanup including WSL shutdown and VHDX compaction (Windows).
 
     ⚠️  DESTRUCTIVE & REQUIRES ADMIN: In addition to quick cleanup, this also:
@@ -119,7 +203,22 @@ def docker_full_cleanup() -> str:
 
     On Linux/macOS, performs quick cleanup + Docker service restart.
     VHDX compaction requires administrator privileges on Windows.
+
+    Guardrails (the agent MUST respect these):
+    - Without ``confirmed=True`` the tool does NOT execute; it returns the list
+      of actions so you can ask the user for explicit confirmation first.
+    - ``dry_run=True`` previews the impact without executing anything.
+
+    Args:
+        confirmed: Set True only after the user has explicitly approved the full cleanup.
+        dry_run: Preview the actions without executing.
     """
+    if dry_run:
+        return _dry_run_preview("docker_full_cleanup", _FULL_CLEANUP_ACTIONS)
+
+    if not confirmed:
+        return _confirmation_required("docker_full_cleanup", _FULL_CLEANUP_ACTIONS)
+
     cleaner = WSLDockerCleaner()
     quick_success = cleaner.docker_cleanup(
         steps=("containers", "images", "volumes", "networks", "system", "builder")
@@ -129,6 +228,7 @@ def docker_full_cleanup() -> str:
     compact_success = cleaner.compact_vhdx_files()
 
     full_result: dict[str, Any] = {
+        "executed": True,
         "success": quick_success and stop_success and compact_success,
         "running_containers_preserved": True,
         "quick_cleanup": {

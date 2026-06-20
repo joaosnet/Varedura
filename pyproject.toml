@@ -5,28 +5,33 @@ description = "Cross-platform Docker cleanup toolkit & network monitor"
 readme = "README.md"
 requires-python = ">=3.14.2"
 dependencies = [
+    # Core runtime: TUI, network monitor, MCP server, PDF/GIF reporting.
     "psutil>=7.2.1",
-    "pytest>=9.0.1",
     "rich>=14.2.0",
-    "plotext>=5.3.2",
-    "matplotlib>=3.10.0",
-    "speedtest-cli>=2.1.3",
-    "flask>=3.1.2",
-    "scapy>=2.7.0",
+    "rich-pixels>=3.0.1",
+    "textual>=6.6.0",
     "requests>=2.32.0",
-    "beautifulsoup4>=4.12.0",
-    "selenium>=4.39.0",
+    "speedtest-cli>=2.1.3",
+    "matplotlib>=3.10.0",
     "reportlab>=4.4.7",
     "pypdf2>=3.0.1",
     "Pillow>=11.0.0",
     "cairosvg>=2.7.0",
     "mcp[cli]>=1.0.0",
-    "rich-pixels>=3.0.1",
-    "textual>=6.6.0",
+]
+
+[project.optional-dependencies]
+# Selenium-based speed-test providers (Brasil Banda Larga / SIMET via headless
+# Chrome). The code degrades gracefully when absent: the provider sets
+# is_available() -> False and the multi-provider falls back to HTTP-based tests.
+# Install with: uv tool install "varedura[browser-speedtest]"
+browser-speedtest = [
+    "selenium>=4.39.0",
 ]
 
 [dependency-groups]
 dev = [
+    "pytest>=9.0.1",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.14.10",
@@ -48,3 +53,23 @@ mascot = ["images/*.png"]
 [tool.uv]
 # pywin32 has no free-threading wheel (cp314t) yet; we only use stdio transport
 override-dependencies = ["pywin32>=999; sys_platform == 'win32'"]
+
+[tool.ruff]
+# target-version is inferred from project.requires-python (>=3.14).
+line-length = 88
+extend-exclude = ["build", "lmarena", "tests/static"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Async tests opt in explicitly via @pytest.mark.asyncio (strict mode).
+asyncio_mode = "strict"
+
+[tool.coverage.run]
+branch = true
+source = ["cli", "docker_cleaner", "monitor", "mcp_server", "recorder", "mascot", "i18n"]
+omit = ["*/__main__.py", "*/__init__.py"]
+
+[tool.coverage.report]
+show_missing = true
+# No fail_under gate yet — current coverage is ~40%. Ratchet up once the
+# untested modules (mcp_server, port_scanner, netinfo, recorder) are covered.

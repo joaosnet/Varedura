@@ -4,6 +4,7 @@ import json
 import re
 import subprocess
 
+import pytest
 from rich.console import Console
 
 import cli.quick_cleanup as quick
@@ -368,6 +369,8 @@ def test_quick_cleanup_reuses_central_cleaner(monkeypatch):
 
 
 def test_mcp_quick_cleanup_reuses_central_cleaner(monkeypatch):
+    calls = []
+
     class FakeCleaner:
         def __init__(self):
             self.last_cleanup_results = [
@@ -380,16 +383,87 @@ def test_mcp_quick_cleanup_reuses_central_cleaner(monkeypatch):
             ]
 
         def docker_cleanup(self, steps=None):
+            calls.append(steps)
             self.steps = steps
             return True
 
     monkeypatch.setattr(mcp_server, "WSLDockerCleaner", FakeCleaner)
+    monkeypatch.setattr(mcp_server, "_is_docker_running", lambda: True)
 
-    payload = json.loads(mcp_server.docker_quick_cleanup())
+    payload = json.loads(mcp_server.docker_quick_cleanup(confirmed=True))
 
+    assert payload["executed"] is True
     assert payload["success"] is True
     assert payload["running_containers_preserved"] is True
     assert payload["steps"][0]["command"] == "docker container prune -f"
+    assert calls == [("containers", "images", "volumes", "networks", "system", "builder")]
+
+
+def test_mcp_quick_cleanup_requires_confirmation(monkeypatch):
+    """The destructive tool must not run without explicit confirmation."""
+    calls = []
+
+    class FakeCleaner:
+        def __init__(self):
+            self.last_cleanup_results = []
+
+        def docker_cleanup(self, steps=None):
+            calls.append(steps)
+            return True
+
+    monkeypatch.setattr(mcp_server, "WSLDockerCleaner", FakeCleaner)
+    monkeypatch.setattr(mcp_server, "_is_docker_running", lambda: True)
+
+    # Default call: no confirmation -> nothing executed.
+    payload = json.loads(mcp_server.docker_quick_cleanup())
+    assert payload["executed"] is False
+    assert payload["requires_confirmation"] is True
+    assert calls == []
+
+    # Dry run: preview only -> still nothing executed.
+    preview = json.loads(mcp_server.docker_quick_cleanup(dry_run=True))
+    assert preview["executed"] is False
+    assert preview["dry_run"] is True
+    assert calls == []
+
+
+def test_mcp_full_cleanup_requires_confirmation(monkeypatch):
+    """Full cleanup is destructive + admin and must gate on confirmation."""
+    monkeypatch.setattr(
+        mcp_server, "WSLDockerCleaner", lambda: pytest.fail("must not instantiate cleaner")
+    )
+
+    payload = json.loads(mcp_server.docker_full_cleanup())
+    assert payload["executed"] is False
+    assert payload["requires_confirmation"] is True
+    # VHDX compaction must appear in the disclosed action list.
+    assert any("VHDX" in action or "Compact" in action for action in payload["actions"])
+
+
+def test_parse_wsl_distros_drops_shell_metacharacters():
+    """Distro names are interpolated into shell=True commands, so any name with
+    shell metacharacters must be rejected (command-injection hardening)."""
+    cleaner = WSLDockerCleaner()
+    output = "\n".join(
+        [
+            "  NAME              STATE   VERSION",
+            "* docker-desktop    Running 2",
+            "  docker-desktop-data Running 2",
+            "  evil`touch pwned`   Running 2",
+            "  bad;rm -rf /        Running 2",
+            "  $(whoami)           Running 2",
+        ]
+    )
+
+    distros = cleaner._parse_wsl_distros(output)
+
+    assert "docker-desktop" in distros
+    assert "docker-desktop-data" in distros
+    assert all(
+        token not in distros
+        for token in ("evil`touch", "bad;rm", "$(whoami)", "evil`touch pwned`")
+    )
+    assert all(re.match(r"^[A-Za-z0-9._-]+$", name) for name in distros)
 
 
 def test_get_docker_vhdx_paths_discovers_disk_layout(monkeypatch, tmp_path):
