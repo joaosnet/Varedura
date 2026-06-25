@@ -8,7 +8,6 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 
 from rich.console import Console
-from rich.panel import Panel
 from rich.text import Text
 from textual import on, work
 from textual.app import App, ComposeResult
@@ -45,18 +44,21 @@ from cli.gamification import (
     update_records,
 )
 from cli.richlog import DailyLogWriter
+from cli.textual_cameras import CAMERAS_CSS, CamerasMixin
 from cli.ui_shared import (
     CLEANUP_GROUPS,
     CLEANUP_STEPS,
     QUICK_CLEANUP_KEYS,
+    anatel_minimums,
     build_achievements_row,
     build_cleanup_status_panel,
     build_dashboard_status,
+    build_ports_summary,
     build_records_panel,
-    build_scanner_tables,
     build_settings_status_table,
     build_tool_option,
     cleanup_label_key,
+    format_duration,
     get_cleanup_steps,
     is_mcp_configured,
     load_network_config,
@@ -85,7 +87,7 @@ class RichRenderable(Static):
     """Static widget that displays Rich renderables."""
 
 
-class VareduraTextualApp(App[str | None]):
+class VareduraTextualApp(CamerasMixin, App[str | None]):
     """Main Textual TUI for Varedura."""
 
     CSS = """
@@ -135,7 +137,7 @@ class VareduraTextualApp(App[str | None]):
     #records-card,
     #cleanup-summary,
     #settings-status,
-    #scanner-rich-summary {
+    #network-ports-summary {
         height: auto;
         margin-bottom: 1;
     }
@@ -210,19 +212,13 @@ class VareduraTextualApp(App[str | None]):
         color: $success;
     }
 
-    #cleanup-progress,
-    #scanner-progress {
+    #cleanup-progress {
         height: 1;
         margin-bottom: 1;
     }
 
     DataTable {
         height: 1fr;
-    }
-
-    #scanner-controls {
-        height: auto;
-        margin-bottom: 1;
     }
 
     #network-controls {
@@ -290,22 +286,23 @@ class VareduraTextualApp(App[str | None]):
         color: $error;
         text-style: bold;
     }
-    """
+    """ + CAMERAS_CSS
 
     BINDINGS = [
         Binding("q", "quit", t("textual.bind_quit"), show=True),
         Binding("d", "toggle_dark", t("textual.bind_dark"), show=True),
         Binding("s", "show_settings", t("textual.bind_settings"), show=True),
-        Binding("r", "run_scanner", t("textual.bind_scan"), show=True),
+        Binding("r", "rescan_ports", t("textual.bind_scan"), show=True),
         Binding("escape", "dashboard", t("textual.bind_dashboard"), show=True),
+        Binding("delete", "cam_del_regiao", t("rtsp.bind_del"), show=False),
+        Binding("l", "cam_log", t("rtsp.bind_log"), show=False),
     ]
 
-    TOOL_IDS = ("network", "docker", "scanner", "settings")
+    TOOL_IDS = ("network", "docker", "settings")
 
     def __init__(self) -> None:
         super().__init__()
         self.cleanup_running = False
-        self.scanner_running = False
         self.network_running = False
         self._network_stop = threading.Event()
         self._network_tick = 0
@@ -313,6 +310,17 @@ class VareduraTextualApp(App[str | None]):
         self._net_external_stats = None
         self._net_pool: ThreadPoolExecutor | None = None
         self._net_scan_failed = False
+        # Força um port scan no próximo tick do worker (tecla "r" / botão).
+        self._force_scan = False
+        # Último top de conexões/RAM por processo (atualiza nos ticks de scan),
+        # usado para enriquecer a tabela de processos entre varreduras.
+        self._last_top_connections: list = []
+        # Poller leve sempre ativo do dashboard (memória/tráfego + ping rápido).
+        self._dash_stop = threading.Event()
+        self._dash_stats: dict = {}
+        # Aba ativa rastreada por atributo (thread-safe) para o poller decidir,
+        # sem tocar na árvore de widgets de fora da thread de UI.
+        self._active_tab = "dashboard"
         # Timers periódicos (criados em on_mount, parados em on_unmount).
         self._dashboard_timer = None
         self._mascot_timer = None
@@ -324,6 +332,8 @@ class VareduraTextualApp(App[str | None]):
         self._mascot_state = STATES.IDLE
         self._mascot_msg = ""
         self._mascot_frame = 0
+        # Estado da aba Câmeras (RTSP), fundida via CamerasMixin.
+        self._init_cameras_state()
 
     def compose(self) -> ComposeResult:
         self.title = "Varedura"
@@ -334,10 +344,10 @@ class VareduraTextualApp(App[str | None]):
                 yield from self._compose_dashboard()
             with TabPane(t("textual.tab_cleanup"), id="docker"):
                 yield from self._compose_cleanup()
-            with TabPane(t("textual.tab_scanner"), id="scanner"):
-                yield from self._compose_scanner()
             with TabPane(t("textual.tab_network"), id="network"):
                 yield from self._compose_network()
+            with TabPane(t("rtsp.tab_cameras"), id="cameras"):
+                yield from self._compose_cameras()
             with TabPane(t("textual.tab_settings"), id="settings"):
                 yield from self._compose_settings()
         yield Footer()
@@ -367,6 +377,10 @@ class VareduraTextualApp(App[str | None]):
                     Option(
                         build_tool_option(t("menu.option_3"), t("menu.desc_3"), "yellow"),
                         id="scanner",
+                    ),
+                    Option(
+                        build_tool_option(t("rtsp.tab_cameras"), t("rtsp.menu_desc"), "red"),
+                        id="cameras",
                     ),
                     Option(Text(""), disabled=True),
                     Option(
@@ -414,28 +428,12 @@ class VareduraTextualApp(App[str | None]):
             yield ProgressBar(total=100, id="cleanup-progress")
             yield RichLog(id="cleanup-log", highlight=True, markup=True, wrap=True)
 
-    def _compose_scanner(self) -> ComposeResult:
-        with Vertical(classes="pane"):
-            with Horizontal(id="scanner-controls"):
-                yield Button(t("textual.scanner_run"), id="run-scanner", variant="primary")
-                yield Label(t("textual.scanner_hint"), id="scanner-status")
-            yield ProgressBar(total=100, id="scanner-progress")
-            with TabbedContent(initial="tcp-tab", id="scanner-tabs"):
-                with TabPane(t("textual.scanner_tcp"), id="tcp-tab"):
-                    yield DataTable(id="tcp-table")
-                with TabPane(t("textual.scanner_connections"), id="connections-tab"):
-                    yield DataTable(id="connections-table")
-                with TabPane(t("textual.scanner_rich"), id="rich-tab"):
-                    yield RichRenderable(
-                        Panel(Text(t("textual.scanner_empty"), style="dim"), border_style="blue"),
-                        id="scanner-rich-summary",
-                    )
-
     def _compose_network(self) -> ComposeResult:
         with Vertical(classes="pane", id="network-pane"):
             with Horizontal(id="network-controls"):
                 yield Button(t("textual.network_start"), id="network-start", variant="primary")
                 yield Button(t("textual.network_stop"), id="network-stop", disabled=True)
+                yield Button(t("textual.network_rescan"), id="network-rescan")
                 yield Button(t("textual.network_export"), id="network-export")
                 yield Label(t("textual.network_idle"), id="network-status")
             with Horizontal(id="network-cards"):
@@ -461,7 +459,9 @@ class VareduraTextualApp(App[str | None]):
                 with TabPane(t("textual.network_speed"), id="net-speed-tab"):
                     yield DataTable(id="network-speed-table")
                 with TabPane(t("textual.network_ports"), id="net-ports-tab"):
-                    yield DataTable(id="network-ports-table")
+                    with Vertical():
+                        yield Label(t("ports.waiting"), id="network-ports-summary")
+                        yield DataTable(id="network-ports-table")
                 with TabPane(t("textual.network_processes"), id="net-procs-tab"):
                     yield DataTable(id="network-procs-table")
                 with TabPane(t("textual.network_events"), id="net-log-tab"):
@@ -511,13 +511,16 @@ class VareduraTextualApp(App[str | None]):
             )
 
     def on_mount(self) -> None:
-        self._setup_scanner_tables()
         self._setup_network_tables()
+        self._cameras_on_mount()
         self._init_network_config()
         self.query_one("#tool-menu", OptionList).focus()
         self._write_dashboard_log(t("textual.ready"))
         self._dashboard_timer = self.set_interval(2.0, self._refresh_dashboard_status)
         self._mascot_timer = self.set_interval(0.5, self._animate_mascot)
+        # Poller leve sempre ativo: mantém o dashboard vivo (memória/tráfego e
+        # ping do gateway) mesmo sem o monitor de Rede estar ligado.
+        self._run_dashboard_poller()
 
     def _network_status_snapshot(self) -> dict:
         """Cheap live snapshot of the network monitor for the dashboard."""
@@ -540,7 +543,10 @@ class VareduraTextualApp(App[str | None]):
         try:
             self.query_one("#dashboard-summary", RichRenderable).update(
                 build_dashboard_status(
-                    load_recording_pref(), get_language(), self._network_status_snapshot()
+                    load_recording_pref(),
+                    get_language(),
+                    self._network_status_snapshot(),
+                    self._dash_stats,
                 )
             )
             self.query_one("#records-card", RichRenderable).update(
@@ -548,6 +554,30 @@ class VareduraTextualApp(App[str | None]):
             )
         except Exception:
             pass
+
+    @work(thread=True, exclusive=False)
+    def _run_dashboard_poller(self) -> None:
+        """Always-on lightweight poll: system memory/traffic + a quick gateway
+        ping (only when the heavy network monitor is not already running)."""
+        import monitor.stalker as stalker_mod
+        from monitor.port_scanner import get_system_network_stats
+
+        while not self._dash_stop.is_set():
+            try:
+                self._dash_stats = get_system_network_stats()
+            except Exception:
+                self._dash_stats = {}
+            # Ping the gateway only when the dashboard is the visible tab and the
+            # heavy monitor isn't already collecting samples — no point spawning
+            # ping subprocesses for a panel nobody is looking at.
+            if self._active_tab == "dashboard" and not self.network_running:
+                try:
+                    gateway = stalker_mod.config.gateway_ip
+                    if gateway:
+                        stalker_mod.local_stats.add(stalker_mod.run_ping(gateway))
+                except Exception:
+                    pass
+            self._dash_stop.wait(timeout=3.0)
 
     def _animate_mascot(self) -> None:
         """Cycle the mascot sprite frames; only while the dashboard is visible."""
@@ -613,25 +643,61 @@ class VareduraTextualApp(App[str | None]):
     def action_dashboard(self) -> None:
         self.query_one("#main-tabs", TabbedContent).active = "dashboard"
 
-    def action_run_scanner(self) -> None:
-        self._start_scanner()
+    def action_rescan_ports(self) -> None:
+        """Jump to the network ports view and force a fresh scan next tick."""
+        tabs = self.query_one("#main-tabs", TabbedContent)
+        if tabs.active != "network":
+            tabs.active = "network"
+        try:
+            self.query_one("#network-subtabs", TabbedContent).active = "net-ports-tab"
+        except Exception:
+            pass
+        # Start the monitor first if paused (it resets the flag), then request a
+        # scan on the very next tick.
+        if not self.network_running:
+            self._start_network()
+        self._force_scan = True
+        self.notify(t("textual.network_rescan"))
 
     @on(OptionList.OptionSelected, "#tool-menu")
     def on_tool_selected(self, event: OptionList.OptionSelected) -> None:
         option_id = str(event.option_id or "")
-        if option_id in {"network", "docker", "scanner", "settings"}:
+        # The legacy "Port Scanner" menu entry now opens the live ports view
+        # inside the Network tab (the standalone scanner tab was merged in).
+        if option_id == "scanner":
+            self.query_one("#main-tabs", TabbedContent).active = "network"
+            try:
+                self.query_one("#network-subtabs", TabbedContent).active = "net-ports-tab"
+            except Exception:
+                pass
+            return
+        if option_id in {"network", "docker", "cameras", "settings"}:
             self.query_one("#main-tabs", TabbedContent).active = option_id
 
     @on(TabbedContent.TabActivated, "#main-tabs")
     def on_main_tab_activated(self, event: TabbedContent.TabActivated) -> None:
+        self._active_tab = event.pane.id or self._active_tab
         if event.pane.id == "network" and not self.network_running:
             self._start_network()
+        elif event.pane.id == "cameras":
+            self._maybe_render_cameras()
+
+    def on_data_table_row_selected(self, event) -> None:
+        self._cameras_on_row_selected(event)
+
+    def on_descendant_focus(self, event) -> None:
+        self._cameras_on_focus(event)
+
+    def on_worker_state_changed(self, event) -> None:
+        self._cameras_on_worker_state(event)
 
     def on_unmount(self) -> None:
         # Sinaliza a parada do worker de rede (que encerra o ThreadPoolExecutor
         # no seu finally) e para os timers periódicos para que não disparem
         # durante o teardown da aplicação.
         self._network_stop.set()
+        self._dash_stop.set()
+        self._cameras_on_unmount()
         for timer in (self._dashboard_timer, self._mascot_timer):
             if timer is not None:
                 timer.stop()
@@ -647,12 +713,12 @@ class VareduraTextualApp(App[str | None]):
             self._save_cleanup_preferences()
         elif button_id == "run-cleanup":
             self._start_cleanup()
-        elif button_id == "run-scanner":
-            self._start_scanner()
         elif button_id == "network-start":
             self._start_network()
         elif button_id == "network-stop":
             self._stop_network()
+        elif button_id == "network-rescan":
+            self.action_rescan_ports()
         elif button_id == "network-export":
             self._export_network_report()
         elif button_id == "net-detect-gateway":
@@ -661,14 +727,50 @@ class VareduraTextualApp(App[str | None]):
             self._apply_cleanup_preset(QUICK_CLEANUP_KEYS)
         elif button_id == "preset-deep":
             self._apply_cleanup_preset([key for key, _l, _d in CLEANUP_STEPS])
+        else:
+            # Camera tab buttons (network cards, scans, credentials, etc.).
+            self._cameras_handle_button(button_id or "")
 
     def _apply_cleanup_preset(self, enabled_keys: list[str]) -> None:
         wanted = set(enabled_keys)
         for key, _label_key, _default in CLEANUP_STEPS:
             self.query_one(f"#{_cleanup_checkbox_id(key)}", Checkbox).value = key in wanted
-        self.query_one("#cleanup-summary", RichRenderable).update(
-            build_cleanup_status_panel(self._cleanup_form_steps())
-        )
+        self._refresh_cleanup_summary()
+
+    def _refresh_cleanup_summary(self) -> None:
+        try:
+            self.query_one("#cleanup-summary", RichRenderable).update(
+                build_cleanup_status_panel(self._cleanup_form_steps())
+            )
+        except Exception:
+            pass
+
+    @on(Checkbox.Changed)
+    def on_cleanup_checkbox_changed(self, event: Checkbox.Changed) -> None:
+        """Keep the cleanup summary in sync the moment a step is toggled."""
+        if (event.checkbox.id or "").startswith("cleanup-"):
+            self._refresh_cleanup_summary()
+
+    @on(Switch.Changed, "#recording-switch")
+    def on_recording_switch_changed(self, event: Switch.Changed) -> None:
+        self._refresh_live_settings_status()
+
+    @on(Select.Changed, "#language-select")
+    def on_language_select_changed(self, event: Select.Changed) -> None:
+        self._refresh_live_settings_status()
+
+    def _refresh_live_settings_status(self) -> None:
+        """Reflect the current (unsaved) settings form in the status panel."""
+        try:
+            recording = bool(self.query_one("#recording-switch", Switch).value)
+            lang = self.query_one("#language-select", Select).value
+            if not isinstance(lang, str):
+                lang = get_language()
+            self.query_one("#settings-status", RichRenderable).update(
+                build_settings_status_table(recording, lang)
+            )
+        except Exception:
+            pass
 
     def _detect_gateway(self) -> None:
         from monitor.netinfo import detect_default_gateway
@@ -809,48 +911,6 @@ class VareduraTextualApp(App[str | None]):
                 save_game_state(self._game)
             self._refresh_dashboard_status()
 
-    def _start_scanner(self) -> None:
-        if self.scanner_running:
-            return
-        self._run_scanner_worker()
-
-    @work(thread=True, exclusive=True)
-    def _run_scanner_worker(self) -> None:
-        self.call_from_thread(self._set_scanner_running, True)
-        try:
-            from monitor.port_scanner import run_full_scan
-
-            state = run_full_scan()
-            self.call_from_thread(self._render_scan_state, state)
-        except Exception as exc:
-            self.call_from_thread(self._scanner_failed, exc)
-        finally:
-            self.call_from_thread(self._set_scanner_running, False)
-
-    def _set_scanner_running(self, running: bool) -> None:
-        self.scanner_running = running
-        self.query_one("#run-scanner", Button).disabled = running
-        self.query_one("#scanner-status", Label).update(
-            t("scanner.scanning") if running else t("textual.scanner_hint")
-        )
-        progress = self.query_one("#scanner-progress", ProgressBar)
-        progress.total = 100
-        progress.progress = 35 if running else 100
-
-    def _scanner_failed(self, exc: Exception) -> None:
-        message = t("menu.error_during_scan", error=str(exc))
-        self.query_one("#scanner-status", Label).update(message)
-        self.notify(message, severity="error")
-
-    def _setup_scanner_tables(self) -> None:
-        tcp_table = self.query_one("#tcp-table", DataTable)
-        tcp_table.cursor_type = "row"
-        tcp_table.add_columns(t("scanner.port"), t("scanner.process"), t("scanner.address"))
-
-        conn_table = self.query_one("#connections-table", DataTable)
-        conn_table.cursor_type = "row"
-        conn_table.add_columns(t("scanner.process"), t("scanner.connections"), t("scanner.ram_mb"))
-
     def _setup_network_tables(self) -> None:
         speed_table = self.query_one("#network-speed-table", DataTable)
         speed_table.cursor_type = "row"
@@ -863,36 +923,73 @@ class VareduraTextualApp(App[str | None]):
 
         ports_table = self.query_one("#network-ports-table", DataTable)
         ports_table.cursor_type = "row"
-        ports_table.add_columns(t("scanner.port"), t("scanner.process"), t("scanner.address"))
+        ports_table.zebra_stripes = True
+        ports_table.add_columns(
+            t("ports.col_service"),
+            t("ports.col_app"),
+            t("ports.col_explain"),
+            t("ports.col_exposure"),
+            t("ports.col_port"),
+        )
 
         procs_table = self.query_one("#network-procs-table", DataTable)
         procs_table.cursor_type = "row"
+        procs_table.zebra_stripes = True
         procs_table.add_columns(
-            t("stalker.process_col"), t("stalker.connections_col"), t("stalker.pid_col")
+            t("ports.col_app"),
+            t("ports.col_conns"),
+            t("ports.col_ram"),
+            t("stalker.pid_col"),
         )
 
-    def _render_scan_state(self, state) -> None:
-        tcp_table = self.query_one("#tcp-table", DataTable)
-        tcp_table.clear(columns=True)
-        tcp_table.add_columns(t("scanner.port"), t("scanner.process"), t("scanner.address"))
-        for port in state.listening_tcp[:50]:
-            tcp_table.add_row(str(port.porta), port.processo, port.endereco)
+    def _friendly_process(self, name: str) -> Text:
+        """Translate the scanner's raw process labels for display."""
+        if not name or name == "N/A":
+            return Text(t("scanner.unknown"), style="dim")
+        if name == "Acesso Negado":
+            return Text(t("scanner.access_denied"), style="dim")
+        return Text(name, style="green")
 
-        conn_table = self.query_one("#connections-table", DataTable)
-        conn_table.clear(columns=True)
-        conn_table.add_columns(t("scanner.process"), t("scanner.connections"), t("scanner.ram_mb"))
-        for proc in state.top_connections:
-            ram_str = f"{proc.memoria_mb:.1f}" if proc.memoria_mb > 0 else "N/A"
-            conn_table.add_row(proc.nome, str(proc.conexoes), ram_str)
+    def _render_ports_table(self, scan_state) -> None:
+        """Render the lay-friendly ports view: service, app, what-it-does,
+        visibility chip and the raw port/proto. Exposed ports float to the top."""
+        from monitor.port_catalog import classify_exposure, describe_port, is_exposed
 
-        tcp_rich, conn_rich, summary = build_scanner_tables(state)
-        self.query_one("#scanner-rich-summary", RichRenderable).update(
-            Panel(tcp_rich, title=t("textual.scanner_tcp"), border_style="cyan")
-        )
-        self._write_dashboard_log(summary)
-        self._write_dashboard_log(conn_rich)
-        self.query_one("#scanner-status", Label).update(t("textual.scanner_done"))
-        self.notify(t("textual.scanner_done"))
+        table = self.query_one("#network-ports-table", DataTable)
+        table.clear()
+        ports = list(scan_state.listening_tcp) + list(scan_state.listening_udp)
+
+        def sort_key(p):
+            label_key, _ = describe_port(p.porta, p.protocolo)
+            unknown = label_key in ("port.unknown", "port.ephemeral")
+            return (not is_exposed(p.endereco), unknown, p.porta)
+
+        ports.sort(key=sort_key)
+        for p in ports[:50]:
+            label_key, expl_key = describe_port(p.porta, p.protocolo)
+            chip_key, color = classify_exposure(p.endereco)
+            table.add_row(
+                Text(t(label_key, porta=p.porta), style="bold"),
+                self._friendly_process(p.processo),
+                Text(t(expl_key), style="dim"),
+                Text(t(chip_key), style=color),
+                Text(f"{p.porta}/{p.protocolo}", style="dim"),
+            )
+        self.query_one("#network-ports-summary", Label).update(build_ports_summary(scan_state))
+
+    def _render_procs_table(self, procs) -> None:
+        """Render the merged processes view: active connections (live every tick)
+        enriched with RAM from the latest port scan, matched by process name."""
+        table = self.query_one("#network-procs-table", DataTable)
+        table.clear()
+        ram_by_name = {
+            pc.nome: pc.memoria_mb for pc in self._last_top_connections if pc.memoria_mb > 0
+        }
+        for pid, name, raw in procs:
+            conns = raw // (1024 * 1024)
+            ram = ram_by_name.get(name)
+            ram_str = f"{ram:.0f} MB" if ram else "—"
+            table.add_row(self._friendly_process(name), str(conns), ram_str, str(pid))
 
     # ------------------------------------------------------------------ #
     # Network Stalker tab                                                 #
@@ -906,6 +1003,8 @@ class VareduraTextualApp(App[str | None]):
         self._net_external_stats = PingStats()
         self._net_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="net")
         self._network_tick = 0
+        self._force_scan = False
+        self._last_top_connections = []
         self._network_stop.clear()
         self._set_network_running(True)
         self._run_network_worker()
@@ -960,7 +1059,11 @@ class VareduraTextualApp(App[str | None]):
                 f_ext = pool.submit(stalker_mod.run_ping, stalker_config.external_ip)
                 f_procs = pool.submit(stalker_mod.get_top_network_hogs)
                 self._network_tick += 1
-                do_scan = self._network_tick % stalker_config.port_scan_interval == 0
+                do_scan = (
+                    self._network_tick % stalker_config.port_scan_interval == 0
+                    or self._force_scan
+                )
+                self._force_scan = False
                 f_scan = pool.submit(run_full_scan) if do_scan else None
 
                 local_ms = self._future_result(f_local)
@@ -1100,6 +1203,11 @@ class VareduraTextualApp(App[str | None]):
                 int(health.get("score", 0)), bool((speed_snapshot or {}).get("is_testing"))
             )
 
+        # Cache the latest top-connections (conn count + RAM) regardless of the
+        # active tab so the processes table can be enriched between scan ticks.
+        if scan_state is not None:
+            self._last_top_connections = list(scan_state.top_connections)
+
         # Skip the heavier visual updates when the network tab is not in front;
         # rebuilding tables every tick on a background tab triggers layout passes
         # that make the whole screen flicker.
@@ -1120,18 +1228,17 @@ class VareduraTextualApp(App[str | None]):
         self._render_ping_card("external", ext_ms, self._net_external_stats, threshold)
 
         if scan_state is not None:
-            ports_table = self.query_one("#network-ports-table", DataTable)
-            ports_table.clear()
-            for port in scan_state.listening_tcp[:50]:
-                ports_table.add_row(str(port.porta), port.processo, port.endereco)
+            self._render_ports_table(scan_state)
 
-        procs_table = self.query_one("#network-procs-table", DataTable)
-        procs_table.clear()
-        for pid, name, raw in procs:
-            conns = raw // (1024 * 1024)
-            procs_table.add_row(name or t("stalker.unknown_process"), str(conns), str(pid))
-
+        self._render_procs_table(procs)
         self._render_speed_table(speed_snapshot or {})
+
+    @staticmethod
+    def _apply_status_class(widgets, cls: str) -> None:
+        """Swap the ping-status colour class on a set of widgets."""
+        for widget in widgets:
+            widget.remove_class("ping-ok", "ping-warn", "ping-bad", "ping-timeout")
+            widget.add_class(cls)
 
     def _render_ping_card(self, prefix: str, ms, stats, threshold: int) -> None:
         digits = self.query_one(f"#{prefix}-digits", Digits)
@@ -1139,28 +1246,18 @@ class VareduraTextualApp(App[str | None]):
         digits.update("--" if ms is None else f"{ms:.0f}")
         spark.data = [v if v is not None else 0.0 for v in stats.history]
 
-        if stats.min_ms is not None:
-            stats_text = t(
+        has_data = stats.min_ms is not None
+        self.query_one(f"#{prefix}-stats", Label).update(
+            t(
                 "textual.network_card_stats",
-                min=f"{stats.min_ms:.0f}",
-                avg=f"{stats.avg_ms:.0f}",
-                max=f"{stats.max_ms:.0f}",
+                min=f"{stats.min_ms:.0f}" if has_data else "--",
+                avg=f"{stats.avg_ms:.0f}" if has_data else "--",
+                max=f"{stats.max_ms:.0f}" if has_data else "--",
                 threshold=threshold,
             )
-        else:
-            stats_text = t(
-                "textual.network_card_stats",
-                min="--",
-                avg="--",
-                max="--",
-                threshold=threshold,
-            )
-        self.query_one(f"#{prefix}-stats", Label).update(stats_text)
+        )
 
-        cls = self._ping_status_class(ms, threshold)
-        for widget in (digits, spark):
-            widget.remove_class("ping-ok", "ping-warn", "ping-bad", "ping-timeout")
-            widget.add_class(cls)
+        self._apply_status_class((digits, spark), self._ping_status_class(ms, threshold))
 
     @staticmethod
     def _speed_compliance(snapshot: dict) -> tuple[bool | None, float]:
@@ -1168,14 +1265,7 @@ class VareduraTextualApp(App[str | None]):
         results = (snapshot or {}).get("results_by_provider", {})
         if not results:
             return None, 0.0
-        try:
-            from monitor.speed_tester import speed_config
-
-            factor = speed_config.percentual_minimo / 100
-            min_down = speed_config.velocidade_contratada_down * factor
-            min_up = speed_config.velocidade_contratada_up * factor
-        except Exception:
-            min_down = min_up = 0.0
+        min_down, min_up = anatel_minimums()
         best_down = 0.0
         compliant = False
         for result in results.values():
@@ -1200,24 +1290,11 @@ class VareduraTextualApp(App[str | None]):
 
         streak_s = float(health.get("streak_s", 0.0))
         self.query_one("#health-streak", Label).update(
-            t("game.streak", time=self._fmt_duration(streak_s))
+            t("game.streak", time=format_duration(streak_s))
         )
 
-        cls = (
-            "ping-ok" if score >= 75 else "ping-warn" if score >= 45 else "ping-bad"
-        )
-        for widget in (digits, self.query_one("#health-spark", Sparkline)):
-            widget.remove_class("ping-ok", "ping-warn", "ping-bad", "ping-timeout")
-            widget.add_class(cls)
-
-    @staticmethod
-    def _fmt_duration(seconds: float) -> str:
-        seconds = int(seconds)
-        if seconds < 60:
-            return f"{seconds}s"
-        if seconds < 3600:
-            return f"{seconds // 60}m{seconds % 60:02d}s"
-        return f"{seconds // 3600}h{(seconds % 3600) // 60:02d}m"
+        cls = "ping-ok" if score >= 75 else "ping-warn" if score >= 45 else "ping-bad"
+        self._apply_status_class((digits, self.query_one("#health-spark", Sparkline)), cls)
 
     def _record_and_check(self, health: dict) -> None:
         """Update persisted records and surface any newly unlocked achievements."""
@@ -1268,14 +1345,7 @@ class VareduraTextualApp(App[str | None]):
 
         # ANATEL compliance reference: at least `percentual_minimo`% of the
         # contracted speed (Resolução 574/2011 mensal mínimo de 80%).
-        try:
-            from monitor.speed_tester import speed_config
-
-            factor = speed_config.percentual_minimo / 100
-            min_down = speed_config.velocidade_contratada_down * factor
-            min_up = speed_config.velocidade_contratada_up * factor
-        except Exception:
-            min_down = min_up = 0.0
+        min_down, min_up = anatel_minimums()
 
         results = snapshot.get("results_by_provider", {})
         for provider, result in results.items():

@@ -1,0 +1,33 @@
+[ INÍCIO ] ---> Gerar espaço total de endereços IPv4 (~4 Bilhões de IPs)
+       |
+       v
+[ FILTRO REGIONAL ] ---> O IP pertence a um bloco do Brasil? 
+       |                   ├── SIM ---> [ DESCARTAR ] (Segurança contra a Lei Carolina Dieckmann)
+       |                   └── NÃO ---> [ CONTINUAR ]
+       v
+[ PORT SCANNING ] ---> Servidores paralelos testam a Porta TCP 554 do IP
+       |                   ├── FECHADA ---> [ DESCARTAR ]
+       |                   └── ABERTA  ---> [ CONTINUAR ]
+       v
+[ FILA REDIS ] ---> Joga o IP aberto numa fila de processamento rápido
+       |
+       v
+[ WORKERS ] ---> Servidores secundários consomem a fila e tentam comunicação
+       |
+       v
+[ AUTENTICAÇÃO ] ---> A câmera exige login ou senha?
+       |                   ├── SIM ---> [ DESCARTAR ] (Ele pula sem tentar brute-force ou senhas padrão)
+       |                   └── NÃO ---> [ CONTINUAR ] (Stream 100% exposto)
+       v
+[ EXTRAÇÃO ] ---> O Worker conecta e tira um Print (Screenshot) do stream
+       |
+       v
+[ TRIAGEM MANUAL ] ---> Análise visual via painel customizado pelo "Mr. Cloud"
+       |                   ├── Parede preta / Câmera inútil? ---> [ DESCARTAR ]
+       |                   ├── Mostra rostos / Dados pessoais? -> [ DESCARTAR ] (Censura de privacidade)
+       |                   └── Imagem limpa e útil? ------------> [ CONTINUAR ]
+       v
+[ BANCO DE DADOS ] ---> Salvar imagem e localização do IP
+       |
+       v
+[ FIM ] ---> Alimentar o Jogo (Restaram ~3.000 câmeras limpas para jogar)

@@ -186,6 +186,12 @@ router_template.html
 tests/router_phishing.py
 tests/arp.py
 
+# RTSP camera scanner runtime state (sensitive) + rotating log
+credenciais.json
+ips_conhecidos.json
+regioes.json
+logs/rtsp.log*
+
 # Hidden tools
 lmarena/
 

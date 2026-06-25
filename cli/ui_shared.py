@@ -239,14 +239,17 @@ def build_cleanup_status_panel(steps: dict[str, bool] | None = None) -> Panel:
     )
 
 
-def build_settings_status_table(recording_enabled: bool, current_language: str) -> Table:
-    """Build the shared settings status table."""
-    table = Table(box=box.SIMPLE, show_header=True, expand=True)
-    table.add_column(t("settings.current_status"), style="bold cyan")
-    table.add_column("", style="white")
+def _add_common_status_rows(
+    table: Table, recording_enabled: bool, current_language: str
+) -> None:
+    """Add the rows shared by the settings and dashboard status panels.
+
+    Keeps recording / language / cleanup / MCP rows defined in one place so the
+    two panels never drift apart.
+    """
     table.add_row(
         t("settings.option_rec"),
-        f"{t('settings.rec_on') if recording_enabled else t('settings.rec_off')}",
+        t("settings.rec_on") if recording_enabled else t("settings.rec_off"),
     )
     table.add_row(t("settings.option_lang"), current_language)
     table.add_row(t("settings.option_cleanup"), cleanup_summary())
@@ -254,13 +257,15 @@ def build_settings_status_table(recording_enabled: bool, current_language: str) 
         t("mcp.option"),
         t("mcp.status_on") if is_mcp_configured() else t("mcp.status_off"),
     )
+
+
+def build_settings_status_table(recording_enabled: bool, current_language: str) -> Table:
+    """Build the shared settings status table."""
+    table = Table(box=box.SIMPLE, show_header=True, expand=True)
+    table.add_column(t("settings.current_status"), style="bold cyan")
+    table.add_column("", style="white")
+    _add_common_status_rows(table, recording_enabled, current_language)
     return table
-
-
-def build_dashboard_summary(recording_enabled: bool, current_language: str) -> Panel:
-    """Build the dashboard overview as a Rich renderable."""
-    status_table = build_settings_status_table(recording_enabled, current_language)
-    return Panel(status_table, title=t("menu.title"), border_style="blue")
 
 
 def _fmt_ping(ms: float | None, threshold: int) -> Text:
@@ -272,10 +277,36 @@ def _fmt_ping(ms: float | None, threshold: int) -> Text:
     return Text(f"{ms:.0f} ms", style=style)
 
 
+def _fmt_data_mb(mb: float) -> str:
+    """Format a megabyte count, scaling to GB once it gets large."""
+    if mb >= 1024:
+        return f"{mb / 1024:.1f} GB"
+    return f"{mb:.0f} MB"
+
+
+def _fmt_memory(percent: float, used_gb: float, total_gb: float) -> Text:
+    """Format RAM usage with a status color (green/yellow/red)."""
+    style = "green" if percent < 70 else ("yellow" if percent < 90 else "bold red")
+    return Text(f"{percent:.0f}% · {used_gb:.1f}/{total_gb:.1f} GB", style=style)
+
+
+def _fmt_traffic(sent_mb: float, recv_mb: float) -> Text:
+    """Format cumulative network traffic (sent/received since boot)."""
+    return Text(f"↑ {_fmt_data_mb(sent_mb)}   ↓ {_fmt_data_mb(recv_mb)}", style="white")
+
+
 def build_dashboard_status(
-    recording_enabled: bool, current_language: str, network: dict | None = None
+    recording_enabled: bool,
+    current_language: str,
+    network: dict | None = None,
+    system: dict | None = None,
 ) -> Panel:
-    """Build a live at-a-glance status overview for the dashboard."""
+    """Build a live at-a-glance status overview for the dashboard.
+
+    ``system`` is an optional dict from ``port_scanner.get_system_network_stats``
+    (memory + cumulative traffic) so the dashboard stays live even before the
+    full network monitor is started.
+    """
     network = network or {}
     threshold = int(network.get("lag_threshold_ms", 100))
     gateway = str(network.get("gateway_ip") or "—")
@@ -293,20 +324,33 @@ def build_dashboard_status(
     )
     table.add_row(t("dashboard.gateway", ip=gateway), _fmt_ping(network.get("local_ms"), threshold))
     table.add_row(t("dashboard.external"), _fmt_ping(network.get("ext_ms"), threshold))
-    table.add_row(
-        t("settings.option_rec"),
-        t("settings.rec_on") if recording_enabled else t("settings.rec_off"),
-    )
-    table.add_row(t("settings.option_lang"), current_language)
-    table.add_row(t("settings.option_cleanup"), cleanup_summary())
-    table.add_row(
-        t("mcp.option"),
-        t("mcp.status_on") if is_mcp_configured() else t("mcp.status_off"),
-    )
+
+    if system:
+        mem_pct = system.get("memoria_percent")
+        if mem_pct is not None:
+            table.add_row(
+                t("dashboard.memory"),
+                _fmt_memory(
+                    float(mem_pct),
+                    float(system.get("memoria_usada_gb", 0.0)),
+                    float(system.get("memoria_total_gb", 0.0)),
+                ),
+            )
+        sent = system.get("bytes_enviados_mb")
+        recv = system.get("bytes_recebidos_mb")
+        if sent is not None and recv is not None:
+            table.add_row(t("dashboard.traffic"), _fmt_traffic(float(sent), float(recv)))
+
+    _add_common_status_rows(table, recording_enabled, current_language)
     return Panel(table, title=t("menu.title"), border_style="blue")
 
 
-def _fmt_streak(seconds: float) -> str:
+def format_duration(seconds: float) -> str:
+    """Format a duration in seconds as a compact human string (e.g. 1h05m).
+
+    Shared helper for both the dashboard records panel and the network health
+    card (streak), so the formatting lives in exactly one place.
+    """
     seconds = int(seconds)
     if seconds < 60:
         return f"{seconds}s"
@@ -348,7 +392,7 @@ def build_records_panel(state) -> Panel:
     best_down = f"{state.best_download:.0f} Mbps" if state.best_download else "—"
     table.add_row(t("game.rec_best_ping"), best_ping)
     table.add_row(t("game.rec_best_download"), best_down)
-    table.add_row(t("game.rec_best_streak"), _fmt_streak(state.best_streak_s))
+    table.add_row(t("game.rec_best_streak"), format_duration(state.best_streak_s))
     table.add_row(t("game.rec_space_freed"), f"{state.total_space_freed_gb:.1f} GB")
     return Panel(table, title=t("game.records"), border_style="magenta")
 
@@ -391,6 +435,46 @@ def build_scanner_tables(state) -> tuple[Table, Table, Panel]:
         border_style="blue",
     )
     return tcp_table, conn_table, summary
+
+
+def anatel_minimums() -> tuple[float, float]:
+    """Return (min_download, min_upload) Mbps for ANATEL compliance.
+
+    Single source of truth for the 80% (configurable) contracted-speed floor,
+    shared by the health-score compliance check and the speed table coloring.
+    """
+    try:
+        from monitor.speed_tester import speed_config
+
+        factor = speed_config.percentual_minimo / 100
+        return (
+            speed_config.velocidade_contratada_down * factor,
+            speed_config.velocidade_contratada_up * factor,
+        )
+    except Exception:
+        return (0.0, 0.0)
+
+
+def build_ports_summary(state) -> Text:
+    """Lay-friendly one-line summary + legend for the network ports view."""
+    from monitor.port_catalog import is_exposed
+
+    tcp = list(getattr(state, "listening_tcp", []) or [])
+    udp = list(getattr(state, "listening_udp", []) or [])
+    exposed = sum(1 for p in tcp + udp if is_exposed(p.endereco))
+    text = Text(
+        t(
+            "ports.summary",
+            local=len(tcp) + len(udp),
+            exposed=exposed,
+            tcp=getattr(state, "total_tcp", len(tcp)),
+            udp=getattr(state, "total_udp", len(udp)),
+            time=getattr(state, "last_scan_time", "") or "--",
+        ),
+        style="bold cyan",
+    )
+    text.append("\n" + t("ports.legend"), style="dim")
+    return text
 
 
 def selected_cleanup_keys(steps: dict[str, bool] | None = None) -> list[str]:

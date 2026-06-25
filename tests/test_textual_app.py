@@ -117,34 +117,58 @@ async def test_textual_cleanup_preferences_are_saved():
 
 
 @pytest.mark.asyncio
-async def test_textual_scanner_worker_populates_tables(monkeypatch):
+async def test_textual_ports_view_populates_in_network_tab(monkeypatch):
+    """The merged ports view (formerly the standalone Scanner tab) fills the
+    network ports table with one row per listening TCP/UDP port."""
     fake_state = PortScannerState(
-        listening_tcp=[PortInfo(8080, 123, "python.exe", "TCP", "127.0.0.1")],
-        listening_udp=[],
-        top_connections=[ProcessConnections(123, "python.exe", 2, 42.0, "running")],
+        listening_tcp=[PortInfo(443, 123, "python.exe", "TCP", "0.0.0.0")],
+        listening_udp=[PortInfo(5353, 456, "svchost.exe", "UDP", "127.0.0.1")],
+        top_connections=[ProcessConnections(111, "chrome.exe", 3, 42.0, "running")],
         total_tcp=1,
-        total_udp=0,
+        total_udp=1,
         total_established=2,
         last_scan_time="12:00:00",
     )
 
+    _patch_network(monkeypatch)
     import monitor.port_scanner as scanner
+    import monitor.stalker as stalker
 
     monkeypatch.setattr(scanner, "run_full_scan", lambda: fake_state)
-    app = VareduraTextualApp()
+    # Scan on the very first tick (which renders immediately) so the ports table
+    # fills without cranking the interval (a fast interval races with teardown).
+    monkeypatch.setattr(stalker.config, "port_scan_interval", 1, raising=False)
 
-    async with app.run_test(size=(100, 40)) as pilot:
+    app = VareduraTextualApp()
+    async with app.run_test(size=(120, 45)) as pilot:
         await pilot.pause()
-        app.query_one("#main-tabs", TabbedContent).active = "scanner"
+        app.query_one("#main-tabs", TabbedContent).active = "network"
+        app.query_one("#network-subtabs", TabbedContent).active = "net-ports-tab"
         await pilot.pause()
-        await pilot.click("#run-scanner")
 
         await wait_until(
-            lambda: app.query_one("#tcp-table", DataTable).row_count == 1,
+            lambda: app.query_one("#network-ports-table", DataTable).row_count == 2,
             pilot,
         )
+        # Merged processes view also fills from get_top_network_hogs.
+        assert app.query_one("#network-procs-table", DataTable).row_count >= 1
 
-        assert app.query_one("#connections-table", DataTable).row_count == 1
+
+@pytest.mark.asyncio
+async def test_textual_scanner_menu_option_opens_network_ports(monkeypatch):
+    """The legacy 'Port Scanner' menu entry now jumps to the network ports view."""
+    _patch_network(monkeypatch)
+    app = VareduraTextualApp()
+
+    async with app.run_test(size=(120, 45)) as pilot:
+        await pilot.pause()
+        app.query_one("#tool-menu").focus()
+        # Move to the third tool option ("Port Scanner") and select it.
+        await pilot.press("down", "down", "enter")
+        await pilot.pause()
+
+        assert app.query_one("#main-tabs", TabbedContent).active == "network"
+        assert app.query_one("#network-subtabs", TabbedContent).active == "net-ports-tab"
 
 
 def _patch_network(monkeypatch):
@@ -275,6 +299,85 @@ async def test_textual_network_option_activates_tab_without_modal(monkeypatch):
 
         assert app.query_one("#main-tabs", TabbedContent).active == "network"
         assert len(app.screen_stack) == 1  # no modal pushed
+
+
+@pytest.mark.asyncio
+async def test_textual_dashboard_poller_populates_system_stats(monkeypatch):
+    """The always-on lightweight poller fills system stats without the heavy
+    network monitor running."""
+    import monitor.port_scanner as scanner
+    import monitor.stalker as stalker
+
+    monkeypatch.setattr(stalker, "run_ping", lambda host: 12.0)
+    monkeypatch.setattr(
+        scanner,
+        "get_system_network_stats",
+        lambda: {
+            "memoria_percent": 55.0,
+            "memoria_usada_gb": 8.0,
+            "memoria_total_gb": 16.0,
+            "bytes_enviados_mb": 100.0,
+            "bytes_recebidos_mb": 200.0,
+        },
+    )
+
+    app = VareduraTextualApp()
+    async with app.run_test(size=(100, 40)) as pilot:
+        await pilot.pause()
+        await wait_until(
+            lambda: app._dash_stats.get("memoria_percent") == 55.0,
+            pilot,
+        )
+
+
+@pytest.mark.asyncio
+async def test_textual_cleanup_summary_is_reactive(monkeypatch):
+    """Toggling a cleanup checkbox refreshes the summary immediately."""
+    import cli.textual_app as ta
+
+    calls = []
+    original = ta.build_cleanup_status_panel
+    monkeypatch.setattr(
+        ta,
+        "build_cleanup_status_panel",
+        lambda steps=None: calls.append(steps) or original(steps),
+    )
+
+    app = VareduraTextualApp()
+    async with app.run_test(size=(100, 60)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "docker"
+        await pilot.pause()
+        calls.clear()
+        checkbox = app.query_one("#cleanup-containers")
+        checkbox.value = not checkbox.value
+        await pilot.pause()
+        assert calls, "toggling a checkbox should rebuild the cleanup summary"
+
+
+@pytest.mark.asyncio
+async def test_textual_settings_status_is_reactive(monkeypatch):
+    """Flipping the recording switch updates the settings status live (pre-save)."""
+    import cli.textual_app as ta
+
+    calls = []
+    original = ta.build_settings_status_table
+    monkeypatch.setattr(
+        ta,
+        "build_settings_status_table",
+        lambda rec, lang: calls.append((rec, lang)) or original(rec, lang),
+    )
+
+    app = VareduraTextualApp()
+    async with app.run_test(size=(100, 60)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "settings"
+        await pilot.pause()
+        calls.clear()
+        switch = app.query_one("#recording-switch")
+        switch.value = not switch.value
+        await pilot.pause()
+        assert calls, "toggling the recording switch should refresh the status panel"
 
 
 @pytest.mark.asyncio

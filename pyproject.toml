@@ -44,7 +44,7 @@ varedura = "main:main"
 py-modules = ["main"]
 
 [tool.setuptools.packages.find]
-include = ["cli", "docker_cleaner", "monitor", "mascot", "recorder", "mcp_server", "i18n"]
+include = ["cli", "docker_cleaner", "monitor", "mascot", "recorder", "mcp_server", "i18n", "rtsp"]
 
 [tool.setuptools.package-data]
 i18n = ["*.json"]
