@@ -691,6 +691,9 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
     def on_worker_state_changed(self, event) -> None:
         self._cameras_on_worker_state(event)
 
+    def on_resize(self, event) -> None:
+        self._cameras_on_resize(event.size.width)
+
     def on_unmount(self) -> None:
         # Sinaliza a parada do worker de rede (que encerra o ThreadPoolExecutor
         # no seu finally) e para os timers periódicos para que não disparem

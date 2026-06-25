@@ -9,6 +9,8 @@ Originalmente um app Textual standalone (scan_rsp); fundido como uma aba.
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from urllib.parse import quote, urlsplit, urlunsplit
 
 from textual.app import ComposeResult
@@ -24,7 +26,6 @@ from textual.widgets import (
     ProgressBar,
     RadioButton,
     RadioSet,
-    Rule,
     Static,
     TabbedContent,
     TabPane,
@@ -112,7 +113,8 @@ CAMERAS_CSS = """
     border: round $primary-darken-2;
     margin: 1 1 1 1;
     padding: 1 2;
-    height: 1fr;
+    height: auto;
+    min-height: 5;
 }
 #cameras .aba-scroll { height: 1fr; }
 #cameras .mapa {
@@ -141,6 +143,16 @@ CAMERAS_CSS = """
 #cameras .card-del { width: 5; min-width: 5; height: 3; margin: 0 0 0 1; border: tall $error; }
 #cameras .oculto { display: none; }
 #rede-tabela { height: 16; min-height: 6; }
+
+/* Aba credenciais: 2 colunas responsivas (formulários | tabelas). */
+#cred-layout { height: 1fr; }
+#cred-forms { width: 40%; }
+#cred-tables { width: 1fr; padding: 0 1; }
+#cred-tabela, #cred-ips-tabela { height: 1fr; min-height: 3; }
+/* Tela estreita: empilha em coluna única (classe alternada via on_resize). */
+#cred-layout.cred-narrow { layout: vertical; }
+#cred-layout.cred-narrow #cred-forms { width: 1fr; height: 45%; }
+#cred-layout.cred-narrow #cred-tables { width: 1fr; height: 1fr; }
 #cameras .scan-feedback {
     height: auto;
     background: $panel;
@@ -160,6 +172,45 @@ def _campo(rotulo: str, **input_kwargs) -> Vertical:
         yield Label(rotulo, classes="rotulo")
         yield Input(**input_kwargs)
     return wrap
+
+
+# Código do diálogo nativo de "Abrir arquivo" (roda num subprocesso isolado para
+# não conflitar com o loop/terminal do Textual). argv: título, rótulo .txt, todos.
+_DIALOGO_CODE = (
+    "import sys, tkinter, tkinter.filedialog as fd\n"
+    "r = tkinter.Tk(); r.withdraw()\n"
+    "try:\n"
+    "    r.attributes('-topmost', True)\n"
+    "except Exception:\n"
+    "    pass\n"
+    "p = fd.askopenfilename(title=sys.argv[1], "
+    "filetypes=[(sys.argv[2], '*.txt'), (sys.argv[3], '*.*')])\n"
+    "r.destroy()\n"
+    "sys.stdout.write(p or '')\n"
+)
+
+
+def _escolher_arquivo_txt(titulo: str, rotulo_txt: str, rotulo_todos: str) -> tuple[str, bool]:
+    """Abre o explorador de arquivos nativo e retorna (caminho, abriu_ok).
+
+    caminho vazio = usuário cancelou. abriu_ok=False -> não foi possível abrir o
+    diálogo (ex.: sem tkinter); o chamador cai no campo manual.
+    """
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-c", _DIALOGO_CODE, titulo, rotulo_txt, rotulo_todos],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except Exception as exc:
+        _log.warning("Falha ao abrir o explorador de arquivos: %s", exc)
+        return "", False
+    if proc.returncode != 0:
+        _log.warning("Explorador retornou erro: %s", proc.stderr.strip())
+        return "", False
+    return proc.stdout.strip(), True
 
 
 class CamerasMixin:
@@ -259,20 +310,21 @@ class CamerasMixin:
 
             # ---------- Aba: RTSP único ----------
             with TabPane(t("rtsp.tab_rtsp"), id="tab-rtsp"):
-                with Container(classes="painel"):
-                    yield Static(t("rtsp.rtsp_titulo"), classes="painel-titulo")
-                    yield from _campo(t("rtsp.campo_url"), placeholder=t("rtsp.ph_url"), id="rtsp-url")
-                    with Horizontal(classes="linha"):
-                        yield from _campo(
-                            t("rtsp.campo_usuario"), placeholder=t("rtsp.ph_usuario"), id="rtsp-user"
-                        )
-                        yield from _campo(
-                            t("rtsp.campo_senha"), placeholder=t("rtsp.ph_senha"), password=True, id="rtsp-pass"
-                        )
-                    with Horizontal(classes="acoes"):
-                        yield Button(t("rtsp.btn_testar"), variant="primary", id="btn-rtsp")
-                        yield Button(t("rtsp.btn_abrir_video"), variant="success", id="btn-rtsp-abrir")
-                yield Static("", id="rtsp-saida")
+                with VerticalScroll(classes="aba-scroll"):
+                    with Container(classes="painel"):
+                        yield Static(t("rtsp.rtsp_titulo"), classes="painel-titulo")
+                        yield from _campo(t("rtsp.campo_url"), placeholder=t("rtsp.ph_url"), id="rtsp-url")
+                        with Horizontal(classes="linha"):
+                            yield from _campo(
+                                t("rtsp.campo_usuario"), placeholder=t("rtsp.ph_usuario"), id="rtsp-user"
+                            )
+                            yield from _campo(
+                                t("rtsp.campo_senha"), placeholder=t("rtsp.ph_senha"), password=True, id="rtsp-pass"
+                            )
+                        with Horizontal(classes="acoes"):
+                            yield Button(t("rtsp.btn_testar"), variant="primary", id="btn-rtsp")
+                            yield Button(t("rtsp.btn_abrir_video"), variant="success", id="btn-rtsp-abrir")
+                    yield Static("", id="rtsp-saida")
 
             # ---------- Aba: portas ----------
             with TabPane(t("rtsp.tab_portas"), id="tab-portas"):
@@ -283,35 +335,45 @@ class CamerasMixin:
                         yield Button(t("rtsp.btn_portas"), variant="primary", id="btn-portas")
                 yield DataTable(id="portas-tabela", zebra_stripes=True)
 
-            # ---------- Aba: credenciais ----------
+            # ---------- Aba: credenciais (2 colunas, responsivo) ----------
             with TabPane(t("rtsp.tab_cred"), id="tab-cred"):
-                with Container(classes="painel"):
-                    yield Static(t("rtsp.cred_titulo"), classes="painel-titulo")
-                    with Horizontal(classes="linha"):
-                        yield from _campo(t("rtsp.campo_usuario"), placeholder=t("rtsp.ph_usuario"), id="cred-user")
-                        yield from _campo(
-                            t("rtsp.campo_senha"), placeholder=t("rtsp.ph_senha"), password=True, id="cred-pass"
-                        )
-                    with Horizontal(classes="acoes"):
-                        yield Button(t("rtsp.btn_add"), variant="primary", id="btn-cred-add")
-                        yield Button(t("rtsp.btn_remover_sel"), variant="error", id="btn-cred-del")
-                    yield Rule()
-                    yield Static(t("rtsp.imp_titulo"), classes="painel-titulo")
-                    with Horizontal(classes="linha"):
-                        yield from _campo(
-                            t("rtsp.imp_users"), placeholder=t("rtsp.ph_imp_users"), id="imp-users"
-                        )
-                        yield from _campo(
-                            t("rtsp.imp_pass"), placeholder=t("rtsp.ph_imp_pass"), id="imp-pass"
-                        )
-                    with Horizontal(classes="acoes"):
-                        yield Button(t("rtsp.btn_import"), variant="primary", id="btn-cred-import")
-                yield DataTable(id="cred-tabela", cursor_type="row", zebra_stripes=True)
-                yield Rule()
-                yield Static(t("rtsp.ips_titulo"), classes="painel-titulo")
-                with Horizontal(classes="acoes"):
-                    yield Button(t("rtsp.btn_esquecer_ip"), variant="warning", id="btn-ip-forget")
-                yield DataTable(id="cred-ips-tabela", cursor_type="row", zebra_stripes=True)
+                with Horizontal(id="cred-layout"):
+                    # Coluna esquerda: formulários (rola se faltar altura).
+                    with VerticalScroll(id="cred-forms"):
+                        with Container(classes="painel"):
+                            yield Static(t("rtsp.cred_titulo"), classes="painel-titulo")
+                            with Horizontal(classes="linha"):
+                                yield from _campo(
+                                    t("rtsp.campo_usuario"), placeholder=t("rtsp.ph_usuario"), id="cred-user"
+                                )
+                                yield from _campo(
+                                    t("rtsp.campo_senha"), placeholder=t("rtsp.ph_senha"), password=True, id="cred-pass"
+                                )
+                            with Horizontal(classes="acoes"):
+                                yield Button(t("rtsp.btn_add"), variant="primary", id="btn-cred-add")
+                                yield Button(t("rtsp.btn_remover_sel"), variant="error", id="btn-cred-del")
+                        with Container(classes="painel"):
+                            yield Static(t("rtsp.imp_titulo"), classes="painel-titulo")
+                            with Horizontal(classes="linha"):
+                                yield from _campo(
+                                    t("rtsp.imp_users"), placeholder=t("rtsp.ph_imp"), id="imp-users"
+                                )
+                                yield from _campo(
+                                    t("rtsp.imp_pass"), placeholder=t("rtsp.ph_imp"), id="imp-pass"
+                                )
+                            with Horizontal(classes="acoes"):
+                                yield Button(t("rtsp.btn_browse_users"), id="btn-browse-users")
+                                yield Button(t("rtsp.btn_browse_pass"), id="btn-browse-pass")
+                            with Horizontal(classes="acoes"):
+                                yield Button(t("rtsp.btn_import"), variant="primary", id="btn-cred-import")
+                    # Coluna direita: tabelas que preenchem a altura disponível.
+                    with Vertical(id="cred-tables"):
+                        yield Static(t("rtsp.cred_vault_titulo"), classes="painel-titulo")
+                        yield DataTable(id="cred-tabela", cursor_type="row", zebra_stripes=True)
+                        yield Static(t("rtsp.ips_titulo"), classes="painel-titulo")
+                        with Horizontal(classes="acoes"):
+                            yield Button(t("rtsp.btn_esquecer_ip"), variant="warning", id="btn-ip-forget")
+                        yield DataTable(id="cred-ips-tabela", cursor_type="row", zebra_stripes=True)
 
     def _cameras_on_mount(self) -> None:
         self.query_one("#portas-tabela", DataTable).add_columns(
@@ -387,6 +449,10 @@ class CamerasMixin:
             self._del_credencial()
         elif bid == "btn-cred-import":
             self._importar_credenciais()
+        elif bid == "btn-browse-users":
+            self._browse_arquivo("imp-users")
+        elif bid == "btn-browse-pass":
+            self._browse_arquivo("imp-pass")
         elif bid == "btn-ip-forget":
             self._esquecer_ip()
         elif bid == "card-externa":
@@ -407,6 +473,14 @@ class CamerasMixin:
         wid = getattr(event, "widget", None)
         if wid is not None and wid.id and wid.id.startswith("card-regiao-"):
             self._regiao_focada = int(wid.id.rsplit("-", 1)[1])
+
+    def _cameras_on_resize(self, width: int) -> None:
+        """Reflow responsivo da aba credenciais: 2 colunas (largo) ou
+        empilhado em coluna única (estreito)."""
+        try:
+            self.query_one("#cred-layout").set_class(width < 90, "cred-narrow")
+        except Exception:
+            pass
 
     def _cameras_on_worker_state(self, event) -> None:
         from textual.worker import WorkerState
@@ -1079,6 +1153,25 @@ class CamerasMixin:
         salvar_vault(self._vault)
         self._refresh_cred_tabela()
         self.notify(t("rtsp.nf_import_ok", novos=novos, total=len(pares)))
+
+    def _browse_arquivo(self, input_id: str) -> None:
+        """Abre o explorador de arquivos (em thread) e preenche o campo escolhido."""
+        self.run_worker(lambda: self._worker_browse(input_id), thread=True, group=_GRUPO)
+
+    def _worker_browse(self, input_id: str) -> None:
+        caminho, abriu = _escolher_arquivo_txt(
+            t("rtsp.dlg_titulo"), t("rtsp.dlg_txt"), t("rtsp.dlg_todos")
+        )
+        if not abriu:
+            self.call_from_thread(
+                self.notify, t("rtsp.nf_explorador_falhou"), severity="warning"
+            )
+            return
+        if caminho:
+            self.call_from_thread(self._set_browse_input, input_id, caminho)
+
+    def _set_browse_input(self, input_id: str, valor: str) -> None:
+        self.query_one(f"#{input_id}", Input).value = valor
 
     def _del_credencial(self) -> None:
         tabela = self.query_one("#cred-tabela", DataTable)

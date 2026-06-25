@@ -55,13 +55,13 @@
     "semantic_hash": "a3dc411d85402f361ad8c43cc99c827a"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\en.json": {
-    "mtime": 1782342301.0405636,
-    "ast_hash": "af7404567f98c715e4b371e417db2b98",
+    "mtime": 1782355153.463354,
+    "ast_hash": "45608cfe5c7a6711b456fab0c205b42a",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\pt.json": {
-    "mtime": 1782342299.7269423,
-    "ast_hash": "5eb11baf00ddead7531055e454122089",
+    "mtime": 1782355151.9409416,
+    "ast_hash": "539dd2a79311b43129b13bda8211a8bf",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\__init__.py": {
@@ -430,8 +430,8 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\textual_app.py": {
-    "mtime": 1782332758.6392694,
-    "ast_hash": "ee12d2d287cd88625ee189ad044de2a7",
+    "mtime": 1782355146.2182631,
+    "ast_hash": "f6d68b2ba12be354763e77472d3ab957",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\ui_shared.py": {
@@ -510,8 +510,8 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\textual_cameras.py": {
-    "mtime": 1782342293.7768734,
-    "ast_hash": "5a901a4073912707a310e9e14df70bfd",
+    "mtime": 1782355201.5962937,
+    "ast_hash": "59391ee8b9b2edd38aa04e7448feedc6",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\amostra_ips_belem.py": {
@@ -575,8 +575,8 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_textual_cameras.py": {
-    "mtime": 1782335357.7466512,
-    "ast_hash": "46484317ccb5e2e2be2cdab4ee4e7564",
+    "mtime": 1782354695.8431654,
+    "ast_hash": "20fd228992818c60ed49cf9693fd3f83",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\todos_ips_belem.txt": {

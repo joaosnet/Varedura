@@ -126,11 +126,37 @@ async def test_cameras_import_credential_lists(monkeypatch, tmp_path):
         await pilot.pause()
         app.query_one("#imp-users").value = str(users)
         app.query_one("#imp-pass").value = str(passwords)
+        app.query_one("#btn-cred-import").scroll_visible(animate=False)
+        await pilot.pause()
         await pilot.click("#btn-cred-import")
         await pilot.pause()
         # 2 users × 2 passwords = 4 vault pairs.
         assert app.query_one("#cred-tabela", DataTable).row_count == 4
         assert len(app._vault) == 4
+
+
+@pytest.mark.asyncio
+async def test_cameras_browse_fills_input(monkeypatch):
+    monkeypatch.setattr("cli.textual_cameras.detectar_redes", lambda: [])
+    monkeypatch.setattr("cli.textual_cameras.geolocalizar", lambda *a, **k: None)
+    # Mock the native file dialog: return a chosen path without opening a window.
+    monkeypatch.setattr(
+        "cli.textual_cameras._escolher_arquivo_txt",
+        lambda *a, **k: ("C:/tmp/usuarios.txt", True),
+    )
+
+    app = VareduraTextualApp()
+    async with app.run_test(size=(120, 60)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "cameras"
+        app.query_one("#cameras-subtabs", TabbedContent).active = "tab-cred"
+        await pilot.pause()
+        app.query_one("#btn-browse-users").scroll_visible(animate=False)
+        await pilot.pause()
+        await pilot.click("#btn-browse-users")
+        await wait_until(
+            lambda: app.query_one("#imp-users").value == "C:/tmp/usuarios.txt", pilot
+        )
 
 
 @pytest.mark.asyncio
