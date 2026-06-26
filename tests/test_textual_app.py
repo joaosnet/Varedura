@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 from cli import ui_shared
-from cli.textual_app import VareduraTextualApp
+from cli.textual_app import ShutdownScreen, VareduraTextualApp
 from i18n import get_language, init as i18n_init
 from monitor.port_scanner import PortInfo, PortScannerState, ProcessConnections
 from textual.widgets import DataTable, Digits, ProgressBar, Sparkline, TabbedContent
@@ -441,3 +441,56 @@ async def test_textual_cleanup_worker_uses_fake_cleaner(monkeypatch):
             "networks",
             "builder",
         ]
+
+
+def test_shutdown_stop_monitors_sets_events():
+    app = VareduraTextualApp()
+    app._sd_stop_monitors()
+    assert app._network_stop.is_set()
+    assert app._dash_stop.is_set()
+
+
+def test_shutdown_close_resources_terminates_players():
+    app = VareduraTextualApp()
+
+    class FakeProc:
+        def __init__(self):
+            self.terminated = False
+
+        def poll(self):
+            return None  # ainda vivo
+
+        def terminate(self):
+            self.terminated = True
+
+    proc = FakeProc()
+    app._players = [proc]
+    app._sd_close_resources()
+    assert proc.terminated
+
+
+@pytest.mark.asyncio
+async def test_quit_exits_immediately_when_idle():
+    app = VareduraTextualApp()
+    async with app.run_test(size=(100, 40)) as pilot:
+        await pilot.pause()
+        # Nada pesado rodando -> sai na hora, sem tela de encerramento.
+        app.action_quit()
+        assert app._shutting_down is False
+        assert not any(isinstance(s, ShutdownScreen) for s in app.screen_stack)
+
+
+@pytest.mark.asyncio
+async def test_quit_shows_shutdown_screen_when_busy(monkeypatch):
+    _patch_network(monkeypatch)
+    # Não deixa o worker fechar o app; só queremos verificar a tela.
+    monkeypatch.setattr(VareduraTextualApp, "_run_shutdown", lambda self: None)
+    app = VareduraTextualApp()
+    async with app.run_test(size=(120, 45)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "network"
+        await wait_until(lambda: app.network_running, pilot)
+        app.action_quit()
+        await pilot.pause()
+        assert app._shutting_down is True
+        assert any(isinstance(s, ShutdownScreen) for s in app.screen_stack)

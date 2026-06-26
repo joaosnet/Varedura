@@ -213,6 +213,36 @@ def _escolher_arquivo_txt(titulo: str, rotulo_txt: str, rotulo_todos: str) -> tu
     return proc.stdout.strip(), True
 
 
+class ClickOpenDataTable(DataTable):
+    """DataTable que abre a linha (RowSelected) com um ÚNICO clique.
+
+    O DataTable padrão só seleciona no 2º clique numa linha (o 1º apenas move o
+    cursor). Aqui um clique numa linha de dados já dispara a seleção, para que a
+    câmera salva abra com um clique. Em qualquer imprevisto, cai no comportamento
+    padrão.
+    """
+
+    async def _on_click(self, event) -> None:
+        try:
+            meta = event.style.meta
+            row = meta.get("row", -1)
+            if (
+                self.show_cursor
+                and self.cursor_type == "row"
+                and "column" in meta
+                and row is not None
+                and row >= 0
+            ):
+                self.cursor_coordinate = Coordinate(row, meta["column"])
+                self._post_selected_message()
+                self._scroll_cursor_into_view()
+                event.stop()
+                return
+        except Exception:
+            pass
+        await super()._on_click(event)
+
+
 class CamerasMixin:
     """UI + workers da aba Câmeras, fundida no VareduraTextualApp."""
 
@@ -273,7 +303,9 @@ class CamerasMixin:
                         yield Static(t("rtsp.contador_cam", n=0), id="rede-contador")
 
                     yield Label(t("rtsp.dica_abrir"), classes="dica")
-                    yield DataTable(id="rede-tabela", cursor_type="row", zebra_stripes=True)
+                    yield ClickOpenDataTable(
+                        id="rede-tabela", cursor_type="row", zebra_stripes=True
+                    )
 
                     with Collapsible(title=t("rtsp.add_regiao"), collapsed=True):
                         with Horizontal(classes="linha"):

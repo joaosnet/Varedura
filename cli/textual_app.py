@@ -12,7 +12,8 @@ from rich.text import Text
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.containers import Container, Horizontal, Vertical, VerticalScroll
+from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
     Checkbox,
@@ -85,6 +86,35 @@ def _cleanup_checkbox_id(step_key: str) -> str:
 
 class RichRenderable(Static):
     """Static widget that displays Rich renderables."""
+
+
+class ShutdownScreen(ModalScreen):
+    """Overlay de encerramento: mostra o que está sendo finalizado + barra.
+
+    Ao montar, dispara o worker de encerramento do app (para evitar tocar nos
+    widgets antes de existirem). O app fecha quando o worker termina.
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="shutdown-box"):
+            yield Label(t("shutdown.title"), id="shutdown-title")
+            yield Label(t("shutdown.step_network"), id="shutdown-step")
+            yield ProgressBar(total=100, show_eta=False, id="shutdown-bar")
+
+    def on_mount(self) -> None:
+        self.app._run_shutdown()
+
+    def set_step(self, label: str) -> None:
+        try:
+            self.query_one("#shutdown-step", Label).update(label)
+        except Exception:
+            pass
+
+    def set_progress(self, pct: int) -> None:
+        try:
+            self.query_one("#shutdown-bar", ProgressBar).update(progress=pct)
+        except Exception:
+            pass
 
 
 class VareduraTextualApp(CamerasMixin, App[str | None]):
@@ -183,6 +213,18 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
     .button-row Button {
         margin-right: 1;
     }
+
+    /* Etapas de limpeza: grade responsiva — o número de colunas é ajustado à
+       largura disponível em on_resize (classes cols-2 / cols-3). */
+    .step-grid {
+        layout: grid;
+        grid-size: 1;
+        grid-gutter: 0 2;
+        height: auto;
+        margin-bottom: 1;
+    }
+    .step-grid.cols-2 { grid-size: 2; }
+    .step-grid.cols-3 { grid-size: 3; }
 
     #cleanup-config {
         height: 1fr;
@@ -286,6 +328,35 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         color: $error;
         text-style: bold;
     }
+
+    ShutdownScreen {
+        align: center middle;
+    }
+    #shutdown-box {
+        width: 64;
+        max-width: 90%;
+        height: auto;
+        border: thick $primary;
+        background: $panel;
+        padding: 2 4;
+    }
+    #shutdown-title {
+        text-style: bold;
+        color: $accent;
+        width: 1fr;
+        text-align: center;
+        margin-bottom: 1;
+    }
+    #shutdown-step {
+        color: $text-muted;
+        width: 1fr;
+        text-align: center;
+        margin-bottom: 1;
+    }
+    #shutdown-bar {
+        width: 1fr;
+        align-horizontal: center;
+    }
     """ + CAMERAS_CSS
 
     BINDINGS = [
@@ -334,6 +405,8 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self._mascot_frame = 0
         # Estado da aba Câmeras (RTSP), fundida via CamerasMixin.
         self._init_cameras_state()
+        self._shutting_down = False
+        self._shutdown_screen = None
 
     def compose(self) -> ComposeResult:
         self.title = "Varedura"
@@ -414,12 +487,13 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                 yield RichRenderable(build_cleanup_status_panel(steps), id="cleanup-summary")
                 for group_key, icon, keys in CLEANUP_GROUPS:
                     yield Label(f"{icon} {t(group_key)}", classes="section-title")
-                    for key in keys:
-                        yield Checkbox(
-                            t(cleanup_label_key(key)),
-                            value=steps.get(key, False),
-                            id=_cleanup_checkbox_id(key),
-                        )
+                    with Container(classes="step-grid"):
+                        for key in keys:
+                            yield Checkbox(
+                                t(cleanup_label_key(key)),
+                                value=steps.get(key, False),
+                                id=_cleanup_checkbox_id(key),
+                            )
             # Fixed action + status + progress + log (always visible).
             with Horizontal(classes="button-row"):
                 yield Button(t("textual.cleanup_run"), id="run-cleanup", variant="primary")
@@ -643,6 +717,67 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
     def action_dashboard(self) -> None:
         self.query_one("#main-tabs", TabbedContent).active = "dashboard"
 
+    def action_quit(self) -> None:
+        """Encerra deixando claro o que está sendo finalizado.
+
+        Se nada pesado estiver em andamento, fecha na hora. Caso contrário,
+        mostra uma tela de encerramento com barra de progresso enquanto para os
+        monitores, o teste de velocidade (Chrome/Selenium) e os players.
+        """
+        if self._shutting_down:
+            return
+        if not (self.network_running or self._players):
+            self.exit()
+            return
+        self._shutting_down = True
+        self._shutdown_screen = ShutdownScreen()
+        self.push_screen(self._shutdown_screen)
+
+    @work(thread=True)
+    def _run_shutdown(self) -> None:
+        """Finaliza os recursos em background, atualizando a barra, e fecha."""
+        screen = self._shutdown_screen
+        steps = (
+            (t("shutdown.step_network"), self._sd_stop_monitors),
+            (t("shutdown.step_speed"), self._sd_stop_speed),
+            (t("shutdown.step_players"), self._sd_close_resources),
+        )
+        total = len(steps)
+        for i, (label, action) in enumerate(steps, 1):
+            if screen is not None:
+                self.call_from_thread(screen.set_step, label)
+            try:
+                action()
+            except Exception:
+                pass
+            if screen is not None:
+                self.call_from_thread(screen.set_progress, int(i / total * 100))
+        if screen is not None:
+            self.call_from_thread(screen.set_step, t("shutdown.step_done"))
+        self.call_from_thread(self.exit)
+
+    def _sd_stop_monitors(self) -> None:
+        self._network_stop.set()
+        self._dash_stop.set()
+
+    def _sd_stop_speed(self) -> None:
+        from monitor.speed_tester import stop_continuous_testing
+
+        stop_continuous_testing()
+
+    def _sd_close_resources(self) -> None:
+        for proc in list(self._players):
+            try:
+                if proc.poll() is None:
+                    proc.terminate()
+            except Exception:
+                pass
+        if self._net_pool is not None:
+            try:
+                self._net_pool.shutdown(wait=False)
+            except Exception:
+                pass
+
     def action_rescan_ports(self) -> None:
         """Jump to the network ports view and force a fresh scan next tick."""
         tabs = self.query_one("#main-tabs", TabbedContent)
@@ -692,7 +827,13 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self._cameras_on_worker_state(event)
 
     def on_resize(self, event) -> None:
-        self._cameras_on_resize(event.size.width)
+        width = event.size.width
+        self._cameras_on_resize(width)
+        # Etapas de limpeza: nº de colunas conforme a largura disponível.
+        cols = 3 if width >= 110 else (2 if width >= 70 else 1)
+        for grid in self.query(".step-grid"):
+            grid.set_class(cols == 2, "cols-2")
+            grid.set_class(cols == 3, "cols-3")
 
     def on_unmount(self) -> None:
         # Sinaliza a parada do worker de rede (que encerra o ThreadPoolExecutor

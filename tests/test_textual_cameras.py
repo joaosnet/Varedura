@@ -160,6 +160,33 @@ async def test_cameras_browse_fills_input(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_saved_camera_opens_on_single_click(monkeypatch):
+    monkeypatch.setattr("cli.textual_cameras.detectar_redes", lambda: [])
+    monkeypatch.setattr("cli.textual_cameras.geolocalizar", lambda *a, **k: None)
+
+    app = VareduraTextualApp()
+    opened = {}
+    async with app.run_test(size=(120, 50)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "cameras"
+        await pilot.pause()
+        # Não abre um player de verdade no teste.
+        monkeypatch.setattr(
+            app, "_lancar_player", lambda url, ip=None: opened.update(url=url, ip=ip)
+        )
+        # Simula uma câmera salva na tabela de resultados.
+        app._urls_rede["192.168.1.50"] = "rtsp://192.168.1.50:554/stream"
+        tabela = app.query_one("#rede-tabela", DataTable)
+        tabela.add_row("192.168.1.50", "ok", "-", "-", "-", "-", key="192.168.1.50")
+        tabela.scroll_visible(animate=False)
+        await pilot.pause()
+        # Um único clique na primeira linha de dados deve abrir a câmera.
+        # (offset y=2: linha 0 = borda, linha 1 = cabeçalho, linha 2 = 1ª linha)
+        await pilot.click("#rede-tabela", offset=(4, 2))
+        await wait_until(lambda: opened.get("ip") == "192.168.1.50", pilot)
+
+
+@pytest.mark.asyncio
 async def test_cameras_open_port_saved_without_credential(monkeypatch):
     monkeypatch.setattr("cli.textual_cameras.detectar_redes", lambda: [])
     monkeypatch.setattr("cli.textual_cameras.geolocalizar", lambda *a, **k: None)
