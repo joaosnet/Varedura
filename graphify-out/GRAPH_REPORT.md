@@ -1,16 +1,16 @@
-# Graph Report - Varedura  (2026-06-24)
+# Graph Report - Varedura  (2026-06-25)
 
 ## Corpus Check
-- 72 files · ~157,197 words
+- 73 files · ~157,679 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3223 nodes · 4286 edges · 165 communities (120 shown, 45 thin omitted)
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 339 edges (avg confidence: 0.78)
+- 3289 nodes · 4371 edges · 184 communities (136 shown, 48 thin omitted)
+- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 351 edges (avg confidence: 0.77)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e9869a38`
+- Built from commit: `45b43afe`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -158,6 +158,7 @@
 - [[_COMMUNITY_Community 143|Community 143]]
 - [[_COMMUNITY_Community 144|Community 144]]
 - [[_COMMUNITY_Community 145|Community 145]]
+- [[_COMMUNITY_Community 146|Community 146]]
 - [[_COMMUNITY_Community 147|Community 147]]
 - [[_COMMUNITY_Community 148|Community 148]]
 - [[_COMMUNITY_Community 149|Community 149]]
@@ -166,6 +167,7 @@
 - [[_COMMUNITY_Community 152|Community 152]]
 - [[_COMMUNITY_Community 153|Community 153]]
 - [[_COMMUNITY_Community 154|Community 154]]
+- [[_COMMUNITY_Community 155|Community 155]]
 - [[_COMMUNITY_Community 156|Community 156]]
 - [[_COMMUNITY_Community 157|Community 157]]
 - [[_COMMUNITY_Community 158|Community 158]]
@@ -176,7 +178,24 @@
 - [[_COMMUNITY_Community 163|Community 163]]
 - [[_COMMUNITY_Community 164|Community 164]]
 - [[_COMMUNITY_Community 165|Community 165]]
+- [[_COMMUNITY_Community 166|Community 166]]
+- [[_COMMUNITY_Community 167|Community 167]]
 - [[_COMMUNITY_Community 168|Community 168]]
+- [[_COMMUNITY_Community 169|Community 169]]
+- [[_COMMUNITY_Community 170|Community 170]]
+- [[_COMMUNITY_Community 171|Community 171]]
+- [[_COMMUNITY_Community 172|Community 172]]
+- [[_COMMUNITY_Community 173|Community 173]]
+- [[_COMMUNITY_Community 174|Community 174]]
+- [[_COMMUNITY_Community 175|Community 175]]
+- [[_COMMUNITY_Community 176|Community 176]]
+- [[_COMMUNITY_Community 177|Community 177]]
+- [[_COMMUNITY_Community 178|Community 178]]
+- [[_COMMUNITY_Community 179|Community 179]]
+- [[_COMMUNITY_Community 180|Community 180]]
+- [[_COMMUNITY_Community 181|Community 181]]
+- [[_COMMUNITY_Community 182|Community 182]]
+- [[_COMMUNITY_Community 183|Community 183]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `VareduraTextualApp` - 97 edges
@@ -197,10 +216,10 @@
   README.pt-BR.md → README.md
 - `Copilot Instructions Safety Requirements` --semantically_similar_to--> `Explicit Confirmation Safety Model`  [INFERRED] [semantically similar]
   .github/copilot-instructions.md → README.md
-- `test_textual_dashboard_renders_and_menu_switches_to_cleanup()` --calls--> `VareduraTextualApp`  [INFERRED]
+- `test_textual_cleanup_preferences_are_saved()` --calls--> `VareduraTextualApp`  [INFERRED]
   tests/test_textual_app.py → cli/textual_app.py
-- `_generate_combined_pdf_worker()` --calls--> `type`  [INFERRED]
-  monitor/stalker.py → .vscode/mcp.json
+- `test_provider_cleanup_without_driver_is_safe()` --calls--> `SimetProvider`  [INFERRED]
+  tests/test_speed_cleanup.py → monitor/speed_providers.py
 
 ## Hyperedges (group relationships)
 - **Docker Cleanup Workflow** — readme_docker_cleanup_feature, main_docker_cleanup_runner, cli_quick_cleanup_flow, cli_admin_tasks_main, docker_core_wsl_docker_cleaner, docker_core_docker_cleanup_flow, docker_core_vhdx_compaction_flow [EXTRACTED 1.00]
@@ -262,7 +281,7 @@
 - **Login Background Visual Composition** — loginbg_abstract_blue_login_background, loginbg_blue_gradient_palette, loginbg_blurred_full_width_backdrop [EXTRACTED 1.00]
 - **YPT Logo Brand Identity Elements** — yptlogo_logo_asset, yptlogo_purple_abstract_mark, yptlogo_gray_we_wordmark [EXTRACTED 1.00]
 
-## Communities (165 total, 45 thin omitted)
+## Communities (184 total, 48 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.00
@@ -285,8 +304,8 @@ Cohesion: 0.17
 Nodes (15): _expand_for_constant_fps(), _finalize_durations(), generate_gif(), GIF generator — converts Rich SVG snapshots to animated GIF.  Backends tried i, High-quality Pillow GIF with per-frame median-cut + Floyd-Steinberg., High-quality Pillow GIF with per-frame median-cut + Floyd-Steinberg., Use gifski for the best possible GIF quality (lossy encoder)., Use gifski for the best possible GIF quality (lossy encoder). (+7 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.07
-Nodes (37): analyze_lag_source(), ContractInfo, get_export_status(), is_android(), main(), make_connections_panel(), make_header(), make_help_panel() (+29 more)
+Cohesion: 0.08
+Nodes (34): ContractInfo, get_export_status(), is_android(), main(), make_connections_panel(), make_header(), make_help_panel(), make_log_panel() (+26 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.08
@@ -325,8 +344,8 @@ Cohesion: 0.11
 Nodes (25): Alert History Latest Events Panel, AnyDesk.exe Connection Activity, Background Port Scan, Code-Insiders.exe Local TCP Port, Connection Status Panel, External AWS DNS Ping Check, Gateway 192.168.18.1 Ping Check, GoogleDriveFS.exe Network Activity (+17 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.08
-Nodes (30): handle_key(), load_prefs(), prompt_change_contracted_speed(), prompt_change_external(), prompt_change_gateway(), prompt_change_interval(), prompt_change_threshold(), Persiste preferências relevantes para exportação em JSON. (+22 more)
+Cohesion: 0.11
+Nodes (18): handle_key(), prompt_change_contracted_speed(), prompt_change_external(), prompt_change_gateway(), prompt_change_interval(), prompt_change_threshold(), Processa entrada de teclado. Retorna mensagem para log ou None., Processa entrada de teclado. Retorna mensagem para log ou None. (+10 more)
 
 ### Community 16 - "Community 16"
 Cohesion: 0.10
@@ -353,12 +372,12 @@ Cohesion: 0.25
 Nodes (19): b64_hmac_md5(), b64_md5(), binl_to_base64(), binl_to_hex(), binl_to_string(), core_hmac_md5(), hex_hmac_md5(), hex_md5() (+11 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.05
-Nodes (64): Run the Textual app, temporarily handing off to legacy Network Stalker., run_textual_app(), Mascot Frame Registry, Mascot module for Varedura — animated ASCII art character., MascotRenderer, Mascot Sprite Generation, _ask_recording_prompt(), _build_menu_layout() (+56 more)
+Cohesion: 0.15
+Nodes (17): Run the Textual app, temporarily handing off to legacy Network Stalker., run_textual_app(), _ask_recording_prompt(), main(), Run the network stalker monitor., Run LMArena models generator., Run the network stalker monitor., Executa o escaner de portas standalone. (+9 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.07
-Nodes (23): ABC, BrasilBandaLargaProvider, FastComProvider, MultiProviderSpeedTester, ProgressState, V's Speed Test Providers - Múltiplos provedores de teste de velocidade  Proved, Provedor Netflix Fast.com usando requests., Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r (+15 more)
+Cohesion: 0.13
+Nodes (11): ABC, V's Speed Test Providers - Múltiplos provedores de teste de velocidade  Proved, Provedor Ookla Speedtest.net usando speedtest-cli., Classe base abstrata para provedores de teste de velocidade., Classe base abstrata para provedores de teste de velocidade., Classe base abstrata para provedores de teste de velocidade., Libera recursos do provedor (ex.: fechar driver Selenium).          No-op por, Provedor Ookla Speedtest.net usando speedtest-cli. (+3 more)
 
 ### Community 24 - "Community 24"
 Cohesion: 0.18
@@ -410,11 +429,11 @@ Nodes (35): code:powershell (& .\.venv\Scripts\Activate.ps1  # Use existing .ven
 
 ### Community 36 - "Community 36"
 Cohesion: 0.07
-Nodes (22): get_multi_provider(), Retorna a instância global do gerenciador de provedores., ContinuousSpeedTester, V's Speed Tester - Monitor de Velocidade de Internet em Tempo Real  Funcionali, Executa um único teste de velocidade usando múltiplos provedores., Loop contínuo de testes em background - alterna entre provedores., Inicia o loop de testes em background., Para o loop de testes. (+14 more)
+Nodes (26): ContinuousSpeedTester, V's Speed Tester - Monitor de Velocidade de Internet em Tempo Real  Funcionali, Executa um único teste de velocidade usando múltiplos provedores., Loop contínuo de testes em background - alterna entre provedores., Inicia o loop de testes em background., Para o loop de testes.          Força o fechamento de qualquer driver Selenium, Verifica se velocidade está conforme contrato.          Retorna:, Verifica se velocidade está conforme contrato.          Retorna: (+18 more)
 
 ### Community 37 - "Community 37"
-Cohesion: 0.09
-Nodes (19): Static widget that displays Rich renderables., Static widget that displays Rich renderables., Static widget that displays Rich renderables., Static widget that displays Rich renderables., Static widget that displays Rich renderables., Static widget that displays Rich renderables., RichRenderable, cleanup_label_key() (+11 more)
+Cohesion: 0.23
+Nodes (8): _cleanup_checkbox_id(), on_cleanup_checkbox_changed(), build_cleanup_status_panel(), cleanup_label_key(), Build a compact cleanup preference summary., Build a compact cleanup preference summary., Build a compact cleanup preference summary., Return the i18n label key for a cleanup step key.
 
 ### Community 38 - "Community 38"
 Cohesion: 0.26
@@ -426,7 +445,7 @@ Nodes (8): CamerasMixin, UI + workers da aba Câmeras, fundida no VareduraTextua
 
 ### Community 40 - "Community 40"
 Cohesion: 0.06
-Nodes (21): CamerasMixin, Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura., _run_scanner_worker() (+13 more)
+Nodes (20): CamerasMixin, Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura., VareduraTextualApp (+12 more)
 
 ### Community 41 - "Community 41"
 Cohesion: 0.21
@@ -445,8 +464,8 @@ Cohesion: 0.12
 Nodes (20): carregar_lista(), combinar_credenciais(), Lê um arquivo texto com uma entrada por linha.      Ignora linhas em branco e co, Produto cartesiano usuários×senhas -> pares do cofre.      Se só uma lista vier, hosts_da_faixa(), normalizar_faixa(), Valida uma faixa de rede e devolve a forma canônica.      Aceita o prefixo legad, Expande uma faixa (prefixo "a.b.c" ou CIDR) na lista de IPs a varrer. (+12 more)
 
 ### Community 45 - "Community 45"
-Cohesion: 0.20
-Nodes (13): get_speed_tester(), Retorna a instância global do testador de velocidade., _generate_combined_pdf_worker(), make_speed_panel(), Cria painel de velocidade mostrando todos provedores em tempo real., Cria painel de velocidade mostrando todos provedores em tempo real., Worker que gera o PDF formal completo em background.      Args:         full_, Worker que gera o PDF formal completo em background.      Args:         full_ (+5 more)
+Cohesion: 0.18
+Nodes (14): get_speed_tester(), Retorna a instância global do testador de velocidade., Retorna a instância global do testador de velocidade., _generate_combined_pdf_worker(), make_speed_panel(), Cria painel de velocidade mostrando todos provedores em tempo real., Cria painel de velocidade mostrando todos provedores em tempo real., Worker que gera o PDF formal completo em background.      Args:         full_ (+6 more)
 
 ### Community 46 - "Community 46"
 Cohesion: 0.11
@@ -461,8 +480,8 @@ Cohesion: 0.40
 Nodes (4): Demo, My Experience with GitHub Copilot CLI, Varedura — safe Docker/WSL cleanup + network monitor 🧹⚡, What I Built
 
 ### Community 49 - "Community 49"
-Cohesion: 0.06
-Nodes (31): Achievement, achievement_by_id(), check_achievements(), _clamp(), compute_health_score(), GameState, load_game_state(), Subtle gamification core for Varedura: health score, records, achievements.  Pur (+23 more)
+Cohesion: 0.08
+Nodes (28): Achievement, achievement_by_id(), check_achievements(), _clamp(), compute_health_score(), GameState, load_game_state(), Subtle gamification core for Varedura: health score, records, achievements.  Pur (+20 more)
 
 ### Community 50 - "Community 50"
 Cohesion: 0.38
@@ -593,8 +612,8 @@ Cohesion: 0.12
 Nodes (13): Translate the scanner's raw process labels for display., Translate the scanner's raw process labels for display., Render the lay-friendly ports view: service, app, what-it-does,         visibili, Render the lay-friendly ports view: service, app, what-it-does,         visibili, Translate the scanner's raw process labels for display., Translate the scanner's raw process labels for display., Render the merged processes view: active connections (live every tick)         e, Render the lay-friendly ports view: service, app, what-it-does,         visibili (+5 more)
 
 ### Community 107 - "Community 107"
-Cohesion: 0.12
-Nodes (18): carregar_conhecidos(), carregar_vault(), CredencialIP, esquecer_ip(), lembrar_ip(), Cofre de credenciais + mapa de IPs já resolvidos (auto-login).  Dois arquivos JS, Lê ips_conhecidos.json. Ausente/corrompido -> dict vazio., Insere/atualiza mapa[ip] e persiste. (+10 more)
+Cohesion: 0.09
+Nodes (22): Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., carregar_conhecidos(), carregar_vault(), CredencialIP, esquecer_ip() (+14 more)
 
 ### Community 108 - "Community 108"
 Cohesion: 0.25
@@ -646,23 +665,23 @@ Nodes (5): Versão async com batch elevated., Versão async com batch elevated.,
 
 ### Community 127 - "Community 127"
 Cohesion: 0.06
-Nodes (37): _add_common_status_rows(), build_cleanup_status_panel(), build_dashboard_status(), build_dashboard_summary(), build_settings_status_table(), cleanup_summary(), _fmt_memory(), _fmt_ping() (+29 more)
+Nodes (40): _add_common_status_rows(), build_dashboard_status(), build_dashboard_summary(), build_settings_status_table(), cleanup_summary(), _fmt_memory(), _fmt_ping(), is_mcp_configured() (+32 more)
 
 ### Community 128 - "Community 128"
 Cohesion: 0.33
 Nodes (6): check_keyboard(), _flush_stdin(), Limpa completamente o buffer de entrada do teclado., Verificação não-bloqueante de teclado com:     - Filtragem de escape sequences, Limpa completamente o buffer de entrada do teclado., Verificação não-bloqueante de teclado com:     - Filtragem de escape sequences
 
 ### Community 130 - "Community 130"
-Cohesion: 0.33
-Nodes (6): get_top_network_hogs(), _get_top_network_hogs_fallback(), Identifica os processos (Top 5) com mais conexões de rede ativas.      NOTA: U, Identifica os processos (Top 5) com mais conexões de rede ativas.      NOTA: U, Fallback usando I/O counters (menos preciso, usado quando sem permissão)., Fallback usando I/O counters (menos preciso, usado quando sem permissão).
+Cohesion: 0.22
+Nodes (10): Fecha um driver Selenium sem nunca propagar erro.      Tenta `driver.quit()` (, Fecha um driver Selenium sem nunca propagar erro.      Tenta `driver.quit()` (, _safe_quit(), FakeDriver, Tests for Selenium driver cleanup (no orphaned chrome/chromedriver)., test_provider_cleanup_quits_and_clears_driver(), test_provider_cleanup_without_driver_is_safe(), test_safe_quit_calls_quit() (+2 more)
 
 ### Community 131 - "Community 131"
 Cohesion: 0.33
 Nodes (6): make_ascii_graph(), make_graph_panel(), Cria gráfico ASCII de linha a partir do histórico de ping., Cria gráfico ASCII de linha a partir do histórico de ping., Cria painel com ambos os gráficos de ping mostrando info de tempo., Cria painel com ambos os gráficos de ping mostrando info de tempo.
 
 ### Community 134 - "Community 134"
-Cohesion: 0.33
-Nodes (5): servers, varedura, args, command, type
+Cohesion: 0.15
+Nodes (7): on_button_pressed(), on_main_tab_activated(), Jump to the network ports view and force a fresh scan next tick., Jump to the network ports view and force a fresh scan next tick., _run_scanner_worker(), PingStats, Estatísticas de histórico de ping com timestamps.
 
 ### Community 137 - "Community 137"
 Cohesion: 0.39
@@ -697,8 +716,12 @@ Cohesion: 0.33
 Nodes (6): _prepare_images(), Remove CSS animations from SVG so each frame is a static snapshot., Remove CSS animations from SVG so each frame is a static snapshot., Convert SVG frames to normalised RGBA images + per-frame durations., Convert SVG frames to normalised RGBA images + per-frame durations., _strip_svg_animation()
 
 ### Community 145 - "Community 145"
-Cohesion: 0.15
-Nodes (8): _cleanup_checkbox_id(), on_button_pressed(), on_cleanup_checkbox_changed(), on_main_tab_activated(), Jump to the network ports view and force a fresh scan next tick., Jump to the network ports view and force a fresh scan next tick., PingStats, Estatísticas de histórico de ping com timestamps.
+Cohesion: 0.14
+Nodes (13): MultiProviderSpeedTester, Gerenciador de múltiplos provedores de teste de velocidade., Retorna lista de provedores disponíveis., Retorna o próximo provedor disponível (rotação round-robin)., Executa teste com o próximo provedor na rotação.         Cada chamada testa ape, Gerenciador de múltiplos provedores de teste de velocidade., Gerenciador de múltiplos provedores de teste de velocidade., Retorna lista de provedores disponíveis. (+5 more)
+
+### Community 146 - "Community 146"
+Cohesion: 0.21
+Nodes (12): load_prefs(), Persiste preferências relevantes para exportação em JSON., Carrega preferências salvas, se o arquivo existir., Persiste preferências relevantes para exportação em JSON., Define a flag e persiste em disco., Carrega preferências salvas, se o arquivo existir., Define a flag e persiste em disco., save_prefs() (+4 more)
 
 ### Community 149 - "Community 149"
 Cohesion: 0.29
@@ -707,6 +730,10 @@ Nodes (6): Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., De
 ### Community 154 - "Community 154"
 Cohesion: 0.31
 Nodes (8): buscar_prefixos_por_asn(), obter_amostra_aleatoria(), obter_blocos_rede(), obter_espaco_amostral_completo(), Consulta a API pública do BGPView para descobrir quais blocos de IP     (prefixo, Coleta e retorna uma lista com os blocos de rede (IPv4Network)., Retorna uma lista contendo TODOS os endereços de IP utilizáveis     dentro dos b, Retorna uma quantidade específica de IPs sorteados aleatoriamente.
+
+### Community 155 - "Community 155"
+Cohesion: 0.24
+Nodes (11): _load_prefs(), _load_recording_pref(), Varedura - System Monitor & Docker Cleanup Tool  Usage:     uv run main.py  Main, Load all preferences from disk., Save preferences to disk., Load recording preference from disk (default: enabled)., Save recording preference to disk., Save cleanup step preferences. (+3 more)
 
 ### Community 156 - "Community 156"
 Cohesion: 0.22
@@ -728,9 +755,65 @@ Nodes (5): caminhos(), _dedup(), Caminhos RTSP conhecidos pela comunidade, por f
 Cohesion: 0.20
 Nodes (11): _build_rtsp_request(), escanear_portas_camera(), Funções para testar câmeras IP e streams RTSP usando apenas a stdlib., Resultado de um teste de stream RTSP., Retorna True se a porta TCP estiver aberta no host., Testa as portas típicas de câmera IP num host e retorna {porta: aberta}., Monta uma requisição RTSP, com Basic Auth opcional., Faz handshake RTSP (OPTIONS) com a câmera e reporta o resultado.      Exemplo de (+3 more)
 
+### Community 166 - "Community 166"
+Cohesion: 0.50
+Nodes (3): analyze_lag_source(), Analisa a origem provável do lag com mais inteligência.      Retorna: (suspeit, Analisa a origem provável do lag com mais inteligência.      Retorna: (suspeit
+
+### Community 167 - "Community 167"
+Cohesion: 0.15
+Nodes (11): _chrome_service(), Resultado de um teste de velocidade., Resultado de um teste de velocidade., Resultado de um teste de velocidade., Cria um Service do chromedriver que NÃO abre janela de console no Windows., Executa teste no SIMET usando Flutter Web.         Flutter renderiza em canvas,, Executa teste no SIMET usando Flutter Web.         Flutter renderiza em canvas,, Executa teste no SIMET usando Flutter Web.         Flutter renderiza em canvas, (+3 more)
+
 ### Community 168 - "Community 168"
-Cohesion: 0.17
-Nodes (9): _escolher_arquivo_txt(), Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Abre o explorador de arquivos (em thread) e preenche o campo escolhido., Abre o explorador de arquivos nativo e retorna (caminho, abriu_ok).      caminho (+1 more)
+Cohesion: 0.29
+Nodes (5): _escolher_arquivo_txt(), Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Abre o explorador de arquivos (em thread) e preenche o campo escolhido., Abre o explorador de arquivos nativo e retorna (caminho, abriu_ok).      caminho, Abre o explorador de arquivos nativo e retorna (caminho, abriu_ok).      caminho
+
+### Community 169 - "Community 169"
+Cohesion: 0.20
+Nodes (11): change_language(), _is_mcp_configured(), Add or remove the Varedura MCP server from .vscode/mcp.json., Check if the MCP server config exists for this workspace., Add or remove the Varedura MCP server from .vscode/mcp.json., Show language selection menu., Show the settings menu with all configurable options., Show language selection menu. (+3 more)
+
+### Community 170 - "Community 170"
+Cohesion: 0.13
+Nodes (11): FastComProvider, ProgressState, Provedor Netflix Fast.com usando requests., Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r, Provedor Netflix Fast.com usando requests., Provedor Netflix Fast.com usando requests., Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r, Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r (+3 more)
+
+### Community 171 - "Community 171"
+Cohesion: 0.28
+Nodes (9): _get_cleanup_steps(), _load_cleanup_steps(), Get cleanup steps, using defaults if not yet configured., Run Docker cleanup using the user's saved step preferences.      On first run (n, Run Docker cleanup using the user's saved step preferences.      On first run (n, Interactive toggle screen for cleanup step preferences.      Shows a numbered li, Load cleanup step preferences. Returns None if never configured., run_docker_cleanup() (+1 more)
+
+### Community 172 - "Community 172"
+Cohesion: 0.22
+Nodes (9): Start recording the current user session if enabled., Stop session recording and save a single GIF for the whole run., Start recording the current user session if enabled., Stop session recording and save a single GIF for the whole run., Toggle automatic GIF recording., Toggle automatic GIF recording., _start_recording_session(), _stop_recording_session() (+1 more)
+
+### Community 173 - "Community 173"
+Cohesion: 0.18
+Nodes (8): Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We, Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We, Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We, Fecha o driver Selenium em aberto (chamado no encerramento/parada)., Fecha o driver Selenium em aberto (chamado no encerramento/parada)., Fecha qualquer driver Selenium em aberto (parada/encerramento).          Segur, Fecha qualquer driver Selenium em aberto (parada/encerramento).          Segur, SimetProvider
+
+### Community 174 - "Community 174"
+Cohesion: 0.33
+Nodes (6): _build_menu_layout(), Build the full menu layout with a given mascot panel., Display the main menu with a continuously animated mascot.      Returns the user, Build the full menu layout with a given mascot panel., Display the main menu with a continuously animated mascot.      Returns the user, show_animated_menu()
+
+### Community 175 - "Community 175"
+Cohesion: 0.50
+Nodes (4): Mascot Frame Registry, Mascot module for Varedura — animated ASCII art character., MascotRenderer, Mascot Sprite Generation
+
+### Community 177 - "Community 177"
+Cohesion: 0.15
+Nodes (10): Runtime tracker of consecutive lag-free seconds., Advance the streak. ``ok`` means ping <= threshold and not lost., StreakTracker, Static widget that displays Rich renderables., Static widget that displays Rich renderables., Static widget that displays Rich renderables., Static widget that displays Rich renderables., Static widget that displays Rich renderables. (+2 more)
+
+### Community 178 - "Community 178"
+Cohesion: 0.22
+Nodes (6): BrasilBandaLargaProvider, Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium., Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium., Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium., Fecha o driver Selenium em aberto (chamado no encerramento/parada)., Fecha o driver Selenium em aberto (chamado no encerramento/parada).
+
+### Community 179 - "Community 179"
+Cohesion: 0.33
+Nodes (6): get_top_network_hogs(), _get_top_network_hogs_fallback(), Identifica os processos (Top 5) com mais conexões de rede ativas.      NOTA: U, Identifica os processos (Top 5) com mais conexões de rede ativas.      NOTA: U, Fallback usando I/O counters (menos preciso, usado quando sem permissão)., Fallback usando I/O counters (menos preciso, usado quando sem permissão).
+
+### Community 180 - "Community 180"
+Cohesion: 0.33
+Nodes (5): servers, varedura, args, command, type
+
+### Community 181 - "Community 181"
+Cohesion: 0.50
+Nodes (4): get_multi_provider(), Retorna a instância global do gerenciador de provedores., Retorna a instância global do gerenciador de provedores., Retorna a instância global do gerenciador de provedores.
 
 ## Ambiguous Edges - Review These
 - `Rich Main Menu Application` → `Copilot Instructions Textual UI Guidelines`  [AMBIGUOUS]
@@ -745,7 +828,7 @@ Nodes (9): _escolher_arquivo_txt(), Importa .txt de usuários e/ou senhas e comb
 ## Knowledge Gaps
 - **1372 isolated node(s):** `PreToolUse`, `PreToolUse`, `python.testing.pytestArgs`, `python.testing.unittestEnabled`, `python.testing.pytestEnabled` (+1367 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **45 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **48 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -758,9 +841,9 @@ _Questions this graph is uniquely positioned to answer:_
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **What is the exact relationship between `Blank White Logo Banner` and `Paraguay PSN Huawei Branding`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `VareduraTextualApp` connect `Community 40` to `Community 37`, `Community 5`, `Community 39`, `Community 106`, `Community 43`, `Community 108`, `Community 42`, `Community 46`, `Community 47`, `Community 49`, `Community 145`, `Community 22`, `Community 121`, `Community 31`, `Community 127`?**
-  _High betweenness centrality (0.095) - this node is a cross-community bridge._
-- **Why does `WSLDockerCleaner` connect `Community 71` to `Community 2`, `Community 67`, `Community 70`, `Community 105`, `Community 42`, `Community 109`, `Community 143`, `Community 114`, `Community 19`, `Community 22`, `Community 121`, `Community 125`, `Community 30`?**
-  _High betweenness centrality (0.058) - this node is a cross-community bridge._
-- **Why does `CamerasMixin` connect `Community 39` to `Community 37`, `Community 168`, `Community 40`, `Community 107`, `Community 142`, `Community 111`, `Community 116`, `Community 149`, `Community 122`, `Community 156`?**
-  _High betweenness centrality (0.044) - this node is a cross-community bridge._
+- **Why does `VareduraTextualApp` connect `Community 40` to `Community 37`, `Community 134`, `Community 166`, `Community 39`, `Community 106`, `Community 43`, `Community 108`, `Community 42`, `Community 46`, `Community 47`, `Community 177`, `Community 49`, `Community 22`, `Community 121`, `Community 31`, `Community 127`?**
+  _High betweenness centrality (0.100) - this node is a cross-community bridge._
+- **Why does `WSLDockerCleaner` connect `Community 71` to `Community 2`, `Community 67`, `Community 70`, `Community 105`, `Community 42`, `Community 171`, `Community 109`, `Community 143`, `Community 114`, `Community 19`, `Community 121`, `Community 125`, `Community 30`?**
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+- **Why does `CamerasMixin` connect `Community 39` to `Community 168`, `Community 40`, `Community 107`, `Community 142`, `Community 111`, `Community 177`, `Community 116`, `Community 149`, `Community 122`, `Community 156`?**
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._

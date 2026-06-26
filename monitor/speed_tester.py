@@ -170,8 +170,17 @@ class ContinuousSpeedTester:
         self._thread.start()
 
     def stop(self):
-        """Para o loop de testes."""
+        """Para o loop de testes.
+
+        Força o fechamento de qualquer driver Selenium em uso para que um teste
+        em andamento (BrasilBandaLarga/SIMET, que rodam num Chrome headless) não
+        deixe processos chrome/chromedriver órfãos ao encerrar.
+        """
         self._running = False
+        try:
+            self._multi_provider.cleanup_active()
+        except Exception:
+            pass
         if self._thread:
             self._thread.join(timeout=5)
 

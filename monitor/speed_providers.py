@@ -6,7 +6,9 @@ Provedores implementados:
     - FastComProvider: Netflix Fast.com
 """
 
+import atexit
 import datetime
+import subprocess
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -37,6 +39,39 @@ class SpeedTestResult:
     provider_name: str  # Identifica qual provedor fez o teste
 
 
+def _chrome_service():
+    """Cria um Service do chromedriver que NÃO abre janela de console no Windows.
+
+    Sem isto, o Selenium inicia o chromedriver.exe com um console preto visível
+    (a "cabeça" que aparece mesmo com o Chrome em --headless). O CREATE_NO_WINDOW
+    é repassado ao subprocess.Popen do chromedriver pelo próprio Selenium.
+    """
+    from selenium.webdriver.chrome.service import Service
+
+    service = Service()
+    service.creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    return service
+
+
+def _safe_quit(driver) -> None:
+    """Fecha um driver Selenium sem nunca propagar erro.
+
+    Tenta `driver.quit()` (encerra o Chrome e o chromedriver). Se falhar,
+    mata diretamente o processo do chromedriver para não deixá-lo órfão.
+    """
+    if driver is None:
+        return
+    try:
+        driver.quit()
+    except Exception:
+        try:
+            proc = getattr(getattr(driver, "service", None), "process", None)
+            if proc is not None:
+                proc.kill()
+        except Exception:
+            pass
+
+
 class SpeedTestProvider(ABC):
     """Classe base abstrata para provedores de teste de velocidade."""
 
@@ -55,6 +90,13 @@ class SpeedTestProvider(ABC):
     def run_test(self) -> Optional[SpeedTestResult]:
         """Executa o teste de velocidade. Retorna None em caso de erro."""
         pass
+
+    def cleanup(self) -> None:
+        """Libera recursos do provedor (ex.: fechar driver Selenium).
+
+        No-op por padrão; provedores Selenium sobrescrevem para fechar o driver.
+        """
+        return
 
 
 class SpeedtestNetProvider(SpeedTestProvider):
@@ -281,6 +323,11 @@ class BrasilBandaLargaProvider(SpeedTestProvider):
     def is_available(self) -> bool:
         return self._available
 
+    def cleanup(self) -> None:
+        """Fecha o driver Selenium em aberto (chamado no encerramento/parada)."""
+        drv, self._driver = self._driver, None
+        _safe_quit(drv)
+
     def run_test(self) -> Optional[SpeedTestResult]:
         if not self._available:
             return None
@@ -294,7 +341,8 @@ class BrasilBandaLargaProvider(SpeedTestProvider):
             options.add_argument("--disable-gpu")
             options.add_argument("--window-size=1920,1080")
 
-            driver = self._webdriver.Chrome(options=options)
+            driver = self._webdriver.Chrome(service=_chrome_service(), options=options)
+            self._driver = driver
             driver.set_page_load_timeout(60)
 
             try:
@@ -432,7 +480,8 @@ class BrasilBandaLargaProvider(SpeedTestProvider):
                 )
 
             finally:
-                driver.quit()
+                _safe_quit(driver)
+                self._driver = None
 
         except Exception as e:
             self._error = str(e)[:50]
@@ -456,6 +505,7 @@ class SimetProvider(SpeedTestProvider):
         self._progress = progress
         self._webdriver = None
         self._Options = None
+        self._driver = None
 
         try:
             from selenium import webdriver
@@ -473,6 +523,11 @@ class SimetProvider(SpeedTestProvider):
 
     def is_available(self) -> bool:
         return self._available
+
+    def cleanup(self) -> None:
+        """Fecha o driver Selenium em aberto (chamado no encerramento/parada)."""
+        drv, self._driver = self._driver, None
+        _safe_quit(drv)
 
     def run_test(self) -> Optional[SpeedTestResult]:
         """
@@ -496,7 +551,8 @@ class SimetProvider(SpeedTestProvider):
             # Habilitar acessibilidade via flag
             options.add_argument("--force-renderer-accessibility")
 
-            driver = self._webdriver.Chrome(options=options)
+            driver = self._webdriver.Chrome(service=_chrome_service(), options=options)
+            self._driver = driver
             driver.set_page_load_timeout(120)
 
             try:
@@ -652,7 +708,8 @@ class SimetProvider(SpeedTestProvider):
                 )
 
             finally:
-                driver.quit()
+                _safe_quit(driver)
+                self._driver = None
 
         except Exception as e:
             self._error = str(e)[:50]
@@ -682,6 +739,18 @@ class MultiProviderSpeedTester:
     def get_available_providers(self) -> list[SpeedTestProvider]:
         """Retorna lista de provedores disponíveis."""
         return [p for p in self.providers if p.is_available()]
+
+    def cleanup_active(self) -> None:
+        """Fecha qualquer driver Selenium em aberto (parada/encerramento).
+
+        Seguro chamar de outra thread: força o fim de um teste em andamento
+        para não deixar processos chrome/chromedriver órfãos.
+        """
+        for provider in self.providers:
+            try:
+                provider.cleanup()
+            except Exception:
+                pass
 
     def get_next_provider(self) -> Optional[SpeedTestProvider]:
         """Retorna o próximo provedor disponível (rotação round-robin)."""
@@ -736,4 +805,7 @@ def get_multi_provider() -> MultiProviderSpeedTester:
     global _multi_provider
     if _multi_provider is None:
         _multi_provider = MultiProviderSpeedTester()
+        # Rede de segurança: fecha drivers Selenium ao encerrar o processo,
+        # mesmo que stop() não seja chamado (evita chrome/chromedriver órfãos).
+        atexit.register(_multi_provider.cleanup_active)
     return _multi_provider

@@ -1124,7 +1124,7 @@
       "source_file": "main.py",
       "source_location": "L1",
       "id": "main_py",
-      "community": 22,
+      "community": 155,
       "norm_label": "main.py"
     },
     {
@@ -1133,7 +1133,7 @@
       "source_file": "main.py",
       "source_location": "L55",
       "id": "varedura_main_show_cleanup_prefs",
-      "community": 22,
+      "community": 171,
       "norm_label": "show_cleanup_prefs()"
     },
     {
@@ -1142,7 +1142,7 @@
       "source_file": "main.py",
       "source_location": "L103",
       "id": "varedura_main_toggle_mcp_config",
-      "community": 22,
+      "community": 169,
       "norm_label": "_toggle_mcp_config()"
     },
     {
@@ -1151,7 +1151,7 @@
       "source_file": "main.py",
       "source_location": "L110",
       "id": "varedura_main_build_menu_layout",
-      "community": 22,
+      "community": 174,
       "norm_label": "_build_menu_layout()"
     },
     {
@@ -1160,7 +1160,7 @@
       "source_file": "main.py",
       "source_location": "L144",
       "id": "varedura_main_show_animated_menu",
-      "community": 22,
+      "community": 174,
       "norm_label": "show_animated_menu()"
     },
     {
@@ -1169,7 +1169,7 @@
       "source_file": "main.py",
       "source_location": "L182",
       "id": "varedura_main_start_recording_session",
-      "community": 22,
+      "community": 172,
       "norm_label": "_start_recording_session()"
     },
     {
@@ -1178,7 +1178,7 @@
       "source_file": "main.py",
       "source_location": "L196",
       "id": "varedura_main_stop_recording_session",
-      "community": 22,
+      "community": 172,
       "norm_label": "_stop_recording_session()"
     },
     {
@@ -1196,7 +1196,7 @@
       "source_file": "main.py",
       "source_location": "L238",
       "id": "varedura_main_run_docker_cleanup",
-      "community": 22,
+      "community": 171,
       "norm_label": "run_docker_cleanup()"
     },
     {
@@ -1223,7 +1223,7 @@
       "source_file": "main.py",
       "source_location": "L371",
       "id": "varedura_main_toggle_recording",
-      "community": 22,
+      "community": 172,
       "norm_label": "toggle_recording()"
     },
     {
@@ -1232,7 +1232,7 @@
       "source_file": "main.py",
       "source_location": "L387",
       "id": "varedura_main_change_language",
-      "community": 37,
+      "community": 169,
       "norm_label": "change_language()"
     },
     {
@@ -1241,7 +1241,7 @@
       "source_file": "main.py",
       "source_location": "L407",
       "id": "varedura_main_show_settings",
-      "community": 22,
+      "community": 169,
       "norm_label": "show_settings()"
     },
     {
@@ -1277,7 +1277,7 @@
       "source_file": "main.py",
       "source_location": "L1",
       "id": "varedura_main_rationale_1",
-      "community": 22,
+      "community": 155,
       "norm_label": "varedura - system monitor & docker cleanup tool  usage:     uv run main.py  main"
     },
     {
@@ -1286,7 +1286,7 @@
       "source_file": "main.py",
       "source_location": "L56",
       "id": "varedura_main_rationale_56",
-      "community": 22,
+      "community": 171,
       "norm_label": "interactive toggle screen for cleanup step preferences.      shows a numbered li"
     },
     {
@@ -1295,7 +1295,7 @@
       "source_file": "main.py",
       "source_location": "L104",
       "id": "varedura_main_rationale_104",
-      "community": 22,
+      "community": 169,
       "norm_label": "add or remove the varedura mcp server from .vscode/mcp.json."
     },
     {
@@ -1304,7 +1304,7 @@
       "source_file": "main.py",
       "source_location": "L111",
       "id": "varedura_main_rationale_111",
-      "community": 22,
+      "community": 174,
       "norm_label": "build the full menu layout with a given mascot panel."
     },
     {
@@ -1313,7 +1313,7 @@
       "source_file": "main.py",
       "source_location": "L145",
       "id": "varedura_main_rationale_145",
-      "community": 22,
+      "community": 174,
       "norm_label": "display the main menu with a continuously animated mascot.      returns the user"
     },
     {
@@ -1322,7 +1322,7 @@
       "source_file": "main.py",
       "source_location": "L183",
       "id": "varedura_main_rationale_183",
-      "community": 22,
+      "community": 172,
       "norm_label": "start recording the current user session if enabled."
     },
     {
@@ -1331,7 +1331,7 @@
       "source_file": "main.py",
       "source_location": "L197",
       "id": "varedura_main_rationale_197",
-      "community": 22,
+      "community": 172,
       "norm_label": "stop session recording and save a single gif for the whole run."
     },
     {
@@ -1349,7 +1349,7 @@
       "source_file": "main.py",
       "source_location": "L239",
       "id": "varedura_main_rationale_239",
-      "community": 22,
+      "community": 171,
       "norm_label": "run docker cleanup using the user's saved step preferences.      on first run (n"
     },
     {
@@ -1376,7 +1376,7 @@
       "source_file": "main.py",
       "source_location": "L372",
       "id": "varedura_main_rationale_372",
-      "community": 22,
+      "community": 172,
       "norm_label": "toggle automatic gif recording."
     },
     {
@@ -1385,7 +1385,7 @@
       "source_file": "main.py",
       "source_location": "L388",
       "id": "varedura_main_rationale_388",
-      "community": 37,
+      "community": 169,
       "norm_label": "show language selection menu."
     },
     {
@@ -1394,7 +1394,7 @@
       "source_file": "main.py",
       "source_location": "L408",
       "id": "varedura_main_rationale_408",
-      "community": 22,
+      "community": 169,
       "norm_label": "show the settings menu with all configurable options."
     },
     {
@@ -1574,7 +1574,7 @@
       "source_file": "cli/gamification.py",
       "source_location": "L84",
       "id": "cli_gamification_streaktracker",
-      "community": 49,
+      "community": 177,
       "norm_label": "streaktracker"
     },
     {
@@ -1583,7 +1583,7 @@
       "source_file": "cli/gamification.py",
       "source_location": "L89",
       "id": "cli_gamification_streaktracker_update",
-      "community": 49,
+      "community": 177,
       "norm_label": ".update()"
     },
     {
@@ -1673,7 +1673,7 @@
       "source_file": "cli/gamification.py",
       "source_location": "L85",
       "id": "cli_gamification_rationale_85",
-      "community": 49,
+      "community": 177,
       "norm_label": "runtime tracker of consecutive lag-free seconds."
     },
     {
@@ -1682,7 +1682,7 @@
       "source_file": "cli/gamification.py",
       "source_location": "L90",
       "id": "cli_gamification_rationale_90",
-      "community": 49,
+      "community": 177,
       "norm_label": "advance the streak. ``ok`` means ping <= threshold and not lost."
     },
     {
@@ -1880,7 +1880,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L82",
       "id": "cli_textual_app_cleanup_checkbox_id",
-      "community": 145,
+      "community": 37,
       "norm_label": "_cleanup_checkbox_id()"
     },
     {
@@ -1889,7 +1889,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L86",
       "id": "cli_textual_app_richrenderable",
-      "community": 37,
+      "community": 177,
       "norm_label": "richrenderable"
     },
     {
@@ -1925,7 +1925,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L303",
       "id": "cli_textual_app_vareduratextualapp_init",
-      "community": 49,
+      "community": 177,
       "norm_label": ".__init__()"
     },
     {
@@ -1934,7 +1934,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L338",
       "id": "cli_textual_app_vareduratextualapp_compose",
-      "community": 37,
+      "community": 40,
       "norm_label": ".compose()"
     },
     {
@@ -1961,7 +1961,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L431",
       "id": "cli_textual_app_vareduratextualapp_compose_network",
-      "community": 37,
+      "community": 40,
       "norm_label": "._compose_network()"
     },
     {
@@ -1970,7 +1970,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L470",
       "id": "cli_textual_app_vareduratextualapp_compose_settings",
-      "community": 37,
+      "community": 127,
       "norm_label": "._compose_settings()"
     },
     {
@@ -2069,7 +2069,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L646",
       "id": "cli_textual_app_vareduratextualapp_action_rescan_ports",
-      "community": 145,
+      "community": 134,
       "norm_label": ".action_rescan_ports()"
     },
     {
@@ -2087,7 +2087,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L678",
       "id": "cli_textual_app_on_main_tab_activated",
-      "community": 145,
+      "community": 134,
       "norm_label": "on_main_tab_activated()"
     },
     {
@@ -2141,7 +2141,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L709",
       "id": "cli_textual_app_on_button_pressed",
-      "community": 145,
+      "community": 134,
       "norm_label": "on_button_pressed()"
     },
     {
@@ -2150,7 +2150,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L737",
       "id": "cli_textual_app_vareduratextualapp_apply_cleanup_preset",
-      "community": 145,
+      "community": 37,
       "norm_label": "._apply_cleanup_preset()"
     },
     {
@@ -2159,7 +2159,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L743",
       "id": "cli_textual_app_vareduratextualapp_refresh_cleanup_summary",
-      "community": 145,
+      "community": 37,
       "norm_label": "._refresh_cleanup_summary()"
     },
     {
@@ -2168,7 +2168,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L752",
       "id": "cli_textual_app_on_cleanup_checkbox_changed",
-      "community": 145,
+      "community": 37,
       "norm_label": "on_cleanup_checkbox_changed()"
     },
     {
@@ -2240,7 +2240,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L822",
       "id": "cli_textual_app_vareduratextualapp_cleanup_form_steps",
-      "community": 145,
+      "community": 37,
       "norm_label": "._cleanup_form_steps()"
     },
     {
@@ -2249,7 +2249,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L828",
       "id": "cli_textual_app_vareduratextualapp_save_cleanup_preferences",
-      "community": 145,
+      "community": 134,
       "norm_label": "._save_cleanup_preferences()"
     },
     {
@@ -2258,7 +2258,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L836",
       "id": "cli_textual_app_vareduratextualapp_start_cleanup",
-      "community": 145,
+      "community": 134,
       "norm_label": "._start_cleanup()"
     },
     {
@@ -2348,7 +2348,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L1000",
       "id": "cli_textual_app_vareduratextualapp_start_network",
-      "community": 145,
+      "community": 134,
       "norm_label": "._start_network()"
     },
     {
@@ -2357,7 +2357,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L1015",
       "id": "cli_textual_app_vareduratextualapp_stop_network",
-      "community": 145,
+      "community": 134,
       "norm_label": "._stop_network()"
     },
     {
@@ -2366,7 +2366,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L1019",
       "id": "cli_textual_app_vareduratextualapp_set_network_running",
-      "community": 145,
+      "community": 134,
       "norm_label": "._set_network_running()"
     },
     {
@@ -2402,7 +2402,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L1162",
       "id": "cli_textual_app_vareduratextualapp_build_network_alerts",
-      "community": 5,
+      "community": 166,
       "norm_label": "._build_network_alerts()"
     },
     {
@@ -2555,7 +2555,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L87",
       "id": "cli_textual_app_rationale_87",
-      "community": 37,
+      "community": 177,
       "norm_label": "static widget that displays rich renderables."
     },
     {
@@ -2627,7 +2627,7 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L647",
       "id": "cli_textual_app_rationale_647",
-      "community": 145,
+      "community": 134,
       "norm_label": "jump to the network ports view and force a fresh scan next tick."
     },
     {
@@ -3194,7 +3194,7 @@
       "source_file": "cli/textual_cameras.py",
       "source_location": "L1142",
       "id": "cli_textual_cameras_camerasmixin_importar_credenciais",
-      "community": 168,
+      "community": 107,
       "norm_label": "._importar_credenciais()"
     },
     {
@@ -3518,7 +3518,7 @@
       "source_file": "cli/ui_shared.py",
       "source_location": "L233",
       "id": "cli_ui_shared_build_cleanup_status_panel",
-      "community": 127,
+      "community": 37,
       "norm_label": "build_cleanup_status_panel()"
     },
     {
@@ -3815,7 +3815,7 @@
       "source_file": "cli/ui_shared.py",
       "source_location": "L234",
       "id": "cli_ui_shared_rationale_234",
-      "community": 127,
+      "community": 37,
       "norm_label": "build a compact cleanup preference summary."
     },
     {
@@ -13823,7 +13823,7 @@
       "source_file": "i18n/__init__.py",
       "source_location": "L114",
       "id": "i18n_init_get_language",
-      "community": 37,
+      "community": 127,
       "norm_label": "get_language()"
     },
     {
@@ -13832,7 +13832,7 @@
       "source_file": "i18n/__init__.py",
       "source_location": "L119",
       "id": "i18n_init_get_supported_languages",
-      "community": 37,
+      "community": 127,
       "norm_label": "get_supported_languages()"
     },
     {
@@ -13913,7 +13913,7 @@
       "source_file": "i18n/__init__.py",
       "source_location": "L115",
       "id": "i18n_init_rationale_115",
-      "community": 37,
+      "community": 127,
       "norm_label": "return the current language code."
     },
     {
@@ -13922,7 +13922,7 @@
       "source_file": "i18n/__init__.py",
       "source_location": "L120",
       "id": "i18n_init_rationale_120",
-      "community": 37,
+      "community": 127,
       "norm_label": "return tuple of supported language codes."
     },
     {
@@ -14552,7 +14552,7 @@
       "source_file": "mascot/__init__.py",
       "source_location": "L1",
       "id": "mascot_init_py",
-      "community": 22,
+      "community": 175,
       "norm_label": "__init__.py"
     },
     {
@@ -14561,7 +14561,7 @@
       "source_file": "mascot/__init__.py",
       "source_location": "L1",
       "id": "mascot_init_rationale_1",
-      "community": 22,
+      "community": 175,
       "norm_label": "mascot module for varedura \u2014 animated ascii art character."
     },
     {
@@ -15117,25 +15117,43 @@
       "label": "ProgressState",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L18",
+      "source_location": "L20",
       "id": "monitor_speed_providers_progressstate",
-      "community": 23,
+      "community": 170,
       "norm_label": "progressstate"
     },
     {
       "label": "SpeedTestResult",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L29",
+      "source_location": "L31",
       "id": "monitor_speed_providers_speedtestresult",
-      "community": 23,
+      "community": 167,
       "norm_label": "speedtestresult"
+    },
+    {
+      "label": "_chrome_service()",
+      "file_type": "code",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L42",
+      "id": "monitor_speed_providers_chrome_service",
+      "community": 167,
+      "norm_label": "_chrome_service()"
+    },
+    {
+      "label": "_safe_quit()",
+      "file_type": "code",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L56",
+      "id": "monitor_speed_providers_safe_quit",
+      "community": 130,
+      "norm_label": "_safe_quit()"
     },
     {
       "label": "SpeedTestProvider",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L40",
+      "source_location": "L75",
       "id": "monitor_speed_providers_speedtestprovider",
       "community": 23,
       "norm_label": "speedtestprovider"
@@ -15153,7 +15171,7 @@
       "label": "name()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L45",
+      "source_location": "L80",
       "id": "monitor_speed_providers_name",
       "community": 23,
       "norm_label": "name()"
@@ -15162,7 +15180,7 @@
       "label": "is_available()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L50",
+      "source_location": "L85",
       "id": "monitor_speed_providers_is_available",
       "community": 23,
       "norm_label": "is_available()"
@@ -15171,16 +15189,25 @@
       "label": "run_test()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L55",
+      "source_location": "L90",
       "id": "monitor_speed_providers_run_test",
       "community": 23,
       "norm_label": "run_test()"
     },
     {
+      "label": ".cleanup()",
+      "file_type": "code",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L94",
+      "id": "monitor_speed_providers_speedtestprovider_cleanup",
+      "community": 23,
+      "norm_label": ".cleanup()"
+    },
+    {
       "label": "SpeedtestNetProvider",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L60",
+      "source_location": "L102",
       "id": "monitor_speed_providers_speedtestnetprovider",
       "community": 23,
       "norm_label": "speedtestnetprovider"
@@ -15189,7 +15216,7 @@
       "label": ".__init__()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L63",
+      "source_location": "L105",
       "id": "monitor_speed_providers_speedtestnetprovider_init",
       "community": 23,
       "norm_label": ".__init__()"
@@ -15198,7 +15225,7 @@
       "label": ".is_available()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L80",
+      "source_location": "L122",
       "id": "monitor_speed_providers_speedtestnetprovider_is_available",
       "community": 23,
       "norm_label": ".is_available()"
@@ -15207,171 +15234,198 @@
       "label": ".run_test()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L83",
+      "source_location": "L125",
       "id": "monitor_speed_providers_speedtestnetprovider_run_test",
-      "community": 23,
+      "community": 167,
       "norm_label": ".run_test()"
     },
     {
       "label": "FastComProvider",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L118",
+      "source_location": "L160",
       "id": "monitor_speed_providers_fastcomprovider",
-      "community": 23,
+      "community": 170,
       "norm_label": "fastcomprovider"
     },
     {
       "label": ".__init__()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L121",
+      "source_location": "L163",
       "id": "monitor_speed_providers_fastcomprovider_init",
-      "community": 23,
+      "community": 170,
       "norm_label": ".__init__()"
     },
     {
       "label": ".is_available()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L138",
+      "source_location": "L180",
       "id": "monitor_speed_providers_fastcomprovider_is_available",
-      "community": 23,
+      "community": 170,
       "norm_label": ".is_available()"
     },
     {
       "label": ".run_test()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L141",
+      "source_location": "L183",
       "id": "monitor_speed_providers_fastcomprovider_run_test",
-      "community": 23,
+      "community": 170,
       "norm_label": ".run_test()"
     },
     {
       "label": "BrasilBandaLargaProvider",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L258",
+      "source_location": "L300",
       "id": "monitor_speed_providers_brasilbandalargaprovider",
-      "community": 23,
+      "community": 178,
       "norm_label": "brasilbandalargaprovider"
     },
     {
       "label": ".__init__()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L261",
+      "source_location": "L303",
       "id": "monitor_speed_providers_brasilbandalargaprovider_init",
-      "community": 23,
+      "community": 178,
       "norm_label": ".__init__()"
     },
     {
       "label": ".is_available()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L281",
+      "source_location": "L323",
       "id": "monitor_speed_providers_brasilbandalargaprovider_is_available",
-      "community": 23,
+      "community": 178,
       "norm_label": ".is_available()"
+    },
+    {
+      "label": ".cleanup()",
+      "file_type": "code",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L326",
+      "id": "monitor_speed_providers_brasilbandalargaprovider_cleanup",
+      "community": 178,
+      "norm_label": ".cleanup()"
     },
     {
       "label": ".run_test()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L284",
+      "source_location": "L331",
       "id": "monitor_speed_providers_brasilbandalargaprovider_run_test",
-      "community": 23,
+      "community": 167,
       "norm_label": ".run_test()"
     },
     {
       "label": "SimetProvider",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L444",
+      "source_location": "L493",
       "id": "monitor_speed_providers_simetprovider",
-      "community": 23,
+      "community": 173,
       "norm_label": "simetprovider"
     },
     {
       "label": ".__init__()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L453",
+      "source_location": "L502",
       "id": "monitor_speed_providers_simetprovider_init",
-      "community": 23,
+      "community": 173,
       "norm_label": ".__init__()"
     },
     {
       "label": ".is_available()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L474",
+      "source_location": "L524",
       "id": "monitor_speed_providers_simetprovider_is_available",
-      "community": 23,
+      "community": 145,
       "norm_label": ".is_available()"
+    },
+    {
+      "label": ".cleanup()",
+      "file_type": "code",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L527",
+      "id": "monitor_speed_providers_simetprovider_cleanup",
+      "community": 173,
+      "norm_label": ".cleanup()"
     },
     {
       "label": ".run_test()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L477",
+      "source_location": "L532",
       "id": "monitor_speed_providers_simetprovider_run_test",
-      "community": 23,
+      "community": 167,
       "norm_label": ".run_test()"
     },
     {
       "label": "MultiProviderSpeedTester",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L664",
+      "source_location": "L721",
       "id": "monitor_speed_providers_multiproviderspeedtester",
-      "community": 23,
+      "community": 145,
       "norm_label": "multiproviderspeedtester"
     },
     {
       "label": ".__init__()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L667",
+      "source_location": "L724",
       "id": "monitor_speed_providers_multiproviderspeedtester_init",
-      "community": 23,
+      "community": 170,
       "norm_label": ".__init__()"
     },
     {
       "label": ".get_available_providers()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L682",
+      "source_location": "L739",
       "id": "monitor_speed_providers_multiproviderspeedtester_get_available_providers",
-      "community": 23,
+      "community": 145,
       "norm_label": ".get_available_providers()"
+    },
+    {
+      "label": ".cleanup_active()",
+      "file_type": "code",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L743",
+      "id": "monitor_speed_providers_multiproviderspeedtester_cleanup_active",
+      "community": 173,
+      "norm_label": ".cleanup_active()"
     },
     {
       "label": ".get_next_provider()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L686",
+      "source_location": "L755",
       "id": "monitor_speed_providers_multiproviderspeedtester_get_next_provider",
-      "community": 23,
+      "community": 145,
       "norm_label": ".get_next_provider()"
     },
     {
       "label": ".run_test_with_fallback()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L698",
+      "source_location": "L767",
       "id": "monitor_speed_providers_multiproviderspeedtester_run_test_with_fallback",
-      "community": 23,
+      "community": 145,
       "norm_label": ".run_test_with_fallback()"
     },
     {
       "label": "get_multi_provider()",
       "file_type": "code",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L734",
+      "source_location": "L803",
       "id": "monitor_speed_providers_get_multi_provider",
-      "community": 36,
+      "community": 181,
       "norm_label": "get_multi_provider()"
     },
     {
@@ -15387,26 +15441,44 @@
       "label": "Estado de progresso em tempo real do teste de velocidade.",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L19",
-      "id": "monitor_speed_providers_rationale_19",
-      "community": 23,
+      "source_location": "L21",
+      "id": "monitor_speed_providers_rationale_21",
+      "community": 170,
       "norm_label": "estado de progresso em tempo real do teste de velocidade."
     },
     {
       "label": "Resultado de um teste de velocidade.",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L30",
-      "id": "monitor_speed_providers_rationale_30",
-      "community": 23,
+      "source_location": "L32",
+      "id": "monitor_speed_providers_rationale_32",
+      "community": 167,
       "norm_label": "resultado de um teste de velocidade."
+    },
+    {
+      "label": "Cria um Service do chromedriver que N\u00c3O abre janela de console no Windows.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L43",
+      "id": "monitor_speed_providers_rationale_43",
+      "community": 167,
+      "norm_label": "cria um service do chromedriver que nao abre janela de console no windows."
+    },
+    {
+      "label": "Fecha um driver Selenium sem nunca propagar erro.      Tenta `driver.quit()` (",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L57",
+      "id": "monitor_speed_providers_rationale_57",
+      "community": 130,
+      "norm_label": "fecha um driver selenium sem nunca propagar erro.      tenta `driver.quit()` ("
     },
     {
       "label": "Classe base abstrata para provedores de teste de velocidade.",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L41",
-      "id": "monitor_speed_providers_rationale_41",
+      "source_location": "L76",
+      "id": "monitor_speed_providers_rationale_76",
       "community": 23,
       "norm_label": "classe base abstrata para provedores de teste de velocidade."
     },
@@ -15414,26 +15486,35 @@
       "label": "Verifica se o provedor est\u00e1 dispon\u00edvel (depend\u00eancias instaladas).",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L51",
-      "id": "monitor_speed_providers_rationale_51",
-      "community": 98,
+      "source_location": "L86",
+      "id": "monitor_speed_providers_rationale_86",
+      "community": 182,
       "norm_label": "verifica se o provedor esta disponivel (dependencias instaladas)."
     },
     {
       "label": "Executa o teste de velocidade. Retorna None em caso de erro.",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L56",
-      "id": "monitor_speed_providers_rationale_56",
-      "community": 99,
+      "source_location": "L91",
+      "id": "monitor_speed_providers_rationale_91",
+      "community": 183,
       "norm_label": "executa o teste de velocidade. retorna none em caso de erro."
+    },
+    {
+      "label": "Libera recursos do provedor (ex.: fechar driver Selenium).          No-op por",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L95",
+      "id": "monitor_speed_providers_rationale_95",
+      "community": 23,
+      "norm_label": "libera recursos do provedor (ex.: fechar driver selenium).          no-op por"
     },
     {
       "label": "Provedor Ookla Speedtest.net usando speedtest-cli.",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L61",
-      "id": "monitor_speed_providers_rationale_61",
+      "source_location": "L103",
+      "id": "monitor_speed_providers_rationale_103",
       "community": 23,
       "norm_label": "provedor ookla speedtest.net usando speedtest-cli."
     },
@@ -15441,90 +15522,117 @@
       "label": "Provedor Netflix Fast.com usando requests.",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L119",
-      "id": "monitor_speed_providers_rationale_119",
-      "community": 23,
+      "source_location": "L161",
+      "id": "monitor_speed_providers_rationale_161",
+      "community": 170,
       "norm_label": "provedor netflix fast.com usando requests."
     },
     {
       "label": "Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L142",
-      "id": "monitor_speed_providers_rationale_142",
-      "community": 23,
+      "source_location": "L184",
+      "id": "monitor_speed_providers_rationale_184",
+      "community": 170,
       "norm_label": "executa teste usando a api do fast.com (netflix).          a api do fast.com r"
     },
     {
       "label": "Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium.",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L259",
-      "id": "monitor_speed_providers_rationale_259",
-      "community": 23,
+      "source_location": "L301",
+      "id": "monitor_speed_providers_rationale_301",
+      "community": 178,
       "norm_label": "provedor brasil banda larga (esaq/anatel) usando selenium."
+    },
+    {
+      "label": "Fecha o driver Selenium em aberto (chamado no encerramento/parada).",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L327",
+      "id": "monitor_speed_providers_rationale_327",
+      "community": 178,
+      "norm_label": "fecha o driver selenium em aberto (chamado no encerramento/parada)."
     },
     {
       "label": "Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L445",
-      "id": "monitor_speed_providers_rationale_445",
-      "community": 23,
+      "source_location": "L494",
+      "id": "monitor_speed_providers_rationale_494",
+      "community": 173,
       "norm_label": "provedor nic.br simet usando selenium.      importante: o simet usa flutter we"
+    },
+    {
+      "label": "Fecha o driver Selenium em aberto (chamado no encerramento/parada).",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L528",
+      "id": "monitor_speed_providers_rationale_528",
+      "community": 173,
+      "norm_label": "fecha o driver selenium em aberto (chamado no encerramento/parada)."
     },
     {
       "label": "Executa teste no SIMET usando Flutter Web.         Flutter renderiza em canvas,",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L478",
-      "id": "monitor_speed_providers_rationale_478",
-      "community": 23,
+      "source_location": "L533",
+      "id": "monitor_speed_providers_rationale_533",
+      "community": 167,
       "norm_label": "executa teste no simet usando flutter web.         flutter renderiza em canvas,"
     },
     {
       "label": "Gerenciador de m\u00faltiplos provedores de teste de velocidade.",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L665",
-      "id": "monitor_speed_providers_rationale_665",
-      "community": 23,
+      "source_location": "L722",
+      "id": "monitor_speed_providers_rationale_722",
+      "community": 145,
       "norm_label": "gerenciador de multiplos provedores de teste de velocidade."
     },
     {
       "label": "Retorna lista de provedores dispon\u00edveis.",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L683",
-      "id": "monitor_speed_providers_rationale_683",
-      "community": 23,
+      "source_location": "L740",
+      "id": "monitor_speed_providers_rationale_740",
+      "community": 145,
       "norm_label": "retorna lista de provedores disponiveis."
+    },
+    {
+      "label": "Fecha qualquer driver Selenium em aberto (parada/encerramento).          Segur",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L744",
+      "id": "monitor_speed_providers_rationale_744",
+      "community": 173,
+      "norm_label": "fecha qualquer driver selenium em aberto (parada/encerramento).          segur"
     },
     {
       "label": "Retorna o pr\u00f3ximo provedor dispon\u00edvel (rota\u00e7\u00e3o round-robin).",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L687",
-      "id": "monitor_speed_providers_rationale_687",
-      "community": 23,
+      "source_location": "L756",
+      "id": "monitor_speed_providers_rationale_756",
+      "community": 145,
       "norm_label": "retorna o proximo provedor disponivel (rotacao round-robin)."
     },
     {
       "label": "Executa teste com o pr\u00f3ximo provedor na rota\u00e7\u00e3o.         Cada chamada testa ape",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L699",
-      "id": "monitor_speed_providers_rationale_699",
-      "community": 23,
+      "source_location": "L768",
+      "id": "monitor_speed_providers_rationale_768",
+      "community": 145,
       "norm_label": "executa teste com o proximo provedor na rotacao.         cada chamada testa ape"
     },
     {
       "label": "Retorna a inst\u00e2ncia global do gerenciador de provedores.",
       "file_type": "rationale",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L735",
-      "id": "monitor_speed_providers_rationale_735",
-      "community": 36,
+      "source_location": "L804",
+      "id": "monitor_speed_providers_rationale_804",
+      "community": 181,
       "norm_label": "retorna a instancia global do gerenciador de provedores."
     },
     {
@@ -15630,7 +15738,7 @@
       "label": ".check_compliance()",
       "file_type": "code",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L178",
+      "source_location": "L187",
       "id": "monitor_speed_tester_continuousspeedtester_check_compliance",
       "community": 36,
       "norm_label": ".check_compliance()"
@@ -15639,7 +15747,7 @@
       "label": ".get_percentage()",
       "file_type": "code",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L199",
+      "source_location": "L208",
       "id": "monitor_speed_tester_continuousspeedtester_get_percentage",
       "community": 36,
       "norm_label": ".get_percentage()"
@@ -15648,7 +15756,7 @@
       "label": ".get_stats_snapshot()",
       "file_type": "code",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L218",
+      "source_location": "L227",
       "id": "monitor_speed_tester_continuousspeedtester_get_stats_snapshot",
       "community": 36,
       "norm_label": ".get_stats_snapshot()"
@@ -15657,7 +15765,7 @@
       "label": "get_speed_tester()",
       "file_type": "code",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L253",
+      "source_location": "L262",
       "id": "monitor_speed_tester_get_speed_tester",
       "community": 45,
       "norm_label": "get_speed_tester()"
@@ -15666,7 +15774,7 @@
       "label": "start_continuous_testing()",
       "file_type": "code",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L261",
+      "source_location": "L270",
       "id": "monitor_speed_tester_start_continuous_testing",
       "community": 36,
       "norm_label": "start_continuous_testing()"
@@ -15675,7 +15783,7 @@
       "label": "stop_continuous_testing()",
       "file_type": "code",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L267",
+      "source_location": "L276",
       "id": "monitor_speed_tester_stop_continuous_testing",
       "community": 36,
       "norm_label": "stop_continuous_testing()"
@@ -15753,20 +15861,20 @@
       "norm_label": "inicia o loop de testes em background."
     },
     {
-      "label": "Para o loop de testes.",
+      "label": "Para o loop de testes.          For\u00e7a o fechamento de qualquer driver Selenium",
       "file_type": "rationale",
       "source_file": "monitor/speed_tester.py",
       "source_location": "L173",
       "id": "monitor_speed_tester_rationale_173",
       "community": 36,
-      "norm_label": "para o loop de testes."
+      "norm_label": "para o loop de testes.          forca o fechamento de qualquer driver selenium"
     },
     {
       "label": "Verifica se velocidade est\u00e1 conforme contrato.          Retorna:",
       "file_type": "rationale",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L179",
-      "id": "monitor_speed_tester_rationale_179",
+      "source_location": "L188",
+      "id": "monitor_speed_tester_rationale_188",
       "community": 36,
       "norm_label": "verifica se velocidade esta conforme contrato.          retorna:"
     },
@@ -15774,8 +15882,8 @@
       "label": "Retorna porcentagem da velocidade contratada.          Retorna:             (",
       "file_type": "rationale",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L200",
-      "id": "monitor_speed_tester_rationale_200",
+      "source_location": "L209",
+      "id": "monitor_speed_tester_rationale_209",
       "community": 36,
       "norm_label": "retorna porcentagem da velocidade contratada.          retorna:             ("
     },
@@ -15783,8 +15891,8 @@
       "label": "Retorna um snapshot thread-safe dos dados atuais.          Inclui resultados p",
       "file_type": "rationale",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L219",
-      "id": "monitor_speed_tester_rationale_219",
+      "source_location": "L228",
+      "id": "monitor_speed_tester_rationale_228",
       "community": 36,
       "norm_label": "retorna um snapshot thread-safe dos dados atuais.          inclui resultados p"
     },
@@ -15792,8 +15900,8 @@
       "label": "Retorna a inst\u00e2ncia global do testador de velocidade.",
       "file_type": "rationale",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L254",
-      "id": "monitor_speed_tester_rationale_254",
+      "source_location": "L263",
+      "id": "monitor_speed_tester_rationale_263",
       "community": 45,
       "norm_label": "retorna a instancia global do testador de velocidade."
     },
@@ -15801,8 +15909,8 @@
       "label": "Inicia testes cont\u00ednuos de velocidade.",
       "file_type": "rationale",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L262",
-      "id": "monitor_speed_tester_rationale_262",
+      "source_location": "L271",
+      "id": "monitor_speed_tester_rationale_271",
       "community": 36,
       "norm_label": "inicia testes continuos de velocidade."
     },
@@ -15810,8 +15918,8 @@
       "label": "Para testes de velocidade.",
       "file_type": "rationale",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L268",
-      "id": "monitor_speed_tester_rationale_268",
+      "source_location": "L277",
+      "id": "monitor_speed_tester_rationale_277",
       "community": 36,
       "norm_label": "para testes de velocidade."
     },
@@ -15839,7 +15947,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L77",
       "id": "monitor_stalker_pingstats",
-      "community": 145,
+      "community": 134,
       "norm_label": "pingstats"
     },
     {
@@ -15848,7 +15956,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L89",
       "id": "monitor_stalker_pingstats_add",
-      "community": 145,
+      "community": 134,
       "norm_label": ".add()"
     },
     {
@@ -15884,7 +15992,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L166",
       "id": "monitor_stalker_save_prefs",
-      "community": 15,
+      "community": 146,
       "norm_label": "save_prefs()"
     },
     {
@@ -15893,7 +16001,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L186",
       "id": "monitor_stalker_load_prefs",
-      "community": 15,
+      "community": 146,
       "norm_label": "load_prefs()"
     },
     {
@@ -15902,7 +16010,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L207",
       "id": "monitor_stalker_set_allow_full_history_export",
-      "community": 15,
+      "community": 146,
       "norm_label": "set_allow_full_history_export()"
     },
     {
@@ -15947,7 +16055,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L256",
       "id": "monitor_stalker_get_top_network_hogs",
-      "community": 130,
+      "community": 179,
       "norm_label": "get_top_network_hogs()"
     },
     {
@@ -15956,7 +16064,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L309",
       "id": "monitor_stalker_get_top_network_hogs_fallback",
-      "community": 130,
+      "community": 179,
       "norm_label": "_get_top_network_hogs_fallback()"
     },
     {
@@ -15965,7 +16073,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L334",
       "id": "monitor_stalker_analyze_lag_source",
-      "community": 5,
+      "community": 166,
       "norm_label": "analyze_lag_source()"
     },
     {
@@ -16190,7 +16298,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L78",
       "id": "monitor_stalker_rationale_78",
-      "community": 145,
+      "community": 134,
       "norm_label": "estatisticas de historico de ping com timestamps."
     },
     {
@@ -16226,7 +16334,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L167",
       "id": "monitor_stalker_rationale_167",
-      "community": 15,
+      "community": 146,
       "norm_label": "persiste preferencias relevantes para exportacao em json."
     },
     {
@@ -16235,7 +16343,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L187",
       "id": "monitor_stalker_rationale_187",
-      "community": 15,
+      "community": 146,
       "norm_label": "carrega preferencias salvas, se o arquivo existir."
     },
     {
@@ -16244,7 +16352,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L208",
       "id": "monitor_stalker_rationale_208",
-      "community": 15,
+      "community": 146,
       "norm_label": "define a flag e persiste em disco."
     },
     {
@@ -16289,7 +16397,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L257",
       "id": "monitor_stalker_rationale_257",
-      "community": 130,
+      "community": 179,
       "norm_label": "identifica os processos (top 5) com mais conexoes de rede ativas.      nota: u"
     },
     {
@@ -16298,7 +16406,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L310",
       "id": "monitor_stalker_rationale_310",
-      "community": 130,
+      "community": 179,
       "norm_label": "fallback usando i/o counters (menos preciso, usado quando sem permissao)."
     },
     {
@@ -16307,7 +16415,7 @@
       "source_file": "monitor/stalker.py",
       "source_location": "L337",
       "id": "monitor_stalker_rationale_337",
-      "community": 5,
+      "community": 166,
       "norm_label": "analisa a origem provavel do lag com mais inteligencia.      retorna: (suspeit"
     },
     {
@@ -18440,7 +18548,7 @@
       "source_file": "tests/test_export_prefs.py",
       "source_location": "L1",
       "id": "tests_test_export_prefs_py",
-      "community": 15,
+      "community": 146,
       "norm_label": "test_export_prefs.py"
     },
     {
@@ -18449,7 +18557,7 @@
       "source_file": "tests/test_export_prefs.py",
       "source_location": "L11",
       "id": "tests_test_export_prefs_test_prefs_persistence",
-      "community": 15,
+      "community": 146,
       "norm_label": "test_prefs_persistence()"
     },
     {
@@ -18458,7 +18566,7 @@
       "source_file": "tests/test_export_prefs.py",
       "source_location": "L29",
       "id": "tests_test_export_prefs_test_prompt_export_save_always",
-      "community": 15,
+      "community": 146,
       "norm_label": "test_prompt_export_save_always()"
     },
     {
@@ -18467,7 +18575,7 @@
       "source_file": "tests/test_export_prefs.py",
       "source_location": "L48",
       "id": "tests_test_export_prefs_test_handle_key_toggle_writes",
-      "community": 15,
+      "community": 146,
       "norm_label": "test_handle_key_toggle_writes()"
     },
     {
@@ -19002,6 +19110,123 @@
       "norm_label": "tests for the pure logic of the integrated rtsp scanner (rtsp/ package)."
     },
     {
+      "label": "test_speed_cleanup.py",
+      "file_type": "code",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L1",
+      "id": "tests_test_speed_cleanup_py",
+      "community": 130,
+      "norm_label": "test_speed_cleanup.py"
+    },
+    {
+      "label": "FakeDriver",
+      "file_type": "code",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L15",
+      "id": "tests_test_speed_cleanup_fakedriver",
+      "community": 130,
+      "norm_label": "fakedriver"
+    },
+    {
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L16",
+      "id": "tests_test_speed_cleanup_fakedriver_init",
+      "community": 130,
+      "norm_label": ".__init__()"
+    },
+    {
+      "label": ".quit()",
+      "file_type": "code",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L21",
+      "id": "tests_test_speed_cleanup_fakedriver_quit",
+      "community": 130,
+      "norm_label": ".quit()"
+    },
+    {
+      "label": "test_safe_quit_calls_quit()",
+      "file_type": "code",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L27",
+      "id": "tests_test_speed_cleanup_test_safe_quit_calls_quit",
+      "community": 130,
+      "norm_label": "test_safe_quit_calls_quit()"
+    },
+    {
+      "label": "test_safe_quit_handles_none()",
+      "file_type": "code",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L33",
+      "id": "tests_test_speed_cleanup_test_safe_quit_handles_none",
+      "community": 130,
+      "norm_label": "test_safe_quit_handles_none()"
+    },
+    {
+      "label": "test_safe_quit_fallback_kills_process()",
+      "file_type": "code",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L37",
+      "id": "tests_test_speed_cleanup_test_safe_quit_fallback_kills_process",
+      "community": 130,
+      "norm_label": "test_safe_quit_fallback_kills_process()"
+    },
+    {
+      "label": "test_provider_cleanup_quits_and_clears_driver()",
+      "file_type": "code",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L50",
+      "id": "tests_test_speed_cleanup_test_provider_cleanup_quits_and_clears_driver",
+      "community": 130,
+      "norm_label": "test_provider_cleanup_quits_and_clears_driver()"
+    },
+    {
+      "label": "test_provider_cleanup_without_driver_is_safe()",
+      "file_type": "code",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L59",
+      "id": "tests_test_speed_cleanup_test_provider_cleanup_without_driver_is_safe",
+      "community": 130,
+      "norm_label": "test_provider_cleanup_without_driver_is_safe()"
+    },
+    {
+      "label": "test_chrome_service_suppresses_console_window()",
+      "file_type": "code",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L65",
+      "id": "tests_test_speed_cleanup_test_chrome_service_suppresses_console_window",
+      "community": 167,
+      "norm_label": "test_chrome_service_suppresses_console_window()"
+    },
+    {
+      "label": "test_continuous_stop_cleans_active_drivers()",
+      "file_type": "code",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L74",
+      "id": "tests_test_speed_cleanup_test_continuous_stop_cleans_active_drivers",
+      "community": 36,
+      "norm_label": "test_continuous_stop_cleans_active_drivers()"
+    },
+    {
+      "label": "Tests for Selenium driver cleanup (no orphaned chrome/chromedriver).",
+      "file_type": "rationale",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L1",
+      "id": "tests_test_speed_cleanup_rationale_1",
+      "community": 130,
+      "norm_label": "tests for selenium driver cleanup (no orphaned chrome/chromedriver)."
+    },
+    {
+      "label": "O Service do chromedriver deve usar CREATE_NO_WINDOW (sem console).",
+      "file_type": "rationale",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L66",
+      "id": "tests_test_speed_cleanup_rationale_66",
+      "community": 167,
+      "norm_label": "o service do chromedriver deve usar create_no_window (sem console)."
+    },
+    {
       "label": "test_textual_app.py",
       "file_type": "code",
       "source_file": "tests/test_textual_app.py",
@@ -19034,7 +19259,7 @@
       "source_file": "tests/test_textual_app.py",
       "source_location": "L35",
       "id": "tests_test_textual_app_test_textual_dashboard_renders_and_menu_switches_to_cleanup",
-      "community": 31,
+      "community": 40,
       "norm_label": "test_textual_dashboard_renders_and_menu_switches_to_cleanup()"
     },
     {
@@ -19043,7 +19268,7 @@
       "source_file": "tests/test_textual_app.py",
       "source_location": "L51",
       "id": "tests_test_textual_app_test_textual_settings_save_recording_and_language",
-      "community": 37,
+      "community": 127,
       "norm_label": "test_textual_settings_save_recording_and_language()"
     },
     {
@@ -19061,7 +19286,7 @@
       "source_file": "tests/test_textual_app.py",
       "source_location": "L102",
       "id": "tests_test_textual_app_test_textual_cleanup_preferences_are_saved",
-      "community": 40,
+      "community": 31,
       "norm_label": "test_textual_cleanup_preferences_are_saved()"
     },
     {
@@ -21405,6 +21630,375 @@
       "norm_label": "notes for ai agents"
     },
     {
+      "label": "Estado de progresso em tempo real do teste de velocidade.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L20",
+      "community": 170,
+      "norm_label": "estado de progresso em tempo real do teste de velocidade.",
+      "id": "monitor_speed_providers_rationale_20"
+    },
+    {
+      "label": "Resultado de um teste de velocidade.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L31",
+      "community": 167,
+      "norm_label": "resultado de um teste de velocidade.",
+      "id": "monitor_speed_providers_rationale_31"
+    },
+    {
+      "label": "Fecha um driver Selenium sem nunca propagar erro.      Tenta `driver.quit()` (",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L42",
+      "community": 130,
+      "norm_label": "fecha um driver selenium sem nunca propagar erro.      tenta `driver.quit()` (",
+      "id": "monitor_speed_providers_rationale_42"
+    },
+    {
+      "label": "Classe base abstrata para provedores de teste de velocidade.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L61",
+      "community": 23,
+      "norm_label": "classe base abstrata para provedores de teste de velocidade.",
+      "id": "monitor_speed_providers_rationale_61"
+    },
+    {
+      "label": "Verifica se o provedor est\u00e1 dispon\u00edvel (depend\u00eancias instaladas).",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L71",
+      "community": 176,
+      "norm_label": "verifica se o provedor esta disponivel (dependencias instaladas).",
+      "id": "monitor_speed_providers_rationale_71"
+    },
+    {
+      "label": "Libera recursos do provedor (ex.: fechar driver Selenium).          No-op por",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L80",
+      "community": 23,
+      "norm_label": "libera recursos do provedor (ex.: fechar driver selenium).          no-op por",
+      "id": "monitor_speed_providers_rationale_80"
+    },
+    {
+      "label": "Provedor Ookla Speedtest.net usando speedtest-cli.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L88",
+      "community": 23,
+      "norm_label": "provedor ookla speedtest.net usando speedtest-cli.",
+      "id": "monitor_speed_providers_rationale_88"
+    },
+    {
+      "label": "Provedor Netflix Fast.com usando requests.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L146",
+      "community": 170,
+      "norm_label": "provedor netflix fast.com usando requests.",
+      "id": "monitor_speed_providers_rationale_146"
+    },
+    {
+      "label": "Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L169",
+      "community": 170,
+      "norm_label": "executa teste usando a api do fast.com (netflix).          a api do fast.com r",
+      "id": "monitor_speed_providers_rationale_169"
+    },
+    {
+      "label": "Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L286",
+      "community": 178,
+      "norm_label": "provedor brasil banda larga (esaq/anatel) usando selenium.",
+      "id": "monitor_speed_providers_rationale_286"
+    },
+    {
+      "label": "Fecha o driver Selenium em aberto (chamado no encerramento/parada).",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L312",
+      "community": 178,
+      "norm_label": "fecha o driver selenium em aberto (chamado no encerramento/parada).",
+      "id": "monitor_speed_providers_rationale_312"
+    },
+    {
+      "label": "Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L479",
+      "community": 173,
+      "norm_label": "provedor nic.br simet usando selenium.      importante: o simet usa flutter we",
+      "id": "monitor_speed_providers_rationale_479"
+    },
+    {
+      "label": "Fecha o driver Selenium em aberto (chamado no encerramento/parada).",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L513",
+      "community": 173,
+      "norm_label": "fecha o driver selenium em aberto (chamado no encerramento/parada).",
+      "id": "monitor_speed_providers_rationale_513"
+    },
+    {
+      "label": "Executa teste no SIMET usando Flutter Web.         Flutter renderiza em canvas,",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L518",
+      "community": 167,
+      "norm_label": "executa teste no simet usando flutter web.         flutter renderiza em canvas,",
+      "id": "monitor_speed_providers_rationale_518"
+    },
+    {
+      "label": "Gerenciador de m\u00faltiplos provedores de teste de velocidade.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L707",
+      "community": 145,
+      "norm_label": "gerenciador de multiplos provedores de teste de velocidade.",
+      "id": "monitor_speed_providers_rationale_707"
+    },
+    {
+      "label": "Retorna lista de provedores dispon\u00edveis.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L725",
+      "community": 145,
+      "norm_label": "retorna lista de provedores disponiveis.",
+      "id": "monitor_speed_providers_rationale_725"
+    },
+    {
+      "label": "Fecha qualquer driver Selenium em aberto (parada/encerramento).          Segur",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L729",
+      "community": 173,
+      "norm_label": "fecha qualquer driver selenium em aberto (parada/encerramento).          segur",
+      "id": "monitor_speed_providers_rationale_729"
+    },
+    {
+      "label": "Retorna o pr\u00f3ximo provedor dispon\u00edvel (rota\u00e7\u00e3o round-robin).",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L741",
+      "community": 145,
+      "norm_label": "retorna o proximo provedor disponivel (rotacao round-robin).",
+      "id": "monitor_speed_providers_rationale_741"
+    },
+    {
+      "label": "Executa teste com o pr\u00f3ximo provedor na rota\u00e7\u00e3o.         Cada chamada testa ape",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L753",
+      "community": 145,
+      "norm_label": "executa teste com o proximo provedor na rotacao.         cada chamada testa ape",
+      "id": "monitor_speed_providers_rationale_753"
+    },
+    {
+      "label": "Retorna a inst\u00e2ncia global do gerenciador de provedores.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L789",
+      "community": 181,
+      "norm_label": "retorna a instancia global do gerenciador de provedores.",
+      "id": "monitor_speed_providers_rationale_789"
+    },
+    {
+      "label": "Estado de progresso em tempo real do teste de velocidade.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L19",
+      "community": 170,
+      "norm_label": "estado de progresso em tempo real do teste de velocidade.",
+      "id": "monitor_speed_providers_rationale_19"
+    },
+    {
+      "label": "Resultado de um teste de velocidade.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L30",
+      "community": 167,
+      "norm_label": "resultado de um teste de velocidade.",
+      "id": "monitor_speed_providers_rationale_30"
+    },
+    {
+      "label": "Classe base abstrata para provedores de teste de velocidade.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L41",
+      "community": 23,
+      "norm_label": "classe base abstrata para provedores de teste de velocidade.",
+      "id": "monitor_speed_providers_rationale_41"
+    },
+    {
+      "label": "Verifica se o provedor est\u00e1 dispon\u00edvel (depend\u00eancias instaladas).",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L51",
+      "community": 98,
+      "norm_label": "verifica se o provedor esta disponivel (dependencias instaladas).",
+      "id": "monitor_speed_providers_rationale_51"
+    },
+    {
+      "label": "Executa o teste de velocidade. Retorna None em caso de erro.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L56",
+      "community": 99,
+      "norm_label": "executa o teste de velocidade. retorna none em caso de erro.",
+      "id": "monitor_speed_providers_rationale_56"
+    },
+    {
+      "label": "Provedor Netflix Fast.com usando requests.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L119",
+      "community": 170,
+      "norm_label": "provedor netflix fast.com usando requests.",
+      "id": "monitor_speed_providers_rationale_119"
+    },
+    {
+      "label": "Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L142",
+      "community": 170,
+      "norm_label": "executa teste usando a api do fast.com (netflix).          a api do fast.com r",
+      "id": "monitor_speed_providers_rationale_142"
+    },
+    {
+      "label": "Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L259",
+      "community": 178,
+      "norm_label": "provedor brasil banda larga (esaq/anatel) usando selenium.",
+      "id": "monitor_speed_providers_rationale_259"
+    },
+    {
+      "label": "Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L445",
+      "community": 173,
+      "norm_label": "provedor nic.br simet usando selenium.      importante: o simet usa flutter we",
+      "id": "monitor_speed_providers_rationale_445"
+    },
+    {
+      "label": "Executa teste no SIMET usando Flutter Web.         Flutter renderiza em canvas,",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L478",
+      "community": 167,
+      "norm_label": "executa teste no simet usando flutter web.         flutter renderiza em canvas,",
+      "id": "monitor_speed_providers_rationale_478"
+    },
+    {
+      "label": "Gerenciador de m\u00faltiplos provedores de teste de velocidade.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L665",
+      "community": 145,
+      "norm_label": "gerenciador de multiplos provedores de teste de velocidade.",
+      "id": "monitor_speed_providers_rationale_665"
+    },
+    {
+      "label": "Retorna lista de provedores dispon\u00edveis.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L683",
+      "community": 145,
+      "norm_label": "retorna lista de provedores disponiveis.",
+      "id": "monitor_speed_providers_rationale_683"
+    },
+    {
+      "label": "Retorna o pr\u00f3ximo provedor dispon\u00edvel (rota\u00e7\u00e3o round-robin).",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L687",
+      "community": 145,
+      "norm_label": "retorna o proximo provedor disponivel (rotacao round-robin).",
+      "id": "monitor_speed_providers_rationale_687"
+    },
+    {
+      "label": "Executa teste com o pr\u00f3ximo provedor na rota\u00e7\u00e3o.         Cada chamada testa ape",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L699",
+      "community": 145,
+      "norm_label": "executa teste com o proximo provedor na rotacao.         cada chamada testa ape",
+      "id": "monitor_speed_providers_rationale_699"
+    },
+    {
+      "label": "Retorna a inst\u00e2ncia global do gerenciador de provedores.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L735",
+      "community": 181,
+      "norm_label": "retorna a instancia global do gerenciador de provedores.",
+      "id": "monitor_speed_providers_rationale_735"
+    },
+    {
+      "label": "Verifica se velocidade est\u00e1 conforme contrato.          Retorna:",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_tester.py",
+      "source_location": "L179",
+      "community": 36,
+      "norm_label": "verifica se velocidade esta conforme contrato.          retorna:",
+      "id": "monitor_speed_tester_rationale_179"
+    },
+    {
+      "label": "Retorna porcentagem da velocidade contratada.          Retorna:             (",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_tester.py",
+      "source_location": "L200",
+      "community": 36,
+      "norm_label": "retorna porcentagem da velocidade contratada.          retorna:             (",
+      "id": "monitor_speed_tester_rationale_200"
+    },
+    {
+      "label": "Retorna um snapshot thread-safe dos dados atuais.          Inclui resultados p",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_tester.py",
+      "source_location": "L219",
+      "community": 36,
+      "norm_label": "retorna um snapshot thread-safe dos dados atuais.          inclui resultados p",
+      "id": "monitor_speed_tester_rationale_219"
+    },
+    {
+      "label": "Retorna a inst\u00e2ncia global do testador de velocidade.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_tester.py",
+      "source_location": "L254",
+      "community": 45,
+      "norm_label": "retorna a instancia global do testador de velocidade.",
+      "id": "monitor_speed_tester_rationale_254"
+    },
+    {
+      "label": "Inicia testes cont\u00ednuos de velocidade.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_tester.py",
+      "source_location": "L262",
+      "community": 36,
+      "norm_label": "inicia testes continuos de velocidade.",
+      "id": "monitor_speed_tester_rationale_262"
+    },
+    {
+      "label": "Para testes de velocidade.",
+      "file_type": "rationale",
+      "source_file": "monitor/speed_tester.py",
+      "source_location": "L268",
+      "community": 36,
+      "norm_label": "para testes de velocidade.",
+      "id": "monitor_speed_tester_rationale_268"
+    },
+    {
       "label": "Keep the cleanup summary in sync the moment a step is toggled.",
       "file_type": "rationale",
       "source_file": "cli/textual_app.py",
@@ -21535,7 +22129,7 @@
       "file_type": "rationale",
       "source_file": "cli/textual_cameras.py",
       "source_location": "L1128",
-      "community": 168,
+      "community": 107,
       "norm_label": "importa .txt de usuarios e/ou senhas e combina (produto cartesiano).",
       "id": "cli_textual_cameras_rationale_1128"
     },
@@ -21571,7 +22165,7 @@
       "file_type": "rationale",
       "source_file": "cli/textual_cameras.py",
       "source_location": "L1076",
-      "community": 168,
+      "community": 107,
       "norm_label": "importa .txt de usuarios e/ou senhas e combina (produto cartesiano).",
       "id": "cli_textual_cameras_rationale_1076"
     },
@@ -21607,7 +22201,7 @@
       "file_type": "rationale",
       "source_file": "cli/textual_cameras.py",
       "source_location": "L1069",
-      "community": 168,
+      "community": 107,
       "norm_label": "importa .txt de usuarios e/ou senhas e combina (produto cartesiano).",
       "id": "cli_textual_cameras_rationale_1069"
     },
@@ -21625,7 +22219,7 @@
       "file_type": "rationale",
       "source_file": "cli/textual_cameras.py",
       "source_location": "L1066",
-      "community": 168,
+      "community": 107,
       "norm_label": "importa .txt de usuarios e/ou senhas e combina (produto cartesiano).",
       "id": "cli_textual_cameras_rationale_1066"
     },
@@ -21688,7 +22282,7 @@
       "file_type": "rationale",
       "source_file": "cli/textual_app.py",
       "source_location": "L86",
-      "community": 37,
+      "community": 177,
       "norm_label": "static widget that displays rich renderables.",
       "id": "cli_textual_app_rationale_86"
     },
@@ -21760,7 +22354,7 @@
       "file_type": "rationale",
       "source_file": "cli/textual_app.py",
       "source_location": "L635",
-      "community": 145,
+      "community": 134,
       "norm_label": "jump to the network ports view and force a fresh scan next tick.",
       "id": "cli_textual_app_rationale_635"
     },
@@ -21931,7 +22525,7 @@
       "file_type": "code",
       "source_file": "cli/textual_app.py",
       "source_location": "L417",
-      "community": 37,
+      "community": 40,
       "norm_label": "._compose_scanner()",
       "id": "cli_textual_app_vareduratextualapp_compose_scanner"
     },
@@ -21940,7 +22534,7 @@
       "file_type": "code",
       "source_file": "cli/textual_app.py",
       "source_location": "L616",
-      "community": 40,
+      "community": 134,
       "norm_label": ".action_run_scanner()",
       "id": "cli_textual_app_vareduratextualapp_action_run_scanner"
     },
@@ -21949,7 +22543,7 @@
       "file_type": "code",
       "source_file": "cli/textual_app.py",
       "source_location": "L812",
-      "community": 40,
+      "community": 134,
       "norm_label": "._start_scanner()",
       "id": "cli_textual_app_vareduratextualapp_start_scanner"
     },
@@ -21958,7 +22552,7 @@
       "file_type": "code",
       "source_file": "cli/textual_app.py",
       "source_location": "L818",
-      "community": 40,
+      "community": 134,
       "norm_label": "_run_scanner_worker()",
       "id": "cli_textual_app_run_scanner_worker"
     },
@@ -22012,7 +22606,7 @@
       "file_type": "rationale",
       "source_file": "cli/textual_app.py",
       "source_location": "L85",
-      "community": 37,
+      "community": 177,
       "norm_label": "static widget that displays rich renderables.",
       "id": "cli_textual_app_rationale_85"
     },
@@ -23803,7 +24397,7 @@
       "file_type": "rationale",
       "source_file": "monitor/stalker.py",
       "source_location": "L142",
-      "community": 15,
+      "community": 146,
       "norm_label": "persiste preferencias relevantes para exportacao em json.",
       "id": "monitor_stalker_rationale_142"
     },
@@ -23812,7 +24406,7 @@
       "file_type": "rationale",
       "source_file": "monitor/stalker.py",
       "source_location": "L162",
-      "community": 15,
+      "community": 146,
       "norm_label": "carrega preferencias salvas, se o arquivo existir.",
       "id": "monitor_stalker_rationale_162"
     },
@@ -23821,7 +24415,7 @@
       "file_type": "rationale",
       "source_file": "monitor/stalker.py",
       "source_location": "L183",
-      "community": 15,
+      "community": 146,
       "norm_label": "define a flag e persiste em disco.",
       "id": "monitor_stalker_rationale_183"
     },
@@ -23866,7 +24460,7 @@
       "file_type": "rationale",
       "source_file": "monitor/stalker.py",
       "source_location": "L232",
-      "community": 130,
+      "community": 179,
       "norm_label": "identifica os processos (top 5) com mais conexoes de rede ativas.      nota: u",
       "id": "monitor_stalker_rationale_232"
     },
@@ -23875,7 +24469,7 @@
       "file_type": "rationale",
       "source_file": "monitor/stalker.py",
       "source_location": "L285",
-      "community": 130,
+      "community": 179,
       "norm_label": "fallback usando i/o counters (menos preciso, usado quando sem permissao).",
       "id": "monitor_stalker_rationale_285"
     },
@@ -23884,7 +24478,7 @@
       "file_type": "rationale",
       "source_file": "monitor/stalker.py",
       "source_location": "L312",
-      "community": 5,
+      "community": 166,
       "norm_label": "analisa a origem provavel do lag com mais inteligencia.      retorna: (suspeit",
       "id": "monitor_stalker_rationale_312"
     },
@@ -24262,7 +24856,7 @@
       "file_type": "rationale",
       "source_file": "cli/textual_app.py",
       "source_location": "L69",
-      "community": 37,
+      "community": 177,
       "norm_label": "static widget that displays rich renderables.",
       "id": "cli_textual_app_rationale_69"
     },
@@ -24451,7 +25045,7 @@
       "file_type": "rationale",
       "source_file": "cli/ui_shared.py",
       "source_location": "L217",
-      "community": 127,
+      "community": 37,
       "norm_label": "build a compact cleanup preference summary.",
       "id": "cli_ui_shared_rationale_217"
     },
@@ -24532,7 +25126,7 @@
       "file_type": "rationale",
       "source_file": "cli/textual_app.py",
       "source_location": "L66",
-      "community": 37,
+      "community": 177,
       "norm_label": "static widget that displays rich renderables.",
       "id": "cli_textual_app_rationale_66"
     },
@@ -24595,7 +25189,7 @@
       "file_type": "rationale",
       "source_file": "cli/ui_shared.py",
       "source_location": "L186",
-      "community": 127,
+      "community": 37,
       "norm_label": "build a compact cleanup preference summary.",
       "id": "cli_ui_shared_rationale_186"
     },
@@ -24685,7 +25279,7 @@
       "file_type": "code",
       "source_file": ".vscode/mcp.json",
       "source_location": "L1",
-      "community": 134,
+      "community": 180,
       "norm_label": "mcp.json",
       "id": "vscode_mcp_json"
     },
@@ -24694,7 +25288,7 @@
       "file_type": "code",
       "source_file": ".vscode/mcp.json",
       "source_location": "L2",
-      "community": 134,
+      "community": 180,
       "norm_label": "servers",
       "id": "vscode_mcp_servers"
     },
@@ -24703,7 +25297,7 @@
       "file_type": "code",
       "source_file": ".vscode/mcp.json",
       "source_location": "L3",
-      "community": 134,
+      "community": 180,
       "norm_label": "varedura",
       "id": "vscode_mcp_servers_varedura"
     },
@@ -24712,7 +25306,7 @@
       "file_type": "code",
       "source_file": ".vscode/mcp.json",
       "source_location": "L4",
-      "community": 134,
+      "community": 180,
       "norm_label": "type",
       "id": "vscode_mcp_varedura_type"
     },
@@ -24721,7 +25315,7 @@
       "file_type": "code",
       "source_file": ".vscode/mcp.json",
       "source_location": "L5",
-      "community": 134,
+      "community": 180,
       "norm_label": "command",
       "id": "vscode_mcp_varedura_command"
     },
@@ -24730,7 +25324,7 @@
       "file_type": "code",
       "source_file": ".vscode/mcp.json",
       "source_location": "L6",
-      "community": 134,
+      "community": 180,
       "norm_label": "args",
       "id": "vscode_mcp_varedura_args"
     },
@@ -24748,7 +25342,7 @@
       "file_type": "code",
       "source_file": "cli/textual_app.py",
       "source_location": "L87",
-      "community": 49,
+      "community": 177,
       "norm_label": ".__init__()",
       "id": "cli_textual_app_confirmmodal_init"
     },
@@ -24775,7 +25369,7 @@
       "file_type": "rationale",
       "source_file": "cli/textual_app.py",
       "source_location": "L63",
-      "community": 37,
+      "community": 177,
       "norm_label": "static widget that displays rich renderables.",
       "id": "cli_textual_app_rationale_63"
     },
@@ -25432,7 +26026,7 @@
       "file_type": "code",
       "source_file": "main.py",
       "source_location": "L59",
-      "community": 22,
+      "community": 155,
       "norm_label": "_load_prefs()",
       "id": "varedura_main_load_prefs"
     },
@@ -25441,7 +26035,7 @@
       "file_type": "code",
       "source_file": "main.py",
       "source_location": "L69",
-      "community": 22,
+      "community": 155,
       "norm_label": "_save_prefs()",
       "id": "varedura_main_save_prefs"
     },
@@ -25450,7 +26044,7 @@
       "file_type": "code",
       "source_file": "main.py",
       "source_location": "L77",
-      "community": 22,
+      "community": 155,
       "norm_label": "_load_recording_pref()",
       "id": "varedura_main_load_recording_pref"
     },
@@ -25459,7 +26053,7 @@
       "file_type": "code",
       "source_file": "main.py",
       "source_location": "L82",
-      "community": 22,
+      "community": 155,
       "norm_label": "_save_recording_pref()",
       "id": "varedura_main_save_recording_pref"
     },
@@ -25468,7 +26062,7 @@
       "file_type": "code",
       "source_file": "main.py",
       "source_location": "L89",
-      "community": 22,
+      "community": 171,
       "norm_label": "_load_cleanup_steps()",
       "id": "varedura_main_load_cleanup_steps"
     },
@@ -25477,7 +26071,7 @@
       "file_type": "code",
       "source_file": "main.py",
       "source_location": "L95",
-      "community": 22,
+      "community": 155,
       "norm_label": "_save_cleanup_steps()",
       "id": "varedura_main_save_cleanup_steps"
     },
@@ -25486,7 +26080,7 @@
       "file_type": "code",
       "source_file": "main.py",
       "source_location": "L102",
-      "community": 22,
+      "community": 171,
       "norm_label": "_get_cleanup_steps()",
       "id": "varedura_main_get_cleanup_steps"
     },
@@ -25495,7 +26089,7 @@
       "file_type": "code",
       "source_file": "main.py",
       "source_location": "L168",
-      "community": 22,
+      "community": 169,
       "norm_label": "_is_mcp_configured()",
       "id": "varedura_main_is_mcp_configured"
     },
@@ -25504,7 +26098,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L60",
-      "community": 22,
+      "community": 155,
       "norm_label": "load all preferences from disk.",
       "id": "varedura_main_rationale_60"
     },
@@ -25513,7 +26107,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L70",
-      "community": 22,
+      "community": 155,
       "norm_label": "save preferences to disk.",
       "id": "varedura_main_rationale_70"
     },
@@ -25522,7 +26116,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L78",
-      "community": 22,
+      "community": 155,
       "norm_label": "load recording preference from disk (default: enabled).",
       "id": "varedura_main_rationale_78"
     },
@@ -25531,7 +26125,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L83",
-      "community": 22,
+      "community": 155,
       "norm_label": "save recording preference to disk.",
       "id": "varedura_main_rationale_83"
     },
@@ -25540,7 +26134,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L90",
-      "community": 22,
+      "community": 171,
       "norm_label": "load cleanup step preferences. returns none if never configured.",
       "id": "varedura_main_rationale_90"
     },
@@ -25549,7 +26143,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L96",
-      "community": 22,
+      "community": 155,
       "norm_label": "save cleanup step preferences.",
       "id": "varedura_main_rationale_96"
     },
@@ -25558,7 +26152,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L103",
-      "community": 22,
+      "community": 171,
       "norm_label": "get cleanup steps, using defaults if not yet configured.",
       "id": "varedura_main_rationale_103"
     },
@@ -25567,7 +26161,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L169",
-      "community": 22,
+      "community": 169,
       "norm_label": "check if the mcp server config exists for this workspace.",
       "id": "varedura_main_rationale_169"
     },
@@ -25576,7 +26170,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L180",
-      "community": 22,
+      "community": 169,
       "norm_label": "add or remove the varedura mcp server from .vscode/mcp.json.",
       "id": "varedura_main_rationale_180"
     },
@@ -25585,7 +26179,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L220",
-      "community": 22,
+      "community": 174,
       "norm_label": "build the full menu layout with a given mascot panel.",
       "id": "varedura_main_rationale_220"
     },
@@ -25594,7 +26188,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L254",
-      "community": 22,
+      "community": 174,
       "norm_label": "display the main menu with a continuously animated mascot.      returns the user",
       "id": "varedura_main_rationale_254"
     },
@@ -25603,7 +26197,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L292",
-      "community": 22,
+      "community": 172,
       "norm_label": "start recording the current user session if enabled.",
       "id": "varedura_main_rationale_292"
     },
@@ -25612,7 +26206,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L306",
-      "community": 22,
+      "community": 172,
       "norm_label": "stop session recording and save a single gif for the whole run.",
       "id": "varedura_main_rationale_306"
     },
@@ -25630,7 +26224,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L348",
-      "community": 22,
+      "community": 171,
       "norm_label": "run docker cleanup using the user's saved step preferences.      on first run (n",
       "id": "varedura_main_rationale_348"
     },
@@ -25657,7 +26251,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L521",
-      "community": 22,
+      "community": 172,
       "norm_label": "toggle automatic gif recording.",
       "id": "varedura_main_rationale_521"
     },
@@ -25666,7 +26260,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L537",
-      "community": 37,
+      "community": 169,
       "norm_label": "show language selection menu.",
       "id": "varedura_main_rationale_537"
     },
@@ -25675,7 +26269,7 @@
       "file_type": "rationale",
       "source_file": "main.py",
       "source_location": "L557",
-      "community": 22,
+      "community": 169,
       "norm_label": "show the settings menu with all configurable options.",
       "id": "varedura_main_rationale_557"
     },
@@ -25747,7 +26341,7 @@
       "file_type": "rationale",
       "source_file": "i18n/__init__.py",
       "source_location": "L116",
-      "community": 37,
+      "community": 127,
       "norm_label": "return the current language code.",
       "id": "i18n_init_rationale_116"
     },
@@ -25756,7 +26350,7 @@
       "file_type": "rationale",
       "source_file": "i18n/__init__.py",
       "source_location": "L121",
-      "community": 37,
+      "community": 127,
       "norm_label": "return tuple of supported language codes.",
       "id": "i18n_init_rationale_121"
     },
@@ -26733,7 +27327,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 22,
+      "community": 175,
       "norm_label": "mascot sprite generation",
       "id": "mascot_sprite_generation"
     },
@@ -26746,7 +27340,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 22,
+      "community": 175,
       "norm_label": "mascot frame registry",
       "id": "mascot_frame_registry"
     },
@@ -26759,7 +27353,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 22,
+      "community": 175,
       "norm_label": "mascotrenderer",
       "id": "mascot_renderer"
     },
@@ -35146,9 +35740,9 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L694",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_app_vareduratextualapp",
-      "target": "cli_textual_app_vareduratextualapp_on_resize",
-      "confidence_score": 1.0
+      "target": "cli_textual_app_vareduratextualapp_on_resize"
     },
     {
       "relation": "method",
@@ -36955,9 +37549,9 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L766",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_app_rationale_766",
-      "target": "cli_textual_app_vareduratextualapp_refresh_live_settings_status",
-      "confidence_score": 1.0
+      "target": "cli_textual_app_vareduratextualapp_refresh_live_settings_status"
     },
     {
       "relation": "calls",
@@ -37083,9 +37677,9 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L800",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_app_rationale_800",
-      "target": "cli_textual_app_vareduratextualapp_save_network_settings",
-      "confidence_score": 1.0
+      "target": "cli_textual_app_vareduratextualapp_save_network_settings"
     },
     {
       "relation": "calls",
@@ -37361,9 +37955,9 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L949",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_app_rationale_949",
-      "target": "cli_textual_app_vareduratextualapp_friendly_process",
-      "confidence_score": 1.0
+      "target": "cli_textual_app_vareduratextualapp_friendly_process"
     },
     {
       "relation": "rationale_for",
@@ -37412,9 +38006,9 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L957",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_app_rationale_957",
-      "target": "cli_textual_app_vareduratextualapp_render_ports_table",
-      "confidence_score": 1.0
+      "target": "cli_textual_app_vareduratextualapp_render_ports_table"
     },
     {
       "relation": "calls",
@@ -37496,9 +38090,9 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L984",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_app_rationale_984",
-      "target": "cli_textual_app_vareduratextualapp_render_procs_table",
-      "confidence_score": 1.0
+      "target": "cli_textual_app_vareduratextualapp_render_procs_table"
     },
     {
       "relation": "rationale_for",
@@ -37778,9 +38372,9 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L1303",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_app_rationale_1303",
-      "target": "cli_textual_app_vareduratextualapp_record_and_check",
-      "confidence_score": 1.0
+      "target": "cli_textual_app_vareduratextualapp_record_and_check"
     },
     {
       "relation": "rationale_for",
@@ -37870,9 +38464,9 @@
       "source_file": "cli/textual_app.py",
       "source_location": "L1335",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_app_rationale_1335",
-      "target": "cli_textual_app_vareduratextualapp_refresh_achievements",
-      "confidence_score": 1.0
+      "target": "cli_textual_app_vareduratextualapp_refresh_achievements"
     },
     {
       "relation": "calls",
@@ -38165,9 +38759,9 @@
       "source_file": "cli/textual_cameras.py",
       "source_location": "L170",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_cameras_rationale_170",
-      "target": "cli_textual_cameras_campo",
-      "confidence_score": 1.0
+      "target": "cli_textual_cameras_campo"
     },
     {
       "relation": "rationale_for",
@@ -38226,9 +38820,9 @@
       "source_file": "cli/textual_cameras.py",
       "source_location": "L194",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_cameras_rationale_194",
-      "target": "cli_textual_cameras_escolher_arquivo_txt",
-      "confidence_score": 1.0
+      "target": "cli_textual_cameras_escolher_arquivo_txt"
     },
     {
       "relation": "rationale_for",
@@ -38326,9 +38920,9 @@
       "source_file": "cli/textual_cameras.py",
       "source_location": "L477",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_cameras_camerasmixin",
-      "target": "cli_textual_cameras_camerasmixin_cameras_on_resize",
-      "confidence_score": 1.0
+      "target": "cli_textual_cameras_camerasmixin_cameras_on_resize"
     },
     {
       "relation": "method",
@@ -38836,9 +39430,9 @@
       "source_file": "cli/textual_cameras.py",
       "source_location": "L217",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_cameras_rationale_217",
-      "target": "cli_textual_cameras_camerasmixin",
-      "confidence_score": 1.0
+      "target": "cli_textual_cameras_camerasmixin"
     },
     {
       "relation": "uses",
@@ -38971,9 +39565,9 @@
       "source_file": "cli/textual_cameras.py",
       "source_location": "L406",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_cameras_rationale_406",
-      "target": "cli_textual_cameras_camerasmixin_maybe_render_cameras",
-      "confidence_score": 1.0
+      "target": "cli_textual_cameras_camerasmixin_maybe_render_cameras"
     },
     {
       "relation": "rationale_for",
@@ -39218,9 +39812,9 @@
       "source_file": "cli/textual_cameras.py",
       "source_location": "L478",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_cameras_rationale_478",
-      "target": "cli_textual_cameras_camerasmixin_cameras_on_resize",
-      "confidence_score": 1.0
+      "target": "cli_textual_cameras_camerasmixin_cameras_on_resize"
     },
     {
       "relation": "calls",
@@ -40009,9 +40603,9 @@
       "source_file": "cli/textual_cameras.py",
       "source_location": "L1143",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_cameras_rationale_1143",
-      "target": "cli_textual_cameras_camerasmixin_importar_credenciais",
-      "confidence_score": 1.0
+      "target": "cli_textual_cameras_camerasmixin_importar_credenciais"
     },
     {
       "relation": "calls",
@@ -40114,9 +40708,9 @@
       "source_file": "cli/textual_cameras.py",
       "source_location": "L1158",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cli_textual_cameras_rationale_1158",
-      "target": "cli_textual_cameras_camerasmixin_browse_arquivo",
-      "confidence_score": 1.0
+      "target": "cli_textual_cameras_camerasmixin_browse_arquivo"
     },
     {
       "relation": "rationale_for",
@@ -58868,6 +59462,26 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_py",
+      "target": "monitor_speed_providers_chrome_service",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L41",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_py",
+      "target": "monitor_speed_providers_safe_quit"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
       "source_location": "L40",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -58989,6 +59603,26 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_21",
+      "target": "monitor_speed_providers_progressstate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_20",
+      "target": "monitor_speed_providers_progressstate"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
       "source_location": "L19",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -59043,11 +59677,171 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
+      "source_location": "L32",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_32",
+      "target": "monitor_speed_providers_speedtestresult",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L31",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_31",
+      "target": "monitor_speed_providers_speedtestresult"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
       "source_location": "L30",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "monitor_speed_providers_rationale_30",
       "target": "monitor_speed_providers_speedtestresult"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L344",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_brasilbandalargaprovider_run_test",
+      "target": "monitor_speed_providers_chrome_service",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L554",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_simetprovider_run_test",
+      "target": "monitor_speed_providers_chrome_service",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_43",
+      "target": "monitor_speed_providers_chrome_service",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L70",
+      "weight": 1.0,
+      "source": "tests_test_speed_cleanup_test_chrome_service_suppresses_console_window",
+      "target": "monitor_speed_providers_chrome_service"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L314",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_brasilbandalargaprovider_cleanup",
+      "target": "monitor_speed_providers_safe_quit"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L468",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_brasilbandalargaprovider_run_test",
+      "target": "monitor_speed_providers_safe_quit"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L515",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_simetprovider_cleanup",
+      "target": "monitor_speed_providers_safe_quit"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L696",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_simetprovider_run_test",
+      "target": "monitor_speed_providers_safe_quit"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L57",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_57",
+      "target": "monitor_speed_providers_safe_quit",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "tests_test_speed_cleanup_test_safe_quit_calls_quit",
+      "target": "monitor_speed_providers_safe_quit"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "tests_test_speed_cleanup_test_safe_quit_handles_none",
+      "target": "monitor_speed_providers_safe_quit"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "source": "tests_test_speed_cleanup_test_safe_quit_fallback_kills_process",
+      "target": "monitor_speed_providers_safe_quit"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_42",
+      "target": "monitor_speed_providers_safe_quit"
     },
     {
       "relation": "inherits",
@@ -59058,6 +59852,16 @@
       "confidence_score": 1.0,
       "source": "monitor_speed_providers_speedtestprovider",
       "target": "abc"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L79",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_speedtestprovider",
+      "target": "monitor_speed_providers_speedtestprovider_cleanup"
     },
     {
       "relation": "inherits",
@@ -59103,11 +59907,51 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
+      "source_location": "L76",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_76",
+      "target": "monitor_speed_providers_speedtestprovider",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L61",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_61",
+      "target": "monitor_speed_providers_speedtestprovider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
       "source_location": "L41",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "monitor_speed_providers_rationale_41",
       "target": "monitor_speed_providers_speedtestprovider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L95",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_95",
+      "target": "monitor_speed_providers_speedtestprovider_cleanup",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L80",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_80",
+      "target": "monitor_speed_providers_speedtestprovider_cleanup"
     },
     {
       "relation": "method",
@@ -59148,6 +59992,26 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "monitor_speed_providers_multiproviderspeedtester_init",
+      "target": "monitor_speed_providers_speedtestnetprovider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L103",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_103",
+      "target": "monitor_speed_providers_speedtestnetprovider",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L88",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_88",
       "target": "monitor_speed_providers_speedtestnetprovider"
     },
     {
@@ -59205,11 +60069,51 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
+      "source_location": "L161",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_161",
+      "target": "monitor_speed_providers_fastcomprovider",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L146",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_146",
+      "target": "monitor_speed_providers_fastcomprovider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
       "source_location": "L119",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "monitor_speed_providers_rationale_119",
       "target": "monitor_speed_providers_fastcomprovider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L184",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_184",
+      "target": "monitor_speed_providers_fastcomprovider_run_test",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L169",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_169",
+      "target": "monitor_speed_providers_fastcomprovider_run_test"
     },
     {
       "relation": "rationale_for",
@@ -59245,6 +60149,16 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
+      "source_location": "L311",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_brasilbandalargaprovider",
+      "target": "monitor_speed_providers_brasilbandalargaprovider_cleanup"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
       "source_location": "L284",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -59266,11 +60180,72 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
+      "source_location": "L301",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_301",
+      "target": "monitor_speed_providers_brasilbandalargaprovider",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L3",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "tests_test_speed_cleanup_fakedriver",
+      "target": "monitor_speed_providers_brasilbandalargaprovider"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L47",
+      "weight": 1.0,
+      "source": "tests_test_speed_cleanup_test_provider_cleanup_quits_and_clears_driver",
+      "target": "monitor_speed_providers_brasilbandalargaprovider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L286",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_286",
+      "target": "monitor_speed_providers_brasilbandalargaprovider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
       "source_location": "L259",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "monitor_speed_providers_rationale_259",
       "target": "monitor_speed_providers_brasilbandalargaprovider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L327",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_327",
+      "target": "monitor_speed_providers_brasilbandalargaprovider_cleanup",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L312",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_312",
+      "target": "monitor_speed_providers_brasilbandalargaprovider_cleanup"
     },
     {
       "relation": "method",
@@ -59296,6 +60271,16 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
+      "source_location": "L512",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_simetprovider",
+      "target": "monitor_speed_providers_simetprovider_cleanup"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
       "source_location": "L477",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -59311,6 +60296,47 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "monitor_speed_providers_multiproviderspeedtester_init",
+      "target": "monitor_speed_providers_simetprovider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L494",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_494",
+      "target": "monitor_speed_providers_simetprovider",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L3",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "tests_test_speed_cleanup_fakedriver",
+      "target": "monitor_speed_providers_simetprovider"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L56",
+      "weight": 1.0,
+      "source": "tests_test_speed_cleanup_test_provider_cleanup_without_driver_is_safe",
+      "target": "monitor_speed_providers_simetprovider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L479",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_479",
       "target": "monitor_speed_providers_simetprovider"
     },
     {
@@ -59339,10 +60365,61 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
+      "source_location": "L736",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_multiproviderspeedtester_cleanup_active",
+      "target": "monitor_speed_providers_simetprovider_cleanup"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L528",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_528",
+      "target": "monitor_speed_providers_simetprovider_cleanup",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L513",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_513",
+      "target": "monitor_speed_providers_simetprovider_cleanup"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
       "source_location": "L716",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "monitor_speed_providers_multiproviderspeedtester_run_test_with_fallback",
+      "target": "monitor_speed_providers_simetprovider_run_test"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L533",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_533",
+      "target": "monitor_speed_providers_simetprovider_run_test",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L518",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_518",
       "target": "monitor_speed_providers_simetprovider_run_test"
     },
     {
@@ -59379,6 +60456,16 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
+      "source_location": "L728",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_multiproviderspeedtester",
+      "target": "monitor_speed_providers_multiproviderspeedtester_cleanup_active"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
       "source_location": "L686",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -59404,6 +60491,26 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "monitor_speed_providers_get_multi_provider",
+      "target": "monitor_speed_providers_multiproviderspeedtester"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L722",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_722",
+      "target": "monitor_speed_providers_multiproviderspeedtester",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L707",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_707",
       "target": "monitor_speed_providers_multiproviderspeedtester"
     },
     {
@@ -59442,11 +60549,51 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
+      "source_location": "L740",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_740",
+      "target": "monitor_speed_providers_multiproviderspeedtester_get_available_providers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L725",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_725",
+      "target": "monitor_speed_providers_multiproviderspeedtester_get_available_providers"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
       "source_location": "L683",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "monitor_speed_providers_rationale_683",
       "target": "monitor_speed_providers_multiproviderspeedtester_get_available_providers"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L744",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_744",
+      "target": "monitor_speed_providers_multiproviderspeedtester_cleanup_active",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L729",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_729",
+      "target": "monitor_speed_providers_multiproviderspeedtester_cleanup_active"
     },
     {
       "relation": "calls",
@@ -59463,11 +60610,51 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
+      "source_location": "L756",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_756",
+      "target": "monitor_speed_providers_multiproviderspeedtester_get_next_provider",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L741",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_741",
+      "target": "monitor_speed_providers_multiproviderspeedtester_get_next_provider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
       "source_location": "L687",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "monitor_speed_providers_rationale_687",
       "target": "monitor_speed_providers_multiproviderspeedtester_get_next_provider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L768",
+      "weight": 1.0,
+      "source": "monitor_speed_providers_rationale_768",
+      "target": "monitor_speed_providers_multiproviderspeedtester_run_test_with_fallback",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L753",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_753",
+      "target": "monitor_speed_providers_multiproviderspeedtester_run_test_with_fallback"
     },
     {
       "relation": "rationale_for",
@@ -59483,11 +60670,11 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_providers.py",
-      "source_location": "L735",
+      "source_location": "L804",
       "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "monitor_speed_providers_rationale_735",
-      "target": "monitor_speed_providers_get_multi_provider"
+      "source": "monitor_speed_providers_rationale_804",
+      "target": "monitor_speed_providers_get_multi_provider",
+      "confidence_score": 1.0
     },
     {
       "relation": "calls",
@@ -59498,6 +60685,26 @@
       "source_location": "L96",
       "weight": 1.0,
       "source": "monitor_speed_tester_continuousspeedtester_init",
+      "target": "monitor_speed_providers_get_multi_provider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L789",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_789",
+      "target": "monitor_speed_providers_get_multi_provider"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_providers.py",
+      "source_location": "L735",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_providers_rationale_735",
       "target": "monitor_speed_providers_get_multi_provider"
     },
     {
@@ -59609,6 +60816,27 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "monitor_speed_tester_rationale_32",
+      "target": "monitor_speed_tester_speedtestconfig"
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L8",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "tests_test_speed_cleanup_fakedriver",
+      "target": "monitor_speed_tester_speedtestconfig"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L62",
+      "weight": 1.0,
+      "source": "tests_test_speed_cleanup_test_continuous_stop_cleans_active_drivers",
       "target": "monitor_speed_tester_speedtestconfig"
     },
     {
@@ -59755,6 +60983,27 @@
       "target": "monitor_speed_tester_continuousspeedtester"
     },
     {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L8",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "tests_test_speed_cleanup_fakedriver",
+      "target": "monitor_speed_tester_continuousspeedtester"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L62",
+      "weight": 1.0,
+      "source": "tests_test_speed_cleanup_test_continuous_stop_cleans_active_drivers",
+      "target": "monitor_speed_tester_continuousspeedtester"
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -59831,6 +61080,16 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_tester.py",
+      "source_location": "L188",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_tester_rationale_188",
+      "target": "monitor_speed_tester_continuousspeedtester_check_compliance"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_tester.py",
       "source_location": "L179",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -59841,11 +61100,31 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_tester.py",
+      "source_location": "L209",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_tester_rationale_209",
+      "target": "monitor_speed_tester_continuousspeedtester_get_percentage"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_tester.py",
       "source_location": "L200",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "monitor_speed_tester_rationale_200",
       "target": "monitor_speed_tester_continuousspeedtester_get_percentage"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_tester.py",
+      "source_location": "L228",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_tester_rationale_228",
+      "target": "monitor_speed_tester_continuousspeedtester_get_stats_snapshot"
     },
     {
       "relation": "rationale_for",
@@ -59872,10 +61151,10 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L254",
+      "source_location": "L263",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "monitor_speed_tester_rationale_254",
+      "source": "monitor_speed_tester_rationale_263",
       "target": "monitor_speed_tester_get_speed_tester"
     },
     {
@@ -59959,10 +61238,20 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L262",
+      "source_location": "L254",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "monitor_speed_tester_rationale_262",
+      "source": "monitor_speed_tester_rationale_254",
+      "target": "monitor_speed_tester_get_speed_tester"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_tester.py",
+      "source_location": "L271",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_tester_rationale_271",
       "target": "monitor_speed_tester_start_continuous_testing"
     },
     {
@@ -59980,10 +61269,20 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "monitor/speed_tester.py",
-      "source_location": "L268",
+      "source_location": "L262",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "monitor_speed_tester_rationale_268",
+      "source": "monitor_speed_tester_rationale_262",
+      "target": "monitor_speed_tester_start_continuous_testing"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_tester.py",
+      "source_location": "L277",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_tester_rationale_277",
       "target": "monitor_speed_tester_stop_continuous_testing"
     },
     {
@@ -59995,6 +61294,16 @@
       "source_location": "L2814",
       "weight": 1.0,
       "source": "monitor_stalker_main",
+      "target": "monitor_speed_tester_stop_continuous_testing"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "monitor/speed_tester.py",
+      "source_location": "L268",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "monitor_speed_tester_rationale_268",
       "target": "monitor_speed_tester_stop_continuous_testing"
     },
     {
@@ -65410,6 +66719,159 @@
       "confidence_score": 1.0,
       "source": "tests_test_rtsp_modules_rationale_1",
       "target": "tests_test_rtsp_modules_py"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L11",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_py",
+      "target": "tests_test_speed_cleanup_fakedriver"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_py",
+      "target": "tests_test_speed_cleanup_test_safe_quit_calls_quit"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L29",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_py",
+      "target": "tests_test_speed_cleanup_test_safe_quit_handles_none"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L33",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_py",
+      "target": "tests_test_speed_cleanup_test_safe_quit_fallback_kills_process"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L46",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_py",
+      "target": "tests_test_speed_cleanup_test_provider_cleanup_quits_and_clears_driver"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L55",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_py",
+      "target": "tests_test_speed_cleanup_test_provider_cleanup_without_driver_is_safe"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L65",
+      "weight": 1.0,
+      "source": "tests_test_speed_cleanup_py",
+      "target": "tests_test_speed_cleanup_test_chrome_service_suppresses_console_window",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L61",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_py",
+      "target": "tests_test_speed_cleanup_test_continuous_stop_cleans_active_drivers"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_rationale_1",
+      "target": "tests_test_speed_cleanup_py"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_fakedriver",
+      "target": "tests_test_speed_cleanup_fakedriver_init"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L17",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_fakedriver",
+      "target": "tests_test_speed_cleanup_fakedriver_quit"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L24",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_test_safe_quit_calls_quit",
+      "target": "tests_test_speed_cleanup_fakedriver"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L40",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_test_safe_quit_fallback_kills_process",
+      "target": "tests_test_speed_cleanup_fakedriver"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L48",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_test_speed_cleanup_test_provider_cleanup_quits_and_clears_driver",
+      "target": "tests_test_speed_cleanup_fakedriver"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/test_speed_cleanup.py",
+      "source_location": "L66",
+      "weight": 1.0,
+      "source": "tests_test_speed_cleanup_rationale_66",
+      "target": "tests_test_speed_cleanup_test_chrome_service_suppresses_console_window",
+      "confidence_score": 1.0
     },
     {
       "relation": "contains",
@@ -76384,5 +77846,5 @@
       "source_file": "tests/static/images/yptlogo.jpg"
     }
   ],
-  "built_at_commit": "e9869a38e573741396cf8942aaca5b7e89eab5aa"
+  "built_at_commit": "45b43afea083a5fad5d05fdcae0ce4c4c7f86c3e"
 }

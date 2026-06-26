@@ -125,14 +125,14 @@
     "semantic_hash": "33c408c6ba098bb4f5fa1c194edab81f"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\speed_providers.py": {
-    "mtime": 1767387187.7091696,
-    "ast_hash": "46319eda76f956c371ef1a982c727dc5",
-    "semantic_hash": "46319eda76f956c371ef1a982c727dc5"
+    "mtime": 1782436772.2191353,
+    "ast_hash": "a1d0a6a5deb1d69189f1a1d8f9701b50",
+    "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\speed_tester.py": {
-    "mtime": 1767412332.615877,
-    "ast_hash": "dcf30bed75060a0052483e7aa128e3b6",
-    "semantic_hash": "dcf30bed75060a0052483e7aa128e3b6"
+    "mtime": 1782436274.923848,
+    "ast_hash": "cb6df00ae2e1ac4dfc9774d1520f3bdf",
+    "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\stalker.py": {
     "mtime": 1781978688.043359,
@@ -582,6 +582,11 @@
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\todos_ips_belem.txt": {
     "mtime": 1782331730.4689813,
     "ast_hash": "2a917151d72810844ad7ba4b0d41ca7b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_speed_cleanup.py": {
+    "mtime": 1782436792.757687,
+    "ast_hash": "97dc2b2015377acba126b70577304f88",
     "semantic_hash": ""
   }
 }
