@@ -1,5 +1,12 @@
 Sempre pesquise na documentação usando mcp e se necessario depois na internet antes usar qualquer biblioteca externa.
 
+## Environment / running the app
+
+- The project is installed as a **global uv tool in editable mode**: `uv tool install --editable ".[browser-speedtest]"`. The `varedura` command (at `C:\Users\joaod\.local\bin\varedura.exe`) launches the TUI from anywhere and reflects source changes immediately (editable install).
+- Because of this, **whenever dependencies change in pyproject.toml** (`uv add`, edits to `dependencies`/extras), also run `uv tool upgrade varedura` so the global tool environment picks them up. Code-only changes need nothing.
+- The `browser-speedtest` extra (selenium) is intentionally included in the tool install — do not reinstall without it.
+- Inside the repo, `uv run main.py` / `uv run pytest` remain the canonical dev commands; never use bare `python`/`pip`.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
