@@ -1439,7 +1439,7 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                 or None
             ),
         )
-        container = self.query_one("#repair-actions", Horizontal)
+        container = self.query_one("#repair-actions", Grid)
         container.remove_children()
         self._repair_actions = {}
         buttons = []

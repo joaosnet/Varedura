@@ -6,7 +6,7 @@ from cli import ui_shared
 from cli.textual_app import ShutdownScreen, TargetPingCard, VareduraTextualApp
 from i18n import get_language, init as i18n_init
 from monitor.port_scanner import PortInfo, PortScannerState, ProcessConnections
-from textual.containers import VerticalScroll
+from textual.containers import Grid, VerticalScroll
 from textual.widgets import DataTable, Digits, ProgressBar, Sparkline, TabbedContent
 
 
@@ -513,6 +513,27 @@ async def test_network_cards_reflow_for_any_terminal_size(
         assert controls.has_class(f"cols-{control_columns}") == (control_columns > 1)
         if size[1] == 18:
             assert pane.max_scroll_y > 0
+
+
+@pytest.mark.asyncio
+async def test_diagnosis_renders_repair_actions_inside_responsive_grid(monkeypatch):
+    import monitor.network_repairs as repairs
+
+    monkeypatch.setattr(repairs, "list_repair_actions", lambda report, **kwargs: ())
+    monkeypatch.setattr(repairs, "list_repair_guidance", lambda report: ())
+    app = VareduraTextualApp()
+    app._after_first_refresh = lambda: None
+    app._start_network = lambda: None
+
+    async with app.run_test(size=(90, 26)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "network"
+        await wait_until(lambda: "network" in app._hydrated_tabs, pilot)
+        await pilot.pause()
+
+        app._show_repair_actions(object())
+
+        assert isinstance(app.query_one("#repair-actions"), Grid)
 
 
 def test_callback_from_previous_network_run_is_discarded():
