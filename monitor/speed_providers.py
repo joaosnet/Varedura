@@ -8,7 +8,10 @@ Provedores implementados:
 
 import atexit
 import datetime
+import importlib.util
+import json
 import subprocess
+import sys
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -103,16 +106,11 @@ class SpeedtestNetProvider(SpeedTestProvider):
     """Provedor Ookla Speedtest.net usando speedtest-cli."""
 
     def __init__(self):
-        self._speedtest = None
-        self._available = False
+        self._available = importlib.util.find_spec("speedtest") is not None
         self._error: Optional[str] = None
-
-        try:
-            import speedtest
-
-            self._speedtest = speedtest
-            self._available = True
-        except ImportError:
+        self._process: subprocess.Popen | None = None
+        self._process_lock = threading.Lock()
+        if not self._available:
             self._error = "speedtest-cli não instalado (uv add speedtest-cli)"
 
     @property
@@ -123,55 +121,82 @@ class SpeedtestNetProvider(SpeedTestProvider):
         return self._available
 
     def run_test(self) -> Optional[SpeedTestResult]:
-        if not self._available or self._speedtest is None:
+        if not self._available:
             return None
 
         try:
-            st = self._speedtest.Speedtest()
-            st.get_best_server()
-
-            # Download
-            download_bps = st.download()
-            download_mbps = download_bps / 1_000_000
-
-            # Upload
-            upload_bps = st.upload()
-            upload_mbps = upload_bps / 1_000_000
-
-            # Ping
-            ping_ms = st.results.ping
-
-            # Servidor
-            servidor = st.results.server.get("sponsor", "Desconhecido")
+            command = [sys.executable, "-m", "speedtest", "--json", "--secure"]
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            with self._process_lock:
+                self._process = process
+            stdout, stderr = process.communicate(timeout=120)
+            if process.returncode != 0:
+                self._error = (stderr or "speedtest-cli falhou")[:120]
+                return None
+            payload = json.loads(stdout)
+            server = payload.get("server") or {}
+            servidor = server.get("sponsor") or server.get("name") or "Desconhecido"
 
             return SpeedTestResult(
-                download_mbps=download_mbps,
-                upload_mbps=upload_mbps,
-                ping_ms=ping_ms,
+                download_mbps=float(payload.get("download", 0.0)) / 1_000_000,
+                upload_mbps=float(payload.get("upload", 0.0)) / 1_000_000,
+                ping_ms=float(payload.get("ping", 0.0)),
                 servidor=servidor,
                 timestamp=datetime.datetime.now(),
                 provider_name=self.name,
             )
+        except subprocess.TimeoutExpired:
+            self.cleanup()
+            self._error = "Tempo limite de 120 s excedido"
+            return None
         except Exception as e:
             self._error = str(e)[:50]
             return None
+        finally:
+            with self._process_lock:
+                self._process = None
+
+    def cleanup(self) -> None:
+        with self._process_lock:
+            process = self._process
+        if process is None or process.poll() is not None:
+            return
+        try:
+            process.terminate()
+            process.wait(timeout=2)
+        except Exception:
+            try:
+                process.kill()
+            except Exception:
+                pass
 
 
 class FastComProvider(SpeedTestProvider):
     """Provedor Netflix Fast.com usando requests."""
 
     def __init__(self, progress: Optional[ProgressState] = None):
-        self._available = False
+        self._available = importlib.util.find_spec("requests") is not None
         self._error: Optional[str] = None
         self._progress = progress  # Referência para atualizar progresso em tempo real
-
-        try:
-            import requests
-
-            self._requests = requests
-            self._available = True
-        except ImportError:
+        self._requests = None
+        if not self._available:
             self._error = "requests não instalado (uv add requests)"
+
+    def _ensure_backend(self) -> bool:
+        if self._requests is None and self._available:
+            try:
+                import requests
+
+                self._requests = requests
+            except ImportError:
+                self._available = False
+        return self._requests is not None
 
     @property
     def name(self) -> str:
@@ -189,7 +214,7 @@ class FastComProvider(SpeedTestProvider):
         2. Baixar chunks de teste dos servidores Netflix
         3. Medir velocidade baseada no tempo de download
         """
-        if not self._available:
+        if not self._ensure_backend():
             return None
 
         try:
@@ -301,20 +326,26 @@ class BrasilBandaLargaProvider(SpeedTestProvider):
     """Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium."""
 
     def __init__(self, progress: Optional[ProgressState] = None):
-        self._available = False
+        self._available = importlib.util.find_spec("selenium") is not None
         self._error: Optional[str] = None
         self._progress = progress
         self._driver = None
-
-        try:
-            from selenium import webdriver
-            from selenium.webdriver.chrome.options import Options
-
-            self._webdriver = webdriver
-            self._Options = Options
-            self._available = True
-        except ImportError:
+        self._webdriver = None
+        self._Options = None
+        if not self._available:
             self._error = "selenium não instalado (uv add selenium)"
+
+    def _ensure_backend(self) -> bool:
+        if self._webdriver is None and self._available:
+            try:
+                from selenium import webdriver
+                from selenium.webdriver.chrome.options import Options
+
+                self._webdriver = webdriver
+                self._Options = Options
+            except ImportError:
+                self._available = False
+        return self._webdriver is not None and self._Options is not None
 
     @property
     def name(self) -> str:
@@ -329,7 +360,7 @@ class BrasilBandaLargaProvider(SpeedTestProvider):
         _safe_quit(drv)
 
     def run_test(self) -> Optional[SpeedTestResult]:
-        if not self._available:
+        if not self._ensure_backend():
             return None
 
         try:
@@ -500,22 +531,27 @@ class SimetProvider(SpeedTestProvider):
     """
 
     def __init__(self, progress: Optional[ProgressState] = None):
-        self._available = False
+        self._available = importlib.util.find_spec("selenium") is not None
         self._error: Optional[str] = None
         self._progress = progress
         self._webdriver = None
         self._Options = None
         self._driver = None
 
-        try:
-            from selenium import webdriver
-            from selenium.webdriver.chrome.options import Options
-
-            self._webdriver = webdriver
-            self._Options = Options
-            self._available = True
-        except ImportError:
+        if not self._available:
             self._error = "selenium não instalado (uv add selenium)"
+
+    def _ensure_backend(self) -> bool:
+        if self._webdriver is None and self._available:
+            try:
+                from selenium import webdriver
+                from selenium.webdriver.chrome.options import Options
+
+                self._webdriver = webdriver
+                self._Options = Options
+            except ImportError:
+                self._available = False
+        return self._webdriver is not None and self._Options is not None
 
     @property
     def name(self) -> str:
@@ -535,7 +571,7 @@ class SimetProvider(SpeedTestProvider):
         Flutter renderiza em canvas, não no DOM tradicional.
         Precisamos habilitar acessibilidade e buscar no Shadow DOM.
         """
-        if not self._available:
+        if not self._ensure_backend():
             return None
 
         try:

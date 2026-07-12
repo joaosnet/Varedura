@@ -31,17 +31,32 @@ def isolated_state(monkeypatch, tmp_path):
 
     monkeypatch.setattr(i18n, "_PREFS_FILE", tmp_path / "lang.json")
     i18n_init("en")
+    ui_shared.save_network_config(
+        {
+            "network_schema_version": 3,
+            "target_onboarding_completed": True,
+            "selected_target_ids": ["cloudflare_ipv4"],
+            "primary_target_id": "cloudflare_ipv4",
+            "custom_targets": [],
+            "league_auto_detect": False,
+        }
+    )
     yield
     i18n_init("en")
 
 
-async def wait_until(predicate, pilot, attempts: int = 30) -> None:
+async def wait_until(predicate, pilot, attempts: int = 100) -> None:
     for _ in range(attempts):
         await pilot.pause()
         if predicate():
             return
         await asyncio.sleep(0.01)
     raise AssertionError("condition was not reached")
+
+
+async def open_cameras(app, pilot) -> None:
+    app.query_one("#main-tabs", TabbedContent).active = "cameras"
+    await wait_until(lambda: bool(list(app.query("#cameras-subtabs"))), pilot)
 
 
 @pytest.mark.asyncio
@@ -53,7 +68,7 @@ async def test_cameras_tab_renders(monkeypatch):
     app = VareduraTextualApp()
     async with app.run_test(size=(120, 50)) as pilot:
         await pilot.pause()
-        app.query_one("#main-tabs", TabbedContent).active = "cameras"
+        await open_cameras(app, pilot)
         await pilot.pause()
 
         # The four sub-tabs and their tables exist with the expected columns.
@@ -75,7 +90,7 @@ async def test_cameras_port_scan_populates_table(monkeypatch):
     app = VareduraTextualApp()
     async with app.run_test(size=(120, 50)) as pilot:
         await pilot.pause()
-        app.query_one("#main-tabs", TabbedContent).active = "cameras"
+        await open_cameras(app, pilot)
         app.query_one("#cameras-subtabs", TabbedContent).active = "tab-portas"
         await pilot.pause()
         app.query_one("#portas-host").value = "192.168.1.10"
@@ -93,7 +108,7 @@ async def test_cameras_credential_add_and_remove(monkeypatch):
     app = VareduraTextualApp()
     async with app.run_test(size=(120, 50)) as pilot:
         await pilot.pause()
-        app.query_one("#main-tabs", TabbedContent).active = "cameras"
+        await open_cameras(app, pilot)
         app.query_one("#cameras-subtabs", TabbedContent).active = "tab-cred"
         await pilot.pause()
 
@@ -121,7 +136,7 @@ async def test_cameras_import_credential_lists(monkeypatch, tmp_path):
     app = VareduraTextualApp()
     async with app.run_test(size=(120, 55)) as pilot:
         await pilot.pause()
-        app.query_one("#main-tabs", TabbedContent).active = "cameras"
+        await open_cameras(app, pilot)
         app.query_one("#cameras-subtabs", TabbedContent).active = "tab-cred"
         await pilot.pause()
         app.query_one("#imp-users").value = str(users)
@@ -148,7 +163,7 @@ async def test_cameras_browse_fills_input(monkeypatch):
     app = VareduraTextualApp()
     async with app.run_test(size=(120, 60)) as pilot:
         await pilot.pause()
-        app.query_one("#main-tabs", TabbedContent).active = "cameras"
+        await open_cameras(app, pilot)
         app.query_one("#cameras-subtabs", TabbedContent).active = "tab-cred"
         await pilot.pause()
         app.query_one("#btn-browse-users").scroll_visible(animate=False)
@@ -168,7 +183,7 @@ async def test_saved_camera_opens_on_single_click(monkeypatch):
     opened = {}
     async with app.run_test(size=(120, 50)) as pilot:
         await pilot.pause()
-        app.query_one("#main-tabs", TabbedContent).active = "cameras"
+        await open_cameras(app, pilot)
         await pilot.pause()
         # Não abre um player de verdade no teste.
         monkeypatch.setattr(
@@ -191,7 +206,8 @@ async def test_cameras_open_port_saved_without_credential(monkeypatch):
     monkeypatch.setattr("cli.textual_cameras.detectar_redes", lambda: [])
     monkeypatch.setattr("cli.textual_cameras.geolocalizar", lambda *a, **k: None)
     monkeypatch.setattr(
-        "cli.textual_cameras.escanear_rede", lambda base, ao_progresso=None: ["192.168.1.50"]
+        "cli.textual_cameras.escanear_rede",
+        lambda base, ao_progresso=None: ["192.168.1.50"],
     )
     # No credential combination validates a stream.
     monkeypatch.setattr("cli.textual_cameras.resolver_ip", lambda *a, **k: None)
@@ -199,7 +215,7 @@ async def test_cameras_open_port_saved_without_credential(monkeypatch):
     app = VareduraTextualApp()
     async with app.run_test(size=(120, 55)) as pilot:
         await pilot.pause()
-        app.query_one("#main-tabs", TabbedContent).active = "cameras"
+        await open_cameras(app, pilot)
         await pilot.pause()
         # Port 554 open but no credential -> still saved and counted as a camera.
         app._scan_faixa("192.168.1")

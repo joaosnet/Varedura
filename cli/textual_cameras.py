@@ -9,6 +9,7 @@ Originalmente um app Textual standalone (scan_rsp); fundido como uma aba.
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import sys
 from urllib.parse import quote, urlsplit, urlunsplit
@@ -32,49 +33,100 @@ from textual.widgets import (
 )
 
 from i18n import t
-from rtsp.credenciais import (
-    Par,
-    adicionar_par,
-    carregar_conhecidos,
-    carregar_lista,
-    carregar_vault,
-    combinar_credenciais,
-    esquecer_ip,
-    remover_par,
-    resolver_ip,
-    salvar_vault,
-)
-from rtsp.geo import geolocalizar
-from rtsp.log import ARQUIVO_LOG, obter_logger
-from rtsp.mapa import Pino, cor_para, render as render_mapa
-from rtsp.paths import caminhos as caminhos_conhecidos
-from rtsp.rede import detectar_redes
-from rtsp.regioes import (
-    TIPO_CAMERA,
-    TIPO_REDE,
-    Regiao,
-    adicionar_regiao,
-    carregar_regioes,
-    remover_regiao,
-    salvar_regioes,
-)
-from rtsp.scanner import (
-    escanear_portas_camera,
-    escanear_rede,
-    hosts_da_faixa,
-    normalizar_faixa,
-    testar_porta,
-    testar_rtsp,
-)
-from rtsp.video import (
-    abrir_stream,
-    descobrir_stream,
-    detectar_player,
-    erro_se_morreu,
-    validar_stream,
-)
 
-_log = obter_logger("cameras_tab")
+_log = logging.getLogger("varedura.cameras")
+_BACKEND_LOADED = False
+_UNLOADED = object()
+
+# Stable monkeypatch/introspection surface without importing the RTSP backend.
+# Explicit declarations also let static analysers see every lazily-bound name.
+Par = _UNLOADED
+adicionar_par = _UNLOADED
+carregar_conhecidos = _UNLOADED
+carregar_lista = _UNLOADED
+carregar_vault = _UNLOADED
+combinar_credenciais = _UNLOADED
+esquecer_ip = _UNLOADED
+remover_par = _UNLOADED
+resolver_ip = _UNLOADED
+salvar_vault = _UNLOADED
+geolocalizar = _UNLOADED
+ARQUIVO_LOG = _UNLOADED
+Pino = _UNLOADED
+cor_para = _UNLOADED
+render_mapa = _UNLOADED
+caminhos_conhecidos = _UNLOADED
+detectar_redes = _UNLOADED
+TIPO_CAMERA = _UNLOADED
+TIPO_REDE = _UNLOADED
+Regiao = _UNLOADED
+adicionar_regiao = _UNLOADED
+carregar_regioes = _UNLOADED
+remover_regiao = _UNLOADED
+salvar_regioes = _UNLOADED
+escanear_portas_camera = _UNLOADED
+escanear_rede = _UNLOADED
+hosts_da_faixa = _UNLOADED
+normalizar_faixa = _UNLOADED
+testar_porta = _UNLOADED
+testar_rtsp = _UNLOADED
+abrir_stream = _UNLOADED
+descobrir_stream = _UNLOADED
+detectar_player = _UNLOADED
+erro_se_morreu = _UNLOADED
+validar_stream = _UNLOADED
+
+
+def _load_camera_backend() -> None:
+    """Import RTSP discovery modules only when the Cameras tab is hydrated."""
+    global _BACKEND_LOADED, _log
+    if _BACKEND_LOADED:
+        return
+    from rtsp import credenciais, geo, log, mapa, paths, rede, regioes, scanner, video
+
+    exports = {
+        "Par": credenciais.Par,
+        "adicionar_par": credenciais.adicionar_par,
+        "carregar_conhecidos": credenciais.carregar_conhecidos,
+        "carregar_lista": credenciais.carregar_lista,
+        "carregar_vault": credenciais.carregar_vault,
+        "combinar_credenciais": credenciais.combinar_credenciais,
+        "esquecer_ip": credenciais.esquecer_ip,
+        "remover_par": credenciais.remover_par,
+        "resolver_ip": credenciais.resolver_ip,
+        "salvar_vault": credenciais.salvar_vault,
+        "geolocalizar": geo.geolocalizar,
+        "ARQUIVO_LOG": log.ARQUIVO_LOG,
+        "Pino": mapa.Pino,
+        "cor_para": mapa.cor_para,
+        "render_mapa": mapa.render,
+        "caminhos_conhecidos": paths.caminhos,
+        "detectar_redes": rede.detectar_redes,
+        "TIPO_CAMERA": regioes.TIPO_CAMERA,
+        "TIPO_REDE": regioes.TIPO_REDE,
+        "Regiao": regioes.Regiao,
+        "adicionar_regiao": regioes.adicionar_regiao,
+        "carregar_regioes": regioes.carregar_regioes,
+        "remover_regiao": regioes.remover_regiao,
+        "salvar_regioes": regioes.salvar_regioes,
+        "escanear_portas_camera": scanner.escanear_portas_camera,
+        "escanear_rede": scanner.escanear_rede,
+        "hosts_da_faixa": scanner.hosts_da_faixa,
+        "normalizar_faixa": scanner.normalizar_faixa,
+        "testar_porta": scanner.testar_porta,
+        "testar_rtsp": scanner.testar_rtsp,
+        "abrir_stream": video.abrir_stream,
+        "descobrir_stream": video.descobrir_stream,
+        "detectar_player": video.detectar_player,
+        "erro_se_morreu": video.erro_se_morreu,
+        "validar_stream": video.validar_stream,
+    }
+    for name, value in exports.items():
+        if globals().get(name, _UNLOADED) is _UNLOADED:
+            globals()[name] = value
+    _log = log.obter_logger("cameras_tab")
+    _BACKEND_LOADED = True
+
 
 # Workers da aba ficam num grupo próprio para que o `exclusive=True` do scan não
 # cancele os workers de rede/dashboard do Varedura (que vivem no grupo default).
@@ -190,7 +242,9 @@ _DIALOGO_CODE = (
 )
 
 
-def _escolher_arquivo_txt(titulo: str, rotulo_txt: str, rotulo_todos: str) -> tuple[str, bool]:
+def _escolher_arquivo_txt(
+    titulo: str, rotulo_txt: str, rotulo_todos: str
+) -> tuple[str, bool]:
     """Abre o explorador de arquivos nativo e retorna (caminho, abriu_ok).
 
     caminho vazio = usuário cancelou. abriu_ok=False -> não foi possível abrir o
@@ -295,7 +349,9 @@ class CamerasMixin:
                                 placeholder=t("rtsp.ph_rede_manual"),
                                 id="rede-base",
                             )
-                            yield Button(t("rtsp.btn_varrer"), variant="primary", id="btn-rede")
+                            yield Button(
+                                t("rtsp.btn_varrer"), variant="primary", id="btn-rede"
+                            )
 
                     with Vertical(id="scan-feedback", classes="scan-feedback oculto"):
                         yield Static("", id="radar")
@@ -310,34 +366,57 @@ class CamerasMixin:
                     with Collapsible(title=t("rtsp.add_regiao"), collapsed=True):
                         with Horizontal(classes="linha"):
                             yield from _campo(
-                                t("rtsp.campo_rotulo"), placeholder=t("rtsp.ph_rotulo"), id="regiao-rotulo"
+                                t("rtsp.campo_rotulo"),
+                                placeholder=t("rtsp.ph_rotulo"),
+                                id="regiao-rotulo",
                             )
                             yield from _campo(
-                                t("rtsp.campo_endereco"), placeholder=t("rtsp.ph_endereco"), id="regiao-endereco"
+                                t("rtsp.campo_endereco"),
+                                placeholder=t("rtsp.ph_endereco"),
+                                id="regiao-endereco",
                             )
                             yield from _campo(
-                                t("rtsp.campo_porta"), placeholder=t("rtsp.ph_porta"), id="regiao-porta"
+                                t("rtsp.campo_porta"),
+                                placeholder=t("rtsp.ph_porta"),
+                                id="regiao-porta",
                             )
                         with Horizontal(classes="linha"):
                             with RadioSet(id="regiao-tipo"):
-                                yield RadioButton(t("rtsp.tipo_rede"), value=True, id="tipo-rede")
-                                yield RadioButton(t("rtsp.tipo_camera"), id="tipo-camera")
+                                yield RadioButton(
+                                    t("rtsp.tipo_rede"), value=True, id="tipo-rede"
+                                )
+                                yield RadioButton(
+                                    t("rtsp.tipo_camera"), id="tipo-camera"
+                                )
                         with Horizontal(classes="acoes"):
-                            yield Button(t("rtsp.add_regiao"), variant="primary", id="btn-regiao-add")
+                            yield Button(
+                                t("rtsp.add_regiao"),
+                                variant="primary",
+                                id="btn-regiao-add",
+                            )
                     with Collapsible(title=t("rtsp.opcoes_avancadas"), collapsed=True):
                         with Horizontal(classes="linha"):
                             yield from _campo(
-                                t("rtsp.campo_caminho"), placeholder=t("rtsp.ph_auto"), id="rede-path"
+                                t("rtsp.campo_caminho"),
+                                placeholder=t("rtsp.ph_auto"),
+                                id="rede-path",
                             )
                             yield from _campo(
-                                t("rtsp.campo_marca"), placeholder=t("rtsp.ph_marca"), id="rede-marca"
+                                t("rtsp.campo_marca"),
+                                placeholder=t("rtsp.ph_marca"),
+                                id="rede-marca",
                             )
                         with Horizontal(classes="linha"):
                             yield from _campo(
-                                t("rtsp.campo_usuario"), placeholder=t("rtsp.ph_usuario"), id="rede-user"
+                                t("rtsp.campo_usuario"),
+                                placeholder=t("rtsp.ph_usuario"),
+                                id="rede-user",
                             )
                             yield from _campo(
-                                t("rtsp.campo_senha"), placeholder=t("rtsp.ph_senha"), password=True, id="rede-pass"
+                                t("rtsp.campo_senha"),
+                                placeholder=t("rtsp.ph_senha"),
+                                password=True,
+                                id="rede-pass",
                             )
 
             # ---------- Aba: RTSP único ----------
@@ -345,26 +424,47 @@ class CamerasMixin:
                 with VerticalScroll(classes="aba-scroll"):
                     with Container(classes="painel"):
                         yield Static(t("rtsp.rtsp_titulo"), classes="painel-titulo")
-                        yield from _campo(t("rtsp.campo_url"), placeholder=t("rtsp.ph_url"), id="rtsp-url")
+                        yield from _campo(
+                            t("rtsp.campo_url"),
+                            placeholder=t("rtsp.ph_url"),
+                            id="rtsp-url",
+                        )
                         with Horizontal(classes="linha"):
                             yield from _campo(
-                                t("rtsp.campo_usuario"), placeholder=t("rtsp.ph_usuario"), id="rtsp-user"
+                                t("rtsp.campo_usuario"),
+                                placeholder=t("rtsp.ph_usuario"),
+                                id="rtsp-user",
                             )
                             yield from _campo(
-                                t("rtsp.campo_senha"), placeholder=t("rtsp.ph_senha"), password=True, id="rtsp-pass"
+                                t("rtsp.campo_senha"),
+                                placeholder=t("rtsp.ph_senha"),
+                                password=True,
+                                id="rtsp-pass",
                             )
                         with Horizontal(classes="acoes"):
-                            yield Button(t("rtsp.btn_testar"), variant="primary", id="btn-rtsp")
-                            yield Button(t("rtsp.btn_abrir_video"), variant="success", id="btn-rtsp-abrir")
+                            yield Button(
+                                t("rtsp.btn_testar"), variant="primary", id="btn-rtsp"
+                            )
+                            yield Button(
+                                t("rtsp.btn_abrir_video"),
+                                variant="success",
+                                id="btn-rtsp-abrir",
+                            )
                     yield Static("", id="rtsp-saida")
 
             # ---------- Aba: portas ----------
             with TabPane(t("rtsp.tab_portas"), id="tab-portas"):
                 with Container(classes="painel"):
                     yield Static(t("rtsp.portas_titulo"), classes="painel-titulo")
-                    yield from _campo(t("rtsp.campo_host"), placeholder=t("rtsp.ph_host"), id="portas-host")
+                    yield from _campo(
+                        t("rtsp.campo_host"),
+                        placeholder=t("rtsp.ph_host"),
+                        id="portas-host",
+                    )
                     with Horizontal(classes="acoes"):
-                        yield Button(t("rtsp.btn_portas"), variant="primary", id="btn-portas")
+                        yield Button(
+                            t("rtsp.btn_portas"), variant="primary", id="btn-portas"
+                        )
                 yield DataTable(id="portas-tabela", zebra_stripes=True)
 
             # ---------- Aba: credenciais (2 colunas, responsivo) ----------
@@ -376,38 +476,74 @@ class CamerasMixin:
                             yield Static(t("rtsp.cred_titulo"), classes="painel-titulo")
                             with Horizontal(classes="linha"):
                                 yield from _campo(
-                                    t("rtsp.campo_usuario"), placeholder=t("rtsp.ph_usuario"), id="cred-user"
+                                    t("rtsp.campo_usuario"),
+                                    placeholder=t("rtsp.ph_usuario"),
+                                    id="cred-user",
                                 )
                                 yield from _campo(
-                                    t("rtsp.campo_senha"), placeholder=t("rtsp.ph_senha"), password=True, id="cred-pass"
+                                    t("rtsp.campo_senha"),
+                                    placeholder=t("rtsp.ph_senha"),
+                                    password=True,
+                                    id="cred-pass",
                                 )
                             with Horizontal(classes="acoes"):
-                                yield Button(t("rtsp.btn_add"), variant="primary", id="btn-cred-add")
-                                yield Button(t("rtsp.btn_remover_sel"), variant="error", id="btn-cred-del")
+                                yield Button(
+                                    t("rtsp.btn_add"),
+                                    variant="primary",
+                                    id="btn-cred-add",
+                                )
+                                yield Button(
+                                    t("rtsp.btn_remover_sel"),
+                                    variant="error",
+                                    id="btn-cred-del",
+                                )
                         with Container(classes="painel"):
                             yield Static(t("rtsp.imp_titulo"), classes="painel-titulo")
                             with Horizontal(classes="linha"):
                                 yield from _campo(
-                                    t("rtsp.imp_users"), placeholder=t("rtsp.ph_imp"), id="imp-users"
+                                    t("rtsp.imp_users"),
+                                    placeholder=t("rtsp.ph_imp"),
+                                    id="imp-users",
                                 )
                                 yield from _campo(
-                                    t("rtsp.imp_pass"), placeholder=t("rtsp.ph_imp"), id="imp-pass"
+                                    t("rtsp.imp_pass"),
+                                    placeholder=t("rtsp.ph_imp"),
+                                    id="imp-pass",
                                 )
                             with Horizontal(classes="acoes"):
-                                yield Button(t("rtsp.btn_browse_users"), id="btn-browse-users")
-                                yield Button(t("rtsp.btn_browse_pass"), id="btn-browse-pass")
+                                yield Button(
+                                    t("rtsp.btn_browse_users"), id="btn-browse-users"
+                                )
+                                yield Button(
+                                    t("rtsp.btn_browse_pass"), id="btn-browse-pass"
+                                )
                             with Horizontal(classes="acoes"):
-                                yield Button(t("rtsp.btn_import"), variant="primary", id="btn-cred-import")
+                                yield Button(
+                                    t("rtsp.btn_import"),
+                                    variant="primary",
+                                    id="btn-cred-import",
+                                )
                     # Coluna direita: tabelas que preenchem a altura disponível.
                     with Vertical(id="cred-tables"):
-                        yield Static(t("rtsp.cred_vault_titulo"), classes="painel-titulo")
-                        yield DataTable(id="cred-tabela", cursor_type="row", zebra_stripes=True)
+                        yield Static(
+                            t("rtsp.cred_vault_titulo"), classes="painel-titulo"
+                        )
+                        yield DataTable(
+                            id="cred-tabela", cursor_type="row", zebra_stripes=True
+                        )
                         yield Static(t("rtsp.ips_titulo"), classes="painel-titulo")
                         with Horizontal(classes="acoes"):
-                            yield Button(t("rtsp.btn_esquecer_ip"), variant="warning", id="btn-ip-forget")
-                        yield DataTable(id="cred-ips-tabela", cursor_type="row", zebra_stripes=True)
+                            yield Button(
+                                t("rtsp.btn_esquecer_ip"),
+                                variant="warning",
+                                id="btn-ip-forget",
+                            )
+                        yield DataTable(
+                            id="cred-ips-tabela", cursor_type="row", zebra_stripes=True
+                        )
 
     def _cameras_on_mount(self) -> None:
+        _load_camera_backend()
         self.query_one("#portas-tabela", DataTable).add_columns(
             t("rtsp.col_porta"), t("rtsp.col_status")
         )
@@ -520,8 +656,12 @@ class CamerasMixin:
         if getattr(event.worker, "group", None) != _GRUPO:
             return
         if event.state is WorkerState.ERROR:
-            _log.exception("Worker '%s' falhou: %s", event.worker.name, event.worker.error)
-            self.notify(t("rtsp.nf_erro_interno", erro=event.worker.error), severity="error")
+            _log.exception(
+                "Worker '%s' falhou: %s", event.worker.name, event.worker.error
+            )
+            self.notify(
+                t("rtsp.nf_erro_interno", erro=event.worker.error), severity="error"
+            )
             self._parar_radar()
             try:
                 self.query_one("#scan-feedback", Vertical).add_class("oculto")
@@ -605,7 +745,7 @@ class CamerasMixin:
         return "card-rede-" + base.replace(".", "-")
 
     def _cam_base_de_card_id(self, bid: str) -> str:
-        return bid[len("card-rede-"):].replace("-", ".")
+        return bid[len("card-rede-") :].replace("-", ".")
 
     async def _render_cards(self) -> None:
         self._redes = detectar_redes()
@@ -767,7 +907,11 @@ class CamerasMixin:
         except ValueError:
             self.notify(t("rtsp.nf_porta_invalida"), severity="warning")
             return
-        tipo = TIPO_CAMERA if self.query_one("#tipo-camera", RadioButton).value else TIPO_REDE
+        tipo = (
+            TIPO_CAMERA
+            if self.query_one("#tipo-camera", RadioButton).value
+            else TIPO_REDE
+        )
         if tipo == TIPO_REDE:
             try:
                 endereco = normalizar_faixa(endereco)
@@ -878,8 +1022,10 @@ class CamerasMixin:
         candidatos = [path] if path else caminhos_conhecidos(marca)
         self.call_from_thread(self._iniciar_fase_validacao, len(abertas))
         for idx, porta in enumerate(abertas, 1):
+
             def monta(h, c, u, p, _pt=porta):
                 return self._monta_url(h, c, u, p, porta=_pt)
+
             if user:
                 info = descobrir_stream(
                     lambda c, _pt=porta: self._monta_url(ip, c, user, pwd, porta=_pt),
@@ -900,7 +1046,9 @@ class CamerasMixin:
                         self._status_tentativa_cred, f"{ip}:{_pt}", c, rot
                     ),
                 )
-                info, par_usado = (resultado[0], resultado[1]) if resultado else (None, None)
+                info, par_usado = (
+                    (resultado[0], resultado[1]) if resultado else (None, None)
+                )
             chave = f"{ip}:{porta}"
             if info and info.funciona:
                 self._urls_rede[chave] = info.url
@@ -917,7 +1065,9 @@ class CamerasMixin:
                 )
             else:
                 # Porta aberta mas sem stream validado -> salva mesmo assim.
-                self._urls_rede[chave] = self._monta_url(ip, candidatos[0], user, pwd, porta=porta)
+                self._urls_rede[chave] = self._monta_url(
+                    ip, candidatos[0], user, pwd, porta=porta
+                )
                 self._falhas_rede[chave] = t("rtsp.falha_sem_video")
                 self.call_from_thread(
                     self.query_one("#rede-tabela", DataTable).add_row,
@@ -944,10 +1094,17 @@ class CamerasMixin:
             self.call_from_thread(self._finalizar_scan)
             return
         candidatos = [path] if path else caminhos_conhecidos(marca)
-        modo = t("rtsp.modo_manual") if user else t("rtsp.modo_cofre", n=len(self._vault))
+        modo = (
+            t("rtsp.modo_manual") if user else t("rtsp.modo_cofre", n=len(self._vault))
+        )
         self.call_from_thread(
             self.notify,
-            t("rtsp.nf_hosts_testando", hosts=len(ips), caminhos=len(candidatos), modo=modo),
+            t(
+                "rtsp.nf_hosts_testando",
+                hosts=len(ips),
+                caminhos=len(candidatos),
+                modo=modo,
+            ),
         )
         self.call_from_thread(self._iniciar_fase_validacao, len(ips))
         for idx, ip in enumerate(ips, 1):
@@ -971,7 +1128,9 @@ class CamerasMixin:
                         self._status_tentativa_cred, _ip, c, rot
                     ),
                 )
-                info, par_usado = (resultado[0], resultado[1]) if resultado else (None, None)
+                info, par_usado = (
+                    (resultado[0], resultado[1]) if resultado else (None, None)
+                )
 
             if info and info.funciona:
                 self._urls_rede[ip] = info.url
@@ -991,7 +1150,9 @@ class CamerasMixin:
                 # Porta 554 aberta mas sem credencial válida -> salva mesmo assim.
                 self._urls_rede[ip] = self._monta_url(ip, candidatos[0], user, pwd)
                 self._falhas_rede[ip] = (
-                    t("rtsp.falha_nenhuma_cred") if not user else t("rtsp.falha_cred_informada")
+                    t("rtsp.falha_nenhuma_cred")
+                    if not user
+                    else t("rtsp.falha_cred_informada")
                 )
                 self.call_from_thread(
                     self.query_one("#rede-tabela", DataTable).add_row,
@@ -1012,7 +1173,9 @@ class CamerasMixin:
         self.call_from_thread(self._atualizar_progresso, 0, 1)
         if not testar_porta(host, porta, timeout=4.0):
             self.call_from_thread(
-                self.notify, t("rtsp.nf_host_sem_resposta", host=host, porta=porta), severity="error"
+                self.notify,
+                t("rtsp.nf_host_sem_resposta", host=host, porta=porta),
+                severity="error",
             )
             self.call_from_thread(self._finalizar_scan)
             return
@@ -1041,7 +1204,9 @@ class CamerasMixin:
                     self._status_tentativa_cred, _h, c, rot
                 ),
             )
-            info, par_usado = (resultado[0], resultado[1]) if resultado else (None, None)
+            info, par_usado = (
+                (resultado[0], resultado[1]) if resultado else (None, None)
+            )
 
         self.call_from_thread(self._atualizar_progresso, 1, 1)
         if info and info.funciona:
@@ -1060,7 +1225,9 @@ class CamerasMixin:
             self.call_from_thread(self._incrementar_cameras)
         else:
             # Porta aberta (testar_porta passou) mas sem stream -> salva mesmo assim.
-            self._urls_rede[host] = self._monta_url(host, candidatos[0], user, pwd, porta=porta)
+            self._urls_rede[host] = self._monta_url(
+                host, candidatos[0], user, pwd, porta=porta
+            )
             self._falhas_rede[host] = t("rtsp.falha_sem_video")
             self.call_from_thread(self._incrementar_cameras)
             self.call_from_thread(
@@ -1081,7 +1248,9 @@ class CamerasMixin:
 
     # ---- Gamificação: radar + progresso + contador ----
     def _atualizar_progresso(self, testados: int, total: int) -> None:
-        self.query_one("#rede-progress", ProgressBar).update(total=total, progress=testados)
+        self.query_one("#rede-progress", ProgressBar).update(
+            total=total, progress=testados
+        )
 
     def _incrementar_cameras(self) -> None:
         self._cameras_encontradas += 1
@@ -1090,7 +1259,12 @@ class CamerasMixin:
     def _atualizar_contador(self) -> None:
         cam = t("rtsp.contador_cam", n=self._cameras_encontradas)
         if self._val_total:
-            texto = t("rtsp.contador_val", feita=self._val_feita, total=self._val_total, cam=cam)
+            texto = t(
+                "rtsp.contador_val",
+                feita=self._val_feita,
+                total=self._val_total,
+                cam=cam,
+            )
         else:
             texto = cam
         self.query_one("#rede-contador", Static).update(texto)
@@ -1181,14 +1355,18 @@ class CamerasMixin:
             self.notify(t("rtsp.nf_import_vazio"), severity="warning")
             return
         pares = combinar_credenciais(usuarios, senhas)
-        novos = sum(1 for par in pares if adicionar_par(self._vault, par.usuario, par.senha))
+        novos = sum(
+            1 for par in pares if adicionar_par(self._vault, par.usuario, par.senha)
+        )
         salvar_vault(self._vault)
         self._refresh_cred_tabela()
         self.notify(t("rtsp.nf_import_ok", novos=novos, total=len(pares)))
 
     def _browse_arquivo(self, input_id: str) -> None:
         """Abre o explorador de arquivos (em thread) e preenche o campo escolhido."""
-        self.run_worker(lambda: self._worker_browse(input_id), thread=True, group=_GRUPO)
+        self.run_worker(
+            lambda: self._worker_browse(input_id), thread=True, group=_GRUPO
+        )
 
     def _worker_browse(self, input_id: str) -> None:
         caminho, abriu = _escolher_arquivo_txt(
@@ -1210,7 +1388,9 @@ class CamerasMixin:
         if not tabela.row_count:
             self.notify(t("rtsp.nf_nenhum_par"), severity="warning")
             return
-        chave = tabela.coordinate_to_cell_key(Coordinate(tabela.cursor_row, 0)).row_key.value
+        chave = tabela.coordinate_to_cell_key(
+            Coordinate(tabela.cursor_row, 0)
+        ).row_key.value
         remover_par(self._vault, int(chave))
         salvar_vault(self._vault)
         self._refresh_cred_tabela()
@@ -1221,7 +1401,9 @@ class CamerasMixin:
         if not tabela.row_count:
             self.notify(t("rtsp.nf_nenhum_ip"), severity="warning")
             return
-        ip = tabela.coordinate_to_cell_key(Coordinate(tabela.cursor_row, 0)).row_key.value
+        ip = tabela.coordinate_to_cell_key(
+            Coordinate(tabela.cursor_row, 0)
+        ).row_key.value
         esquecer_ip(self._conhecidos, ip)
         self._refresh_ips_tabela()
         self.notify(t("rtsp.nf_ip_esquecido", ip=ip))
@@ -1232,7 +1414,10 @@ class CamerasMixin:
             return
         motivo = self._falhas_rede.get(ip or "")
         if motivo:
-            self.notify(t("rtsp.nf_camera_nao_validou", ip=ip, motivo=motivo), severity="warning")
+            self.notify(
+                t("rtsp.nf_camera_nao_validou", ip=ip, motivo=motivo),
+                severity="warning",
+            )
         self._lancar_player(url, ip)
 
     # ---- Aba RTSP único ----
@@ -1245,7 +1430,10 @@ class CamerasMixin:
         pwd = self.query_one("#rtsp-pass", Input).value.strip() or None
         self.query_one("#rtsp-saida", Static).update(t("rtsp.testando_curto"))
         self.run_worker(
-            lambda: self._worker_rtsp(url, user, pwd), thread=True, exclusive=True, group=_GRUPO
+            lambda: self._worker_rtsp(url, user, pwd),
+            thread=True,
+            exclusive=True,
+            group=_GRUPO,
         )
 
     def _worker_rtsp(self, url: str, user, pwd) -> None:
@@ -1260,10 +1448,14 @@ class CamerasMixin:
         linhas.append(t("rtsp.rtsp_status", code=r.status_code, msg=r.mensagem))
         if info:
             if info.funciona:
-                linhas.append(t("rtsp.rtsp_entrega_video", res=info.resolucao, codec=info.codec))
+                linhas.append(
+                    t("rtsp.rtsp_entrega_video", res=info.resolucao, codec=info.codec)
+                )
             else:
                 linhas.append(t("rtsp.rtsp_sem_video", msg=info.mensagem))
-        self.call_from_thread(self.query_one("#rtsp-saida", Static).update, "\n".join(linhas))
+        self.call_from_thread(
+            self.query_one("#rtsp-saida", Static).update, "\n".join(linhas)
+        )
 
     def _abrir_rtsp_unico(self) -> None:
         url = self.query_one("#rtsp-url", Input).value.strip()

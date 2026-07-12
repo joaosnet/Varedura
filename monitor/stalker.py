@@ -12,7 +12,6 @@ Funcionalidades:
     - Exportação para PNG/CSV
 """
 
-import subprocess
 import platform
 import time
 import datetime
@@ -36,7 +35,6 @@ from rich import box
 from monitor.port_scanner import run_full_scan, PortScannerState
 from monitor.speed_tester import (
     get_speed_tester,
-    start_continuous_testing,
     stop_continuous_testing,
     speed_config,
 )
@@ -55,8 +53,8 @@ else:
 # ==============================================================================
 @dataclass
 class StalkerConfig:
-    gateway_ip: str = "192.168.18.1"  # IP do Roteador
-    external_ip: str = "ec2.sa-east-1.amazonaws.com"  # AWS EC2 por que o LOL teoricamente usa essa região
+    gateway_ip: str = ""
+    external_ip: str = ""
     lag_threshold_ms: int = 100  # Limite para considerar LAG (ms)
     interval: float = 1.0  # Intervalo de atualização (segundos)
     history_size: int = 8  # Quantas linhas de log manter
@@ -67,9 +65,15 @@ class StalkerConfig:
     show_speed: bool = True  # Mostrar painel de velocidade
 
     # Export options
-    export_max_points: int = 5000  # Máximo de pontos a manter ao exportar (downsampling)
-    allow_full_history_export: bool = False  # Se True, permite exportar todo o histórico sem downsampling
-    export_error_log: str = "exports/export_errors.log"  # Arquivo para registrar falhas de exportação
+    export_max_points: int = (
+        5000  # Máximo de pontos a manter ao exportar (downsampling)
+    )
+    allow_full_history_export: bool = (
+        False  # Se True, permite exportar todo o histórico sem downsampling
+    )
+    export_error_log: str = (
+        "exports/export_errors.log"  # Arquivo para registrar falhas de exportação
+    )
     prefs_file: str = "exports/stalker_prefs.json"  # Arquivo para persistir preferências de exportação
 
 
@@ -238,17 +242,13 @@ def parse_ping(output):
 
 def run_ping(host):
     """Executa o ping e retorna o tempo ou None se falhar."""
+    if not str(host or "").strip():
+        return None
     try:
-        cmd = get_ping_command(host)
-        startupinfo = None
-        if platform.system().lower() == "windows":
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        from monitor.ping_targets import PingStatus, probe_ping
 
-        result = subprocess.run(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=startupinfo
-        )
-        return parse_ping(result.stdout)
+        result = probe_ping(str(host), timeout_seconds=1.25)
+        return result.latency_ms if result.status is PingStatus.SUCCESS else None
     except Exception:
         return None
 
@@ -376,7 +376,11 @@ def analyze_lag_source(
         if diff < 20:  # Menos de 20ms de diferença
             return (
                 t("stalker.router"),
-                t("stalker.router_overloaded", local=f"{local_ms:.0f}", ext=f"{ext_ms:.0f}"),
+                t(
+                    "stalker.router_overloaded",
+                    local=f"{local_ms:.0f}",
+                    ext=f"{ext_ms:.0f}",
+                ),
             )
         else:
             # Grande diferença: pode ser tanto roteador quanto provedor
@@ -420,6 +424,7 @@ def _flush_stdin():
             msvcrt.getch()
     else:
         import termios
+
         try:
             termios.tcflush(sys.stdin, termios.TCIFLUSH)
         except (termios.error, OSError):
@@ -499,19 +504,27 @@ def handle_key(key: str) -> Optional[str]:
         return prompt_export_report()
     elif key == "p":
         config.show_ports = not config.show_ports
-        status = t("stalker.ports_enabled") if config.show_ports else t("stalker.ports_disabled")
+        status = (
+            t("stalker.ports_enabled")
+            if config.show_ports
+            else t("stalker.ports_disabled")
+        )
         return f"[yellow]{t('stalker.ports_panel', status=status)}[/]"
     elif key == "s":
         port_scanner_state = run_full_scan()
         return f"[green]{t('stalker.port_scan_updated', tcp=port_scanner_state.total_tcp, udp=port_scanner_state.total_udp)}[/]"
     elif key == "v":
-        config.show_speed = not config.show_speed
-        if config.show_speed:
-            return f"[yellow]{t('stalker.speed_panel_on')}[/]"
-        else:
-            # Exportar relatório ao pausar velocidade
-            export_msg = export_combined_report()
-            return f"[yellow]{t('stalker.speed_panel_off')}[/] | {export_msg}"
+        tester = get_speed_tester()
+        if tester.prepare_single_test():
+            config.show_speed = True
+            threading.Thread(
+                target=tester.run_once,
+                kwargs={"prepared": True},
+                daemon=True,
+            ).start()
+            return f"[cyan]{t('network.speed_started')}[/]"
+        tester.cancel_current_test()
+        return f"[yellow]{t('network.speed_cancelling')}[/]"
     elif key == "c":
         return prompt_change_contracted_speed()
     elif key == "f":
@@ -535,13 +548,24 @@ def prompt_change_gateway() -> str:
 
 
 def prompt_change_external() -> str:
-    """Altera IP externo (cicla entre servidores DNS)."""
-    dns_servers = ["8.8.8.8", "1.1.1.1", "208.67.222.222", "9.9.9.9"]
+    """Cycle only through the user's persisted targets, never hidden defaults."""
+    from cli.ui_shared import load_network_config, save_network_config
+    from monitor.ping_targets import TargetSelection
+
+    saved = load_network_config()
+    selection = TargetSelection.from_config(saved)
+    if not selection.targets:
+        return f"[yellow]{t('network.choose_one_target')}[/]"
+    ids = list(selection.selected_target_ids)
     try:
-        current_idx = dns_servers.index(config.external_ip)
-        config.external_ip = dns_servers[(current_idx + 1) % len(dns_servers)]
+        current = ids.index(selection.primary_target_id)
     except ValueError:
-        config.external_ip = dns_servers[0]
+        current = -1
+    primary = ids[(current + 1) % len(ids)]
+    saved["primary_target_id"] = primary
+    save_network_config(saved)
+    target = next(item for item in selection.targets if item.id == primary)
+    config.external_ip = target.host
     return f"[yellow]{t('stalker.dns_changed', ip=config.external_ip)}[/]"
 
 
@@ -604,7 +628,9 @@ def prompt_export_report(simulated_choice: str | None = None) -> str:
     """
     # Contagem de pontos estimada
     _ping_snapshot = snapshot_ping_history()
-    total_points = len(_ping_snapshot) if _ping_snapshot else len(local_stats.timestamps)
+    total_points = (
+        len(_ping_snapshot) if _ping_snapshot else len(local_stats.timestamps)
+    )
     # Mensagem de aviso
     warning = t("stalker.export_warning")
 
@@ -620,12 +646,26 @@ def prompt_export_report(simulated_choice: str | None = None) -> str:
         # Pergunta interativa simples (compatível Windows/Unix)
         try:
             if platform.system().lower() == "windows":
-                print(t("stalker.export_points_prompt", points=total_points, warning=warning), end=" ")
+                print(
+                    t(
+                        "stalker.export_points_prompt",
+                        points=total_points,
+                        warning=warning,
+                    ),
+                    end=" ",
+                )
                 ch = msvcrt.getwch()
                 print(ch)
                 choice = ch.lower()
             else:
-                print(t("stalker.export_points_prompt", points=total_points, warning=warning), end=" ")
+                print(
+                    t(
+                        "stalker.export_points_prompt",
+                        points=total_points,
+                        warning=warning,
+                    ),
+                    end=" ",
+                )
                 choice = sys.stdin.read(1).lower()
                 print(choice)
         except Exception:
@@ -740,9 +780,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                         "timestamp,download_mbps,upload_mbps,contrato_down,contrato_up,"
                         "pct_down,pct_up,status_anatel_medio,status_anatel_instantaneo\n"
                     )
-                    for ts, down, up in zip(
-                        speed_ts, speed_down, speed_up
-                    ):
+                    for ts, down, up in zip(speed_ts, speed_down, speed_up):
                         ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
                         pct_down = (down / contract_info.velocidade_down_mbps) * 100
                         pct_up = (up / contract_info.velocidade_up_mbps) * 100
@@ -2208,7 +2246,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
     except Exception as e:
         # Limpar arquivos temporários caso erro
         try:
-            if 'pdf_temp' in locals() and os.path.exists(pdf_temp):
+            if "pdf_temp" in locals() and os.path.exists(pdf_temp):
                 os.remove(pdf_temp)
         except Exception:
             pass
@@ -2309,7 +2347,9 @@ def make_ascii_graph(
 
     # Adicionar linha de stats
     if stats.min_ms is not None:
-        stats_line = t("stalker.graph_stats", min=stats.min_ms, max=stats.max_ms, avg=stats.avg_ms)
+        stats_line = t(
+            "stalker.graph_stats", min=stats.min_ms, max=stats.max_ms, avg=stats.avg_ms
+        )
     else:
         stats_line = t("stalker.graph_waiting")
 
@@ -2339,13 +2379,11 @@ def make_header():
     grid.add_row(
         f"[dim]{t('stalker.header_info', os=os_name, gateway=config.gateway_ip, dns=config.external_ip, ports=ports_info, threshold=config.lag_threshold_ms)}[/]"
     )
-    grid.add_row(
-        f"[dim italic]{t('stalker.header_keys')}[/]"
-    )
+    grid.add_row(f"[dim italic]{t('stalker.header_keys')}[/]")
     return Panel(grid, style="white on blue")
 
 
-def make_ping_table(local_ms, ext_ms, threshold):
+def make_ping_table(local_ms, ext_ms, threshold, additional_rows=()):
     """Cria a tabela de status dos Pings."""
     table = Table(expand=True, box=box.ROUNDED)
     table.add_column(t("stalker.ping_destination"), justify="center")
@@ -2390,6 +2428,18 @@ def make_ping_table(local_ms, ext_ms, threshold):
         Text(ext_display, style=ext_style),
         Text(ext_status, style=ext_style),
     )
+    for label, host, latency, status in additional_rows:
+        if latency is None:
+            display = t("stalker.timeout")
+            style = "yellow" if status == "icmp_filtered" else "bold white on red"
+        else:
+            display = f"{latency:.1f} ms"
+            style = "bold red" if latency > threshold else "green"
+        table.add_row(
+            f"{label} ({host})",
+            Text(display, style=style),
+            Text(status, style=style),
+        )
 
     return Panel(table, title=t("stalker.connection_status"), border_style="cyan")
 
@@ -2400,7 +2450,9 @@ def make_graph_panel():
         local_stats, width=config.graph_width, label="[cyan]Gateway[/]"
     )
     ext_graph = make_ascii_graph(
-        external_stats, width=config.graph_width, label=f"[orange1]{t('stalker.graph_external')}[/]"
+        external_stats,
+        width=config.graph_width,
+        label=f"[orange1]{t('stalker.graph_external')}[/]",
     )
 
     # Info de intervalo de tempo
@@ -2412,14 +2464,14 @@ def make_graph_panel():
         time_info = f"[dim]{t('stalker.graph_waiting')}[/]"
 
     # Indicador de linha de threshold
-    threshold_info = f"[red]{t('stalker.graph_threshold', threshold=config.lag_threshold_ms)}[/]"
+    threshold_info = (
+        f"[red]{t('stalker.graph_threshold', threshold=config.lag_threshold_ms)}[/]"
+    )
 
     content = Text.from_markup(
         f"{time_info}\n\n{local_graph}\n\n{ext_graph}\n\n{threshold_info}"
     )
-    return Panel(
-        content, title=t("stalker.graph_title"), border_style="magenta"
-    )
+    return Panel(content, title=t("stalker.graph_title"), border_style="magenta")
 
 
 def make_process_table(procs):
@@ -2440,15 +2492,15 @@ def make_process_table(procs):
             proc_name = name if name else t("stalker.unknown_process")
             table.add_row(str(pid), proc_name, f"{mb:.2f} MB")
 
-    return Panel(
-        table, title=t("stalker.process_table_title"), border_style="yellow"
-    )
+    return Panel(table, title=t("stalker.process_table_title"), border_style="yellow")
 
 
 def make_ports_panel():
     """Cria painel de portas TCP em listening."""
     table = Table(expand=True, box=box.SIMPLE_HEAD)
-    table.add_column(t("stalker.ports_col"), style="bold yellow", width=8, justify="center")
+    table.add_column(
+        t("stalker.ports_col"), style="bold yellow", width=8, justify="center"
+    )
     table.add_column(t("stalker.process_short_col"), style="bold green")
     table.add_column(t("stalker.address_col"), style="dim", width=10)
 
@@ -2470,7 +2522,9 @@ def make_ports_panel():
 
     return Panel(
         table,
-        title=t("stalker.ports_title", total=total, extra=extra_info, last_scan=last_scan),
+        title=t(
+            "stalker.ports_title", total=total, extra=extra_info, last_scan=last_scan
+        ),
         border_style="green",
     )
 
@@ -2479,7 +2533,9 @@ def make_connections_panel():
     """Cria painel de processos com mais conexões."""
     table = Table(expand=True, box=box.SIMPLE_HEAD)
     table.add_column(t("stalker.process_col"), style="bold cyan")
-    table.add_column(t("stalker.connections_col"), style="bold yellow", justify="center", width=8)
+    table.add_column(
+        t("stalker.connections_col"), style="bold yellow", justify="center", width=8
+    )
     table.add_column(t("stalker.ram_col"), style="dim", justify="right", width=8)
 
     connections = port_scanner_state.top_connections[:5]
@@ -2493,7 +2549,9 @@ def make_connections_panel():
 
     return Panel(
         table,
-        title=t("stalker.connections_title", count=port_scanner_state.total_established),
+        title=t(
+            "stalker.connections_title", count=port_scanner_state.total_established
+        ),
         border_style="cyan",
     )
 
@@ -2578,15 +2636,23 @@ def make_speed_panel():
                     )
             else:
                 table.add_row(
-                    "[yellow]...[/]", f"[dim]{t('stalker.speed_starting')}[/]", "[dim]...[/]", "[dim]...[/]"
+                    "[yellow]...[/]",
+                    f"[dim]{t('stalker.speed_starting')}[/]",
+                    "[dim]...[/]",
+                    "[dim]...[/]",
                 )
         elif not results_by_provider:
             if snapshot.get("last_error"):
-                error_msg = str(snapshot.get("last_error", t("stalker.speed_error")))[:20]
+                error_msg = str(snapshot.get("last_error", t("stalker.speed_error")))[
+                    :20
+                ]
                 table.add_row("-", f"[red]{error_msg}[/]", "-", "-")
             else:
                 table.add_row(
-                    "[dim]...[/]", f"[dim]{t('stalker.speed_waiting')}[/]", "[dim]...[/]", "[dim]...[/]"
+                    "[dim]...[/]",
+                    f"[dim]{t('stalker.speed_waiting')}[/]",
+                    "[dim]...[/]",
+                    "[dim]...[/]",
                 )
 
         test_count = snapshot.get("test_count", 0)
@@ -2619,15 +2685,15 @@ def make_log_panel(log_events):
         if i < len(lines) - 1:
             content.append("\n")
 
-    return Panel(
-        content, title=t("stalker.log_title"), border_style="red"
-    )
+    return Panel(content, title=t("stalker.log_title"), border_style="red")
 
 
 def make_help_panel():
     """Cria painel de ajuda com atalhos de teclado."""
     help_text = t("stalker.help_text")
-    return Panel(Text.from_markup(help_text), title=t("stalker.help_title"), border_style="green")
+    return Panel(
+        Text.from_markup(help_text), title=t("stalker.help_title"), border_style="green"
+    )
 
 
 def main(external_console: Console | None = None, session_recorder=None):
@@ -2635,6 +2701,52 @@ def main(external_console: Console | None = None, session_recorder=None):
 
     if external_console is not None:
         console = external_console
+
+    # The Rich fallback consumes the same consented schema-v3 selection.  It
+    # never revives the former EC2 default or starts external traffic when the
+    # onboarding was cancelled.
+    from cli.ui_shared import load_network_config
+    from monitor.ping_targets import TargetSelection
+
+    network_config = load_network_config()
+    selection = TargetSelection.from_config(network_config)
+    if not selection.onboarding_completed or selection.primary_target is None:
+        console.print(f"[yellow]{t('network.choose_one_target')}[/]")
+        return
+    config.gateway_ip = str(network_config.get("gateway_ip", "") or "").strip()
+    config.external_ip = selection.primary_target.host
+    config.lag_threshold_ms = int(network_config.get("lag_threshold_ms", 100) or 100)
+
+    route_available = False
+    try:
+        from monitor.network_diagnostics import collect_network_snapshot
+
+        local_snapshot = collect_network_snapshot(timeout=2.5)
+        route_available = local_snapshot.route_present and not local_snapshot.apipa
+        if not config.gateway_ip and local_snapshot.default_gateway:
+            config.gateway_ip = local_snapshot.default_gateway
+    except Exception:
+        route_available = bool(config.gateway_ip)
+
+    from monitor.ping_scheduler import PingScheduler
+    from monitor.ping_targets import PingTarget, TargetCategory
+
+    gateway_target = None
+    if config.gateway_ip:
+        try:
+            gateway_target = PingTarget(
+                "gateway",
+                t("stalker.graph_gateway"),
+                config.gateway_ip,
+                TargetCategory.GATEWAY,
+                ephemeral=True,
+            )
+        except ValueError:
+            gateway_target = None
+    ping_scheduler = PingScheduler()
+    ping_scheduler.configure(selection, gateway_target=gateway_target)
+    ping_scheduler.set_route_available(route_available)
+    latest_targets = {}
 
     # Reset state so stalker can be re-entered from the main menu
     running = True
@@ -2648,9 +2760,7 @@ def main(external_console: Console | None = None, session_recorder=None):
     log_events.append(f"[dim]{t('stalker.monitoring_started')}[/]")
 
     if is_android():
-        log_events.append(
-            f"[yellow]{t('stalker.android_detected')}[/]"
-        )
+        log_events.append(f"[yellow]{t('stalker.android_detected')}[/]")
 
     # Scan inicial de portas em background (não trava a inicialização)
     def _initial_port_scan():
@@ -2663,14 +2773,7 @@ def main(external_console: Console | None = None, session_recorder=None):
     threading.Thread(target=_initial_port_scan, daemon=True).start()
     log_events.append(f"[dim]{t('stalker.port_scan_bg')}[/]")
 
-    # Iniciar teste de velocidade contínuo em background
-    try:
-        start_continuous_testing()
-        log_events.append(
-            f"[cyan]{t('stalker.speed_monitor_started', down=speed_config.velocidade_contratada_down, up=speed_config.velocidade_contratada_up)}[/]"
-        )
-    except Exception as e:
-        log_events.append(f"[red]{t('stalker.speed_start_error', error=e)}[/]")
+    log_events.append(f"[dim]{t('network.speed_start')} (V)[/]")
 
     # Register layout with session recorder for GIF capture
     if session_recorder is not None:
@@ -2687,6 +2790,30 @@ def main(external_console: Console | None = None, session_recorder=None):
                         log_events.append(
                             f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {msg}"
                         )
+                    if key == "e":
+                        network_config = load_network_config()
+                        selection = TargetSelection.from_config(network_config)
+                        if selection.targets:
+                            ping_scheduler.configure(
+                                selection,
+                                gateway_target=gateway_target,
+                            )
+                    elif key == "g":
+                        try:
+                            gateway_target = PingTarget(
+                                "gateway",
+                                t("stalker.graph_gateway"),
+                                config.gateway_ip,
+                                TargetCategory.GATEWAY,
+                                ephemeral=True,
+                            )
+                            ping_scheduler.configure(
+                                selection,
+                                gateway_target=gateway_target,
+                            )
+                            ping_scheduler.set_route_available(True)
+                        except ValueError:
+                            ping_scheduler.set_route_available(False)
 
                 # Verificar status da exportação em background
                 export_msg = get_export_status()
@@ -2697,17 +2824,37 @@ def main(external_console: Console | None = None, session_recorder=None):
 
                 start_time = datetime.datetime.now().strftime("%H:%M:%S")
 
-                # 1. Executa Testes de Ping
-                local_ms = run_ping(config.gateway_ip)
-                ext_ms = run_ping(config.external_ip)
-
-                # Atualizar stats para gráfico
-                local_stats.add(local_ms)
-                external_stats.add(ext_ms)
-
-                # Registrar no histórico completo para relatório formal (thread-safe)
-                now = datetime.datetime.now()
-                record_ping_sample(now, local_ms, ext_ms)
+                # 1. Scheduler compartilhado: gateway + até cinco destinos.
+                accepted = ping_scheduler.poll()
+                for result in accepted:
+                    latest_targets[result.target_id] = result
+                    value = result.latency_ms if result.success else None
+                    if result.target_id == "gateway":
+                        local_stats.add(value)
+                    elif result.target_id == selection.primary_target_id:
+                        external_stats.add(value)
+                local_result = latest_targets.get("gateway")
+                primary_result = latest_targets.get(selection.primary_target_id)
+                local_ms = getattr(local_result, "latency_ms", None)
+                ext_ms = getattr(primary_result, "latency_ms", None)
+                if accepted:
+                    record_ping_sample(datetime.datetime.now(), local_ms, ext_ms)
+                additional_rows = []
+                for target in selection.targets:
+                    if target.id == selection.primary_target_id:
+                        continue
+                    result = latest_targets.get(target.id)
+                    status = getattr(
+                        getattr(result, "status", None), "value", "waiting"
+                    )
+                    additional_rows.append(
+                        (
+                            target.label,
+                            target.host,
+                            getattr(result, "latency_ms", None),
+                            status,
+                        )
+                    )
 
                 # 2. Verifica Processos de Rede
                 procs = get_top_network_hogs()
@@ -2745,14 +2892,18 @@ def main(external_console: Console | None = None, session_recorder=None):
                     suspeito, explicacao = analyze_lag_source(
                         local_ms, ext_ms, config.lag_threshold_ms, procs
                     )
-                    log_events.append(f"   ↳ [bold yellow]{t('stalker.diagnostic')}[/] {suspeito}")
+                    log_events.append(
+                        f"   ↳ [bold yellow]{t('stalker.diagnostic')}[/] {suspeito}"
+                    )
                     log_events.append(f"   ↳ [dim]{explicacao}[/]")
 
                     # Mostrar processo com mais conexões se houver (como info secundária)
                     if procs and not suspeito.startswith("🔌"):
                         top_hog = procs[0]
                         conns = top_hog[2] // (1024 * 1024)  # Número de conexões
-                        hog_name = top_hog[1] if top_hog[1] else t("stalker.unknown_process")
+                        hog_name = (
+                            top_hog[1] if top_hog[1] else t("stalker.unknown_process")
+                        )
                         log_events.append(
                             f"   ↳ [dim]{t('stalker.top_connections_log', name=hog_name, conns=conns)}[/]"
                         )
@@ -2822,7 +2973,12 @@ def main(external_console: Console | None = None, session_recorder=None):
 
                     layout["header"].update(make_header())
                     layout["ping_stats"].update(
-                        make_ping_table(local_ms, ext_ms, config.lag_threshold_ms)
+                        make_ping_table(
+                            local_ms,
+                            ext_ms,
+                            config.lag_threshold_ms,
+                            additional_rows,
+                        )
                     )
                     layout["graph"].update(make_graph_panel())
                     layout["footer"].update(make_log_panel(log_events))
@@ -2835,6 +2991,7 @@ def main(external_console: Console | None = None, session_recorder=None):
     # Cleanup
     if session_recorder is not None:
         session_recorder.set_renderable(None)
+    ping_scheduler.stop(wait=False)
     stop_continuous_testing()
 
     # Perguntar se usuário quer gerar relatório ao sair
@@ -2842,9 +2999,7 @@ def main(external_console: Console | None = None, session_recorder=None):
     if tester.stats.test_count > 0 or local_stats.history:
         try:
             choice = (
-                console.input(
-                    f"\n[bold cyan]{t('stalker.ask_final_report')}[/]"
-                )
+                console.input(f"\n[bold cyan]{t('stalker.ask_final_report')}[/]")
                 .strip()
                 .lower()
             )

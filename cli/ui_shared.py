@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import ipaddress
 import json
+import re
 from pathlib import Path
 from typing import Callable, Iterable
 
@@ -47,7 +50,11 @@ CleanupProgressCallback = Callable[[int, int, str], None]
 
 # Cleanup steps grouped into sections for a clearer Docker tab.
 CLEANUP_GROUPS = [
-    ("cleanup_prefs.group_docker", "🐳", ["containers", "images", "volumes", "networks", "builder"]),
+    (
+        "cleanup_prefs.group_docker",
+        "🐳",
+        ["containers", "images", "volumes", "networks", "builder"],
+    ),
     ("cleanup_prefs.group_wsl", "🐧", ["stop_docker", "wsl_sparse", "compact_vhdx"]),
     ("cleanup_prefs.group_system", "🧹", ["temp_files", "recycle_bin"]),
 ]
@@ -93,33 +100,212 @@ def save_recording_pref(enabled: bool) -> None:
     save_prefs(data)
 
 
-# Default network monitor settings (mirror monitor.stalker.StalkerConfig /
-# monitor.speed_tester.SpeedTestConfig so we don't import those heavy modules).
+# Network preferences are intentionally plain data.  Keeping migration here
+# avoids importing the monitor (and its optional network providers) while the
+# first Textual frame is being composed.
+NETWORK_SCHEMA_VERSION = 3
+LEGACY_EXTERNAL_DEFAULT = "ec2.sa-east-1.amazonaws.com"
+
+# Known legacy values can be migrated without importing the target catalogue.
+_PRESET_HOST_IDS = {
+    "1.1.1.1": "cloudflare_ipv4",
+    "2606:4700:4700::1111": "cloudflare_ipv6",
+    "8.8.8.8": "google_ipv4",
+    "2001:4860:4860::8888": "google_ipv6",
+    "9.9.9.9": "quad9_ipv4",
+    "2620:fe::fe": "quad9_ipv6",
+    "br1.api.riotgames.com": "lol_br1_api",
+}
+
 NETWORK_DEFAULTS: dict[str, object] = {
     "gateway_ip": "",  # empty -> autodetect on first run
-    "external_host": "ec2.sa-east-1.amazonaws.com",
+    # ``external_host`` remains a read-only compatibility view for one release.
+    "external_host": "",
     "lag_threshold_ms": 100,
     "contracted_down": 500.0,
     "contracted_up": 100.0,
+    "network_schema_version": NETWORK_SCHEMA_VERSION,
+    "target_onboarding_completed": False,
+    "selected_target_ids": [],
+    "primary_target_id": "",
+    "custom_targets": [],
+    "league_auto_detect": True,
+    "include_full_ip_exports": False,
+    "app_ca_file": "",
 }
 
 
+def _valid_legacy_host(value: str) -> bool:
+    """Cheap, resolution-free migration guard kept outside monitor imports."""
+    host = value.strip()
+    if (
+        not host
+        or len(host) > 253
+        or host.startswith("-")
+        or any(char.isspace() or ord(char) < 32 or ord(char) == 127 for char in host)
+        or any(token in host for token in ("://", "/", "?", "#", "@", "\\", "*"))
+    ):
+        return False
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        if ":" in host:
+            return False
+        try:
+            ascii_host = host.rstrip(".").encode("idna").decode("ascii")
+        except UnicodeError:
+            return False
+        labels = ascii_host.split(".")
+        return bool(labels) and all(
+            label
+            and len(label) <= 63
+            and re.fullmatch(r"[A-Za-z0-9-]+", label)
+            and not label.startswith("-")
+            and not label.endswith("-")
+            for label in labels
+        )
+    return not (address.is_unspecified or address.is_multicast)
+
+
+def _verified_stored_app_ca(value: object) -> str:
+    candidate = str(value or "").strip()
+    if not candidate:
+        return ""
+    try:
+        path = Path(candidate).expanduser().resolve(strict=True)
+        store = (Path.home() / ".varedura" / "certs").resolve()
+        if (
+            not path.is_file()
+            or path.parent != store
+            or path.suffix.casefold() != ".pem"
+            or not re.fullmatch(r"[0-9a-f]{64}", path.stem)
+            or path.stat().st_size > 5 * 1024 * 1024
+        ):
+            return ""
+        material = path.read_bytes()
+    except OSError:
+        return ""
+    return str(path) if hashlib.sha256(material).hexdigest() == path.stem else ""
+
+
 def load_network_config() -> dict:
-    """Load the network monitor configuration, merged over defaults."""
+    """Load and migrate network preferences without writing to disk.
+
+    Schema-v1/v2 installations used a single ``external_host``.  An explicit
+    host is preserved as the sole primary target; the old speculative AWS
+    default deliberately returns to onboarding so a new installation never
+    starts external traffic without consent.
+    """
     saved = load_prefs().get("network", {})
     config = dict(NETWORK_DEFAULTS)
+    config["selected_target_ids"] = []
+    config["custom_targets"] = []
     if isinstance(saved, dict):
         config.update({k: saved[k] for k in NETWORK_DEFAULTS if k in saved})
+
+        try:
+            schema = int(saved.get("network_schema_version", 0) or 0)
+        except (TypeError, ValueError):
+            schema = 0
+        if schema < NETWORK_SCHEMA_VERSION:
+            legacy_host = str(saved.get("external_host", "") or "").strip()
+            if (
+                legacy_host
+                and legacy_host.lower() != LEGACY_EXTERNAL_DEFAULT
+                and _valid_legacy_host(legacy_host)
+            ):
+                preset_id = _PRESET_HOST_IDS.get(legacy_host.lower())
+                if preset_id:
+                    config["selected_target_ids"] = [preset_id]
+                    config["primary_target_id"] = preset_id
+                else:
+                    digest = hashlib.sha256(
+                        legacy_host.lower().encode("utf-8")
+                    ).hexdigest()[:12]
+                    custom_id = f"custom_{digest}"
+                    config["custom_targets"] = [
+                        {"id": custom_id, "label": legacy_host, "host": legacy_host}
+                    ]
+                    config["selected_target_ids"] = [custom_id]
+                    config["primary_target_id"] = custom_id
+                config["target_onboarding_completed"] = True
+            else:
+                config["selected_target_ids"] = []
+                config["primary_target_id"] = ""
+                config["target_onboarding_completed"] = False
+            config["network_schema_version"] = NETWORK_SCHEMA_VERSION
+
+    selected = config.get("selected_target_ids")
+    if not isinstance(selected, list):
+        selected = []
+    selected = [str(value) for value in selected if str(value).strip()][:5]
+    config["selected_target_ids"] = list(dict.fromkeys(selected))
+
+    custom = config.get("custom_targets")
+    if not isinstance(custom, list):
+        custom = []
+    config["custom_targets"] = [item for item in custom if isinstance(item, dict)][:5]
+
+    primary = str(config.get("primary_target_id", "") or "")
+    if primary not in config["selected_target_ids"]:
+        primary = (
+            config["selected_target_ids"][0] if config["selected_target_ids"] else ""
+        )
+    config["primary_target_id"] = primary
+    config["target_onboarding_completed"] = bool(
+        config.get("target_onboarding_completed") and config["selected_target_ids"]
+    )
+    config["league_auto_detect"] = bool(config.get("league_auto_detect", True))
+    config["include_full_ip_exports"] = bool(
+        config.get("include_full_ip_exports", False)
+    )
+    config["app_ca_file"] = _verified_stored_app_ca(config.get("app_ca_file", ""))
+    try:
+        threshold = int(config.get("lag_threshold_ms", 100))
+    except (TypeError, ValueError):
+        threshold = 100
+    config["lag_threshold_ms"] = threshold if threshold > 0 else 100
+    for key, fallback in (("contracted_down", 500.0), ("contracted_up", 100.0)):
+        try:
+            value = float(config.get(key, fallback))
+        except (TypeError, ValueError):
+            value = fallback
+        config[key] = value if value >= 0 else fallback
+
+    # Compatibility for code that still expects the old scalar field.
+    if primary:
+        preset_host = next(
+            (
+                host
+                for host, target_id in _PRESET_HOST_IDS.items()
+                if target_id == primary
+            ),
+            "",
+        )
+        custom_host = next(
+            (
+                str(item.get("host", ""))
+                for item in config["custom_targets"]
+                if str(item.get("id", "")) == primary
+            ),
+            "",
+        )
+        config["external_host"] = preset_host or custom_host
+    else:
+        config["external_host"] = ""
     return config
 
 
 def save_network_config(config: dict) -> None:
-    """Persist the network monitor configuration."""
+    """Persist schema-v3 network configuration atomically with other prefs."""
     data = load_prefs()
     current = data.get("network", {})
     if not isinstance(current, dict):
         current = {}
     current.update({k: config[k] for k in NETWORK_DEFAULTS if k in config})
+    current["network_schema_version"] = NETWORK_SCHEMA_VERSION
+    # v3 is authoritative; keep no stale scalar target on disk.
+    current.pop("external_host", None)
     data["network"] = current
     save_prefs(data)
 
@@ -225,7 +411,11 @@ def build_cleanup_steps_table(steps: dict[str, bool] | None = None) -> Table:
     for index, (key, label_key, _default) in enumerate(CLEANUP_STEPS, 1):
         enabled = current.get(key, False)
         icon = "[bold green]+[/]" if enabled else "[dim]-[/]"
-        status = f"[green]{t('cleanup_prefs.on')}[/]" if enabled else f"[dim]{t('cleanup_prefs.off')}[/]"
+        status = (
+            f"[green]{t('cleanup_prefs.on')}[/]"
+            if enabled
+            else f"[dim]{t('cleanup_prefs.off')}[/]"
+        )
         table.add_row(str(index), f"{icon} {status}", t(label_key))
     return table
 
@@ -259,7 +449,9 @@ def _add_common_status_rows(
     )
 
 
-def build_settings_status_table(recording_enabled: bool, current_language: str) -> Table:
+def build_settings_status_table(
+    recording_enabled: bool, current_language: str
+) -> Table:
     """Build the shared settings status table."""
     table = Table(box=box.SIMPLE, show_header=True, expand=True)
     table.add_column(t("settings.current_status"), style="bold cyan")
@@ -273,7 +465,11 @@ def _fmt_ping(ms: float | None, threshold: int) -> Text:
     if ms is None:
         # No data / idle -> neutral dash rather than an alarming TIMEOUT.
         return Text("—", style="dim")
-    style = "green" if ms <= threshold else ("yellow" if ms <= threshold * 1.5 else "bold red")
+    style = (
+        "green"
+        if ms <= threshold
+        else ("yellow" if ms <= threshold * 1.5 else "bold red")
+    )
     return Text(f"{ms:.0f} ms", style=style)
 
 
@@ -322,7 +518,10 @@ def build_dashboard_status(
         if running
         else Text(t("dashboard.net_idle"), style="dim"),
     )
-    table.add_row(t("dashboard.gateway", ip=gateway), _fmt_ping(network.get("local_ms"), threshold))
+    table.add_row(
+        t("dashboard.gateway", ip=gateway),
+        _fmt_ping(network.get("local_ms"), threshold),
+    )
     table.add_row(t("dashboard.external"), _fmt_ping(network.get("ext_ms"), threshold))
 
     if system:
@@ -339,7 +538,9 @@ def build_dashboard_status(
         sent = system.get("bytes_enviados_mb")
         recv = system.get("bytes_recebidos_mb")
         if sent is not None and recv is not None:
-            table.add_row(t("dashboard.traffic"), _fmt_traffic(float(sent), float(recv)))
+            table.add_row(
+                t("dashboard.traffic"), _fmt_traffic(float(sent), float(recv))
+            )
 
     _add_common_status_rows(table, recording_enabled, current_language)
     return Panel(table, title=t("menu.title"), border_style="blue")
@@ -378,7 +579,8 @@ def build_achievements_row(state) -> Panel:
     unlocked_count = sum(1 for a in ACHIEVEMENTS if a.id in state.achievements)
     return Panel(
         table,
-        title=t("game.achievements") + f"  [dim]{unlocked_count}/{len(ACHIEVEMENTS)}[/]",
+        title=t("game.achievements")
+        + f"  [dim]{unlocked_count}/{len(ACHIEVEMENTS)}[/]",
         border_style="yellow",
     )
 
@@ -422,7 +624,9 @@ def build_scanner_tables(state) -> tuple[Table, Table, Panel]:
         expand=True,
     )
     conn_table.add_column(t("scanner.process"), style="bold cyan")
-    conn_table.add_column(t("scanner.connections"), style="bold yellow", justify="center")
+    conn_table.add_column(
+        t("scanner.connections"), style="bold yellow", justify="center"
+    )
     conn_table.add_column(t("scanner.ram_mb"), style="dim", justify="right")
     for proc in state.top_connections:
         ram_str = f"{proc.memoria_mb:.1f}" if proc.memoria_mb > 0 else "N/A"
@@ -480,7 +684,9 @@ def build_ports_summary(state) -> Text:
 def selected_cleanup_keys(steps: dict[str, bool] | None = None) -> list[str]:
     """Return enabled cleanup step keys in configured display order."""
     current = steps or get_cleanup_steps()
-    return [key for key, _label_key, _default in CLEANUP_STEPS if current.get(key, False)]
+    return [
+        key for key, _label_key, _default in CLEANUP_STEPS if current.get(key, False)
+    ]
 
 
 def run_cleanup_steps(

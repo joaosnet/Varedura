@@ -18,6 +18,18 @@ def isolated_ui_prefs(monkeypatch, tmp_path):
 
     monkeypatch.setattr(i18n, "_PREFS_FILE", tmp_path / "lang.json")
     i18n_init("en")
+    # Most UI tests exercise established-user flows.  First-run onboarding has
+    # dedicated coverage below and must not intercept unrelated pilot clicks.
+    ui_shared.save_network_config(
+        {
+            "network_schema_version": 3,
+            "target_onboarding_completed": True,
+            "selected_target_ids": ["cloudflare_ipv4"],
+            "primary_target_id": "cloudflare_ipv4",
+            "custom_targets": [],
+            "league_auto_detect": False,
+        }
+    )
     yield
     i18n_init("en")
 
@@ -143,6 +155,7 @@ async def test_textual_ports_view_populates_in_network_tab(monkeypatch):
     async with app.run_test(size=(120, 45)) as pilot:
         await pilot.pause()
         app.query_one("#main-tabs", TabbedContent).active = "network"
+        await wait_until(lambda: bool(list(app.query("#network-subtabs"))), pilot)
         app.query_one("#network-subtabs", TabbedContent).active = "net-ports-tab"
         await pilot.pause()
 
@@ -168,7 +181,9 @@ async def test_textual_scanner_menu_option_opens_network_ports(monkeypatch):
         await pilot.pause()
 
         assert app.query_one("#main-tabs", TabbedContent).active == "network"
-        assert app.query_one("#network-subtabs", TabbedContent).active == "net-ports-tab"
+        assert (
+            app.query_one("#network-subtabs", TabbedContent).active == "net-ports-tab"
+        )
 
 
 def _patch_network(monkeypatch):
@@ -176,8 +191,25 @@ def _patch_network(monkeypatch):
     import monitor.stalker as stalker
     import monitor.speed_tester as speed_tester
     import monitor.port_scanner as scanner
+    import monitor.ping_scheduler as ping_scheduler
+    from monitor.ping_targets import PingProbeResult, PingStatus
+    import time
 
     monkeypatch.setattr(stalker, "run_ping", lambda host: 12.0)
+
+    def fake_probe(self, target, generation, cancel_event):
+        started = time.monotonic()
+        return PingProbeResult(
+            target_id=target.id,
+            generation=generation,
+            host=target.host,
+            status=PingStatus.SUCCESS,
+            latency_ms=12.0,
+            started_monotonic=started,
+            completed_monotonic=started + 0.001,
+        )
+
+    monkeypatch.setattr(ping_scheduler.PingScheduler, "_run_probe", fake_probe)
     monkeypatch.setattr(
         stalker, "get_top_network_hogs", lambda: [(111, "chrome.exe", 3 * 1024 * 1024)]
     )
@@ -237,7 +269,9 @@ async def test_textual_network_health_card_updates(monkeypatch):
             lambda: app.query_one("#health-digits", Digits).value not in ("", "--"),
             pilot,
         )
-        assert int(app.query_one("#health-digits", Digits).value) >= 80  # 12ms ping -> top tier
+        assert (
+            int(app.query_one("#health-digits", Digits).value) >= 80
+        )  # 12ms ping -> top tier
         assert "sub20" in app._game.achievements
 
 
@@ -299,6 +333,179 @@ async def test_textual_network_option_activates_tab_without_modal(monkeypatch):
 
         assert app.query_one("#main-tabs", TabbedContent).active == "network"
         assert len(app.screen_stack) == 1  # no modal pushed
+
+
+@pytest.mark.asyncio
+async def test_first_run_requires_selection_before_external_monitoring(monkeypatch):
+    from cli.network_ui import TargetPickerScreen
+    from textual.widgets import Select, SelectionList
+
+    ui_shared.PREFS_FILE.unlink(missing_ok=True)
+    import monitor.netinfo as netinfo
+
+    monkeypatch.setattr(netinfo, "detect_default_gateway", lambda: None)
+    app = VareduraTextualApp()
+    async with app.run_test(size=(120, 50)) as pilot:
+        await wait_until(lambda: isinstance(app.screen, TargetPickerScreen), pilot)
+        assert not app.network_running
+        assert app._ping_scheduler is None
+
+        picker = app.screen
+        picker.query_one("#target-list", SelectionList).select("cloudflare_ipv4")
+        await pilot.pause()
+        picker.query_one("#target-primary", Select).value = "cloudflare_ipv4"
+        await pilot.click("#target-save")
+        await wait_until(lambda: len(app.screen_stack) == 1, pilot)
+
+        config = ui_shared.load_network_config()
+        assert config["target_onboarding_completed"] is True
+        assert config["selected_target_ids"] == ["cloudflare_ipv4"]
+        # Saving on the dashboard does not itself start background pings.
+        assert not app.network_running
+
+
+@pytest.mark.asyncio
+async def test_hidden_tabs_are_composed_only_when_opened():
+    app = VareduraTextualApp()
+    async with app.run_test(size=(120, 50)) as pilot:
+        await pilot.pause()
+        assert not list(app.query("#network-pane"))
+        assert not list(app.query("#cleanup-config"))
+
+        app.query_one("#main-tabs", TabbedContent).active = "network"
+        await wait_until(lambda: bool(list(app.query("#network-pane"))), pilot)
+        assert not list(app.query("#cleanup-config"))
+
+
+@pytest.mark.asyncio
+async def test_network_monitor_does_not_auto_start_bandwidth_test(monkeypatch):
+    _patch_network(monkeypatch)
+    import monitor.speed_tester as speed_module
+
+    monkeypatch.setattr(speed_module, "speed_tester", None)
+    app = VareduraTextualApp()
+    async with app.run_test(size=(120, 50)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "network"
+        await wait_until(lambda: app.network_running, pilot)
+        await pilot.pause()
+        assert speed_module.speed_tester is None
+
+
+def test_speed_worker_is_prepared_before_schedule_and_can_cancel_immediately(
+    monkeypatch,
+):
+    import monitor.speed_tester as speed_module
+    from monitor.speed_tester import ContinuousSpeedTester, SpeedTestConfig
+
+    tester = ContinuousSpeedTester(SpeedTestConfig())
+    events = []
+    original_prepare = tester.prepare_single_test
+
+    def prepare():
+        events.append("prepare")
+        return original_prepare()
+
+    monkeypatch.setattr(tester, "prepare_single_test", prepare)
+    monkeypatch.setattr(speed_module, "get_speed_tester", lambda: tester)
+
+    class Widget:
+        disabled = False
+
+    class FakeApp:
+        _speed_test_active = False
+        start_button = Widget()
+        cancel_button = Widget()
+
+        def query_one(self, selector, *_args):
+            return (
+                self.start_button
+                if selector == "#network-speed-start"
+                else self.cancel_button
+            )
+
+        def _network_log(self, _message):
+            pass
+
+        def _run_speed_test_once(self, *, prepared=False):
+            events.append(("worker", prepared))
+
+    app = FakeApp()
+    VareduraTextualApp._start_speed_test(app)
+    assert events == ["prepare", ("worker", True)]
+
+    VareduraTextualApp._cancel_speed_test(app)
+    assert tester.run_once(prepared=True) is None
+    assert tester.get_stats_snapshot()["last_error"] == "Teste cancelado"
+
+
+def test_additional_targets_do_not_increment_gamification_counters():
+    app = VareduraTextualApp()
+    calls = []
+    app._record_and_check = lambda health: calls.append(health)
+    health = {"score": 90, "monitor_s": 1.0}
+
+    app._render_ping_update(health, {}, record=False)
+    assert calls == []
+    app._render_ping_update(health, {}, record=True)
+    assert calls == [health]
+
+
+def test_target_table_statistics_include_jitter_trend_and_live_league_ip():
+    from monitor.ping_targets import PingTarget, TargetCategory
+
+    assert VareduraTextualApp._target_jitter([10.0, 20.0, 15.0]) == 7.5
+    assert VareduraTextualApp._target_trend([10.0, 10.0, 20.0, 20.0]) == "↑"
+    league = PingTarget(
+        "league_match_test",
+        "League match",
+        "104.160.131.3",
+        TargetCategory.LEAGUE_MATCH,
+        ephemeral=True,
+    )
+    assert "104.160.131.3" in VareduraTextualApp._live_target_label(league)
+
+
+def test_callback_from_previous_network_run_is_discarded():
+    app = VareduraTextualApp()
+    app.network_running = True
+    app._network_run_generation = 2
+    app._accept_ping_result(object(), run_generation=1)
+    assert app._target_latest == {}
+
+
+def test_late_league_callback_cannot_reenable_disabled_detector():
+    from monitor.league_detector import (
+        LeagueDetectionResult,
+        LeagueDetectorState,
+        LeagueEndpoint,
+    )
+
+    app = VareduraTextualApp()
+    app._network_run_generation = 1
+    app._league_detector_generation = 2
+    endpoint = LeagueEndpoint(
+        "104.160.131.3",
+        7001,
+        10,
+        "League of Legends.exe",
+        1.0,
+        "session",
+        1,
+    )
+    result = LeagueDetectionResult(LeagueDetectorState.ACTIVE, endpoint=endpoint)
+
+    # The preference check independently rejects a callback from the current
+    # detector after the switch is turned off.
+    app._network_config["league_auto_detect"] = False
+    app._accept_league_detection(result, run_generation=1, detector_generation=2)
+    assert app._league_target is None
+
+    # The detector token independently rejects an old callback after a new
+    # detector has already been started in the same network run.
+    app._network_config["league_auto_detect"] = True
+    app._accept_league_detection(result, run_generation=1, detector_generation=1)
+    assert app._league_target is None
 
 
 @pytest.mark.asyncio
