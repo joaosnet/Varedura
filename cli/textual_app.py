@@ -12,7 +12,7 @@ from rich.text import Text
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical, VerticalScroll
+from textual.containers import Container, Grid, Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
@@ -86,6 +86,58 @@ def _cleanup_checkbox_id(step_key: str) -> str:
 
 class RichRenderable(Static):
     """Static widget that displays Rich renderables."""
+
+
+class TargetPingCard(Vertical):
+    """Reusable graph card for a secondary or temporary ping target."""
+
+    def __init__(self, slot: int) -> None:
+        super().__init__(id=f"target-ping-card-{slot}", classes="ping-card target-card")
+        self.target_id: str | None = None
+        self.display = False
+
+    def compose(self) -> ComposeResult:
+        yield Label("", classes="card-title target-card-title")
+        yield Digits("--", classes="ping-digits target-card-digits")
+        yield Label("", classes="card-unit target-card-unit")
+        yield Sparkline([], classes="target-card-spark", summary_function=max)
+        yield Label("", classes="card-stats target-card-stats")
+
+    def update_view(
+        self,
+        *,
+        target_id: str,
+        title: str,
+        latency: float | None,
+        method_status: str,
+        history: list[float],
+        statistics: str,
+        color_class: str,
+    ) -> None:
+        self.target_id = target_id
+        self.display = True
+        try:
+            title_widget = self.query_one(".target-card-title", Label)
+            digits = self.query_one(".target-card-digits", Digits)
+            unit = self.query_one(".target-card-unit", Label)
+            spark = self.query_one(".target-card-spark", Sparkline)
+            stats = self.query_one(".target-card-stats", Label)
+            title_widget.update(title)
+            digits.update("--" if latency is None else f"{latency:.0f}")
+            unit.update(method_status)
+            spark.data = history or [0.0]
+            stats.update(statistics)
+            for widget in (digits, spark):
+                widget.remove_class("ping-ok", "ping-warn", "ping-bad", "ping-timeout")
+                widget.add_class(color_class)
+        except Exception:
+            # A slot may receive data in the same refresh in which it mounts;
+            # the next monitor tick will paint it normally.
+            pass
+
+    def clear_target(self) -> None:
+        self.target_id = None
+        self.display = False
 
 
 class ShutdownScreen(ModalScreen):
@@ -265,28 +317,44 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
     }
 
     #network-controls {
+        layout: grid;
+        grid-size: 1;
+        grid-columns: 1fr;
+        grid-rows: 3;
+        grid-gutter: 0 1;
         height: auto;
         margin-bottom: 1;
     }
 
     #network-controls Button {
-        margin-right: 1;
+        width: 100%;
     }
 
     #network-controls #network-status {
         content-align: left middle;
-        width: 1fr;
+        width: 100%;
+        height: 3;
     }
+
+    #network-controls.cols-2 { grid-size: 2; }
+    #network-controls.cols-3 { grid-size: 3; }
+    #network-controls.cols-4 { grid-size: 4; }
 
     .lazy-pane {
         height: 1fr;
         align: center middle;
     }
 
-    #network-targets-table {
-        height: 12;
+    #network-pane {
+        width: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    #network-subtabs {
+        height: 22;
+        min-height: 14;
         margin-top: 1;
-        margin-bottom: 1;
     }
 
     #network-diagnosis {
@@ -298,31 +366,47 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
     }
 
     #repair-actions {
+        layout: grid;
+        grid-size: 1;
+        grid-columns: 1fr;
+        grid-rows: 3;
+        grid-gutter: 0 1;
         height: auto;
         margin-bottom: 1;
     }
 
     #repair-actions Button {
-        width: auto;
-        margin-right: 1;
+        width: 100%;
     }
 
+    #repair-actions.cols-2 { grid-size: 2; }
+    #repair-actions.cols-3 { grid-size: 3; }
+
     #network-cards {
-        height: 11;
+        layout: grid;
+        grid-size: 1;
+        grid-columns: 1fr;
+        grid-rows: 12;
+        grid-gutter: 1;
+        height: auto;
         margin-bottom: 1;
     }
 
+    #network-cards.cols-2 { grid-size: 2; }
+    #network-cards.cols-3 { grid-size: 3; }
+
     .ping-card {
-        width: 1fr;
+        width: 100%;
+        height: 12;
         border: round $primary;
         padding: 0 1;
-        margin-right: 1;
     }
 
     .card-title {
         text-style: bold;
         color: $accent;
-        height: 1;
+        height: 2;
+        max-height: 2;
     }
 
     .ping-digits {
@@ -336,10 +420,13 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         color: $text-muted;
     }
 
-    #gateway-spark,
-    #external-spark {
+    .ping-card Sparkline {
         height: 3;
-        margin-top: 1;
+    }
+
+    .target-card-stats {
+        height: 2;
+        max-height: 2;
     }
 
     .ping-ok {
@@ -418,7 +505,6 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self._ping_scheduler = None
         self._target_map: dict[str, object] = {}
         self._primary_target_id: str | None = None
-        self._detail_target_id: str | None = None
         self._league_detector = None
         self._league_detector_generation = 0
         self._league_target = None
@@ -595,8 +681,8 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             yield RichLog(id="cleanup-log", highlight=True, markup=True, wrap=True)
 
     def _compose_network(self) -> ComposeResult:
-        with Vertical(classes="pane", id="network-pane"):
-            with Horizontal(id="network-controls"):
+        with VerticalScroll(classes="pane", id="network-pane"):
+            with Grid(id="network-controls"):
                 yield Button(
                     t("textual.network_start"), id="network-start", variant="primary"
                 )
@@ -613,7 +699,7 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                 yield Button(t("textual.network_rescan"), id="network-rescan")
                 yield Button(t("textual.network_export"), id="network-export")
                 yield Label(t("textual.network_idle"), id="network-status")
-            with Horizontal(id="network-cards"):
+            with Grid(id="network-cards"):
                 with Vertical(classes="ping-card", id="health-card"):
                     yield Label(t("game.health_title"), classes="card-title")
                     yield Digits("--", id="health-digits", classes="ping-digits")
@@ -636,9 +722,10 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                     yield Label("ms", classes="card-unit")
                     yield Sparkline([], id="external-spark", summary_function=max)
                     yield Label("", id="external-stats", classes="card-stats")
+                for slot in range(5):
+                    yield TargetPingCard(slot)
             yield Static(t("network.diagnosis_idle"), id="network-diagnosis")
-            yield Horizontal(id="repair-actions")
-            yield DataTable(id="network-targets-table")
+            yield Grid(id="repair-actions")
             with TabbedContent(initial="net-speed-tab", id="network-subtabs"):
                 with TabPane(t("textual.network_speed"), id="net-speed-tab"):
                     with Vertical():
@@ -795,8 +882,8 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
     def _finish_tab_hydration(self, tab_id: str) -> None:
         if tab_id == "network":
             self._setup_network_tables()
-            self._setup_target_table()
-            self._render_target_table()
+            self._render_target_cards()
+            self._apply_network_responsive_layout(self.size.width)
             if (
                 self._network_config.get("target_onboarding_completed", False)
                 and self._active_tab == "network"
@@ -1073,10 +1160,6 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             await self._hydrate_tab(event.pane.id)
 
     def on_data_table_row_selected(self, event) -> None:
-        if getattr(event.data_table, "id", None) == "network-targets-table":
-            self._detail_target_id = str(event.row_key.value)
-            self._render_target_detail_card()
-            return
         self._cameras_on_row_selected(event)
 
     def on_descendant_focus(self, event) -> None:
@@ -1088,11 +1171,34 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
     def on_resize(self, event) -> None:
         width = event.size.width
         self._cameras_on_resize(width)
+        self._apply_network_responsive_layout(width)
         # Etapas de limpeza: nº de colunas conforme a largura disponível.
         cols = 3 if width >= 110 else (2 if width >= 70 else 1)
         for grid in self.query(".step-grid"):
             grid.set_class(cols == 2, "cols-2")
             grid.set_class(cols == 3, "cols-3")
+
+    def _apply_network_responsive_layout(self, width: int) -> None:
+        """Reflow network controls and cards without assuming a terminal size."""
+
+        if "network" not in self._hydrated_tabs:
+            return
+        card_columns = 3 if width >= 132 else (2 if width >= 82 else 1)
+        control_columns = (
+            4 if width >= 140 else (3 if width >= 104 else (2 if width >= 48 else 1))
+        )
+        repair_columns = 3 if width >= 108 else (2 if width >= 54 else 1)
+        for selector, columns, maximum in (
+            ("#network-cards", card_columns, 3),
+            ("#network-controls", control_columns, 4),
+            ("#repair-actions", repair_columns, 3),
+        ):
+            try:
+                widget = self.query_one(selector)
+            except Exception:
+                continue
+            for value in range(2, maximum + 1):
+                widget.set_class(columns == value, f"cols-{value}")
 
     def on_unmount(self) -> None:
         # Sinaliza a parada do worker de rede (que encerra o ThreadPoolExecutor
@@ -1235,7 +1341,7 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self._network_config = load_network_config()
         self._apply_network_config(self._network_config)
         self._refresh_target_selection_labels()
-        self._render_target_table()
+        self._render_target_cards()
         self._reconfigure_ping_scheduler()
         self._sync_league_detector()
         if self._active_tab == "network" and not self.network_running:
@@ -1638,23 +1744,6 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             t("stalker.pid_col"),
         )
 
-    def _setup_target_table(self) -> None:
-        table = self.query_one("#network-targets-table", DataTable)
-        table.cursor_type = "row"
-        table.zebra_stripes = True
-        table.add_columns(
-            t("network.col_target"),
-            t("network.col_method"),
-            t("network.col_now"),
-            t("network.col_min"),
-            t("network.col_avg"),
-            t("network.col_max"),
-            t("network.col_jitter"),
-            t("network.col_loss"),
-            t("network.col_status"),
-            t("network.col_trend"),
-        )
-
     @staticmethod
     def _target_jitter(values: list[float]) -> float | None:
         if len(values) < 2:
@@ -1685,45 +1774,47 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             return f"{target.label} — {t('network.lol_br1_short_warning')}"
         return target.label
 
-    def _render_target_table(self) -> None:
+    def _render_target_cards(self) -> None:
         if "network" not in self._hydrated_tabs:
             return
-        try:
-            table = self.query_one("#network-targets-table", DataTable)
-        except Exception:
-            return
-        table.clear()
+        desired: list[tuple[object, str]] = []
         snapshots = self._ping_scheduler.snapshot() if self._ping_scheduler else ()
-        if not snapshots:
+        if snapshots:
+            desired = [
+                (snapshot.target, snapshot.role.value)
+                for snapshot in snapshots
+                if snapshot.role.value not in {"gateway", "primary"}
+            ]
+        else:
             try:
                 from monitor.ping_targets import TargetSelection
 
                 selection = TargetSelection.from_config(self._network_config)
-                targets = selection.targets
+                desired = [
+                    (target, "secondary")
+                    for target in selection.targets
+                    if target.id != selection.primary_target_id
+                ]
             except Exception:
-                targets = ()
-            for target in targets:
-                prefix = (
-                    "★ "
-                    if target.id == self._network_config.get("primary_target_id")
-                    else ""
-                )
-                table.add_row(
-                    f"{prefix}{self._live_target_label(target)}",
-                    "ICMP",
-                    "—",
-                    "—",
-                    "—",
-                    "—",
-                    "—",
-                    "—",
-                    t("network.status_waiting"),
-                    "—",
-                    key=target.id,
-                )
-            return
-        for snapshot in snapshots:
-            target = snapshot.target
+                desired = []
+            if self._league_target is not None:
+                desired.append((self._league_target, "league"))
+
+        # Preserve scheduler order while protecting against duplicate IDs.
+        unique: list[tuple[object, str]] = []
+        seen: set[str] = set()
+        for target, role in desired:
+            if target.id not in seen:
+                seen.add(target.id)
+                unique.append((target, role))
+
+        slots = list(self.query(TargetPingCard))
+        threshold = int(self._network_config.get("lag_threshold_ms", 100))
+        for slot, item in zip(slots, [*unique, *([None] * len(slots))]):
+            if item is None:
+                slot.clear_target()
+                continue
+            target, role = item
             stats = self._target_stats.get(target.id)
             history = list(getattr(stats, "history", ()))
             valid = [value for value in history if value is not None]
@@ -1736,26 +1827,51 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             latency = getattr(result, "latency_ms", None)
             status = getattr(getattr(result, "status", None), "value", "waiting")
             role_icon = {
-                "gateway": "⌂ ",
-                "primary": "★ ",
                 "league": "🎮 ",
-            }.get(snapshot.role.value, "")
+                "secondary": "◈ ",
+            }.get(role, "")
             jitter = self._target_jitter(valid)
             method = str(getattr(result, "method", "icmp")).upper()
-            if snapshot.role.value == "league" and self._league_endpoint is not None:
+            if role == "league" and self._league_endpoint is not None:
                 method = "ICMP+UDP"
-            table.add_row(
-                f"{role_icon}{self._live_target_label(target)}",
-                method,
-                "—" if latency is None else f"{latency:.1f}",
-                "—" if not valid else f"{min(valid):.1f}",
-                "—" if not valid else f"{sum(valid) / len(valid):.1f}",
-                "—" if not valid else f"{max(valid):.1f}",
-                "—" if jitter is None else f"{jitter:.1f}",
-                "—" if loss is None else f"{loss:.0f}%",
-                t(f"network.ping_status_{status}"),
-                self._target_trend(valid),
-                key=target.id,
+            minimum = "—" if not valid else f"{min(valid):.0f}"
+            average = "—" if not valid else f"{sum(valid) / len(valid):.0f}"
+            maximum = "—" if not valid else f"{max(valid):.0f}"
+            jitter_text = "—" if jitter is None else f"{jitter:.0f}"
+            loss_text = "—" if loss is None else f"{loss:.0f}%"
+            trend = self._target_trend(valid)
+            statistics = (
+                f"{t('network.col_min')} {minimum} · "
+                f"{t('network.col_avg')} {average} · "
+                f"{t('network.col_max')} {maximum}\n"
+                f"{t('network.col_jitter')} {jitter_text} · "
+                f"{t('network.col_loss')} {loss_text} · {trend}"
+            )
+            if latency is None:
+                color_class = (
+                    "ping-warn"
+                    if status in {"waiting", "icmp_filtered"}
+                    else "ping-timeout"
+                )
+            elif latency > threshold:
+                color_class = "ping-bad"
+            elif latency > threshold * 0.7:
+                color_class = "ping-warn"
+            else:
+                color_class = "ping-ok"
+            status_label = (
+                t("network.status_waiting")
+                if status == "waiting"
+                else t(f"network.ping_status_{status}")
+            )
+            slot.update_view(
+                target_id=target.id,
+                title=f"{role_icon}{self._live_target_label(target)}",
+                latency=latency,
+                method_status=f"{method} · {status_label}",
+                history=valid,
+                statistics=statistics,
+                color_class=color_class,
             )
 
     def _friendly_process(self, name: str) -> Text:
@@ -1838,7 +1954,6 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self._target_latest = {}
         self._target_map = {target.id: target for target in selection.targets}
         self._primary_target_id = selection.primary_target_id
-        self._detail_target_id = selection.primary_target_id
         self._network_history = NetworkSessionHistory()
         gateway = None
         gateway_host = str(self._network_config.get("gateway_ip", "") or "").strip()
@@ -1931,13 +2046,12 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         for target_id in self._target_map:
             self._target_stats.setdefault(target_id, PingStats())
         self._primary_target_id = selection.primary_target_id
-        self._detail_target_id = self._detail_target_id or selection.primary_target_id
         self._ping_scheduler.configure(
             selection,
             gateway_target=gateway,
             league_target=self._league_target,
         )
-        self._render_target_table()
+        self._render_target_cards()
 
     def _sync_league_detector(self) -> None:
         if not self.network_running:
@@ -2169,13 +2283,15 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             int(self._network_config.get("lag_threshold_ms", 100)),
         )
         self._render_target_detail_card()
-        self._render_target_table()
+        self._render_target_cards()
         self._render_speed_table(speed_snapshot)
 
     def _render_target_detail_card(self) -> None:
         if "network" not in self._hydrated_tabs:
             return
-        target_id = self._detail_target_id or self._primary_target_id
+        # This card is permanently the selected primary. Secondary and League
+        # targets have independent cards and must never replace it.
+        target_id = self._primary_target_id
         target = self._target_map.get(target_id or "")
         stats = self._target_stats.get(target_id or "")
         if target is None or stats is None:
@@ -2228,7 +2344,6 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             if self._league_target != target:
                 self._league_endpoint = endpoint
                 self._league_target = target
-                self._detail_target_id = target.id
                 self._reconfigure_ping_scheduler()
         if "network" in self._hydrated_tabs:
             detail = result.detail or result.state.value
@@ -2242,7 +2357,7 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                 else "[dim]"
             )
             self._network_log(f"{prefix}League: {detail}[/]")
-            self._render_target_table()
+            self._render_target_cards()
 
     def _render_auxiliary_network(self, procs, scan_state, speed_snapshot) -> None:
         if scan_state is not None:

@@ -3,9 +3,10 @@ import asyncio
 import pytest
 
 from cli import ui_shared
-from cli.textual_app import ShutdownScreen, VareduraTextualApp
+from cli.textual_app import ShutdownScreen, TargetPingCard, VareduraTextualApp
 from i18n import get_language, init as i18n_init
 from monitor.port_scanner import PortInfo, PortScannerState, ProcessConnections
+from textual.containers import VerticalScroll
 from textual.widgets import DataTable, Digits, ProgressBar, Sparkline, TabbedContent
 
 
@@ -451,7 +452,7 @@ def test_additional_targets_do_not_increment_gamification_counters():
     assert calls == [health]
 
 
-def test_target_table_statistics_include_jitter_trend_and_live_league_ip():
+def test_target_card_statistics_include_jitter_trend_and_live_league_ip():
     from monitor.ping_targets import PingTarget, TargetCategory
 
     assert VareduraTextualApp._target_jitter([10.0, 20.0, 15.0]) == 7.5
@@ -464,6 +465,54 @@ def test_target_table_statistics_include_jitter_trend_and_live_league_ip():
         ephemeral=True,
     )
     assert "104.160.131.3" in VareduraTextualApp._live_target_label(league)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("size", "card_columns", "control_columns"),
+    [((55, 18), 1, 2), ((90, 26), 2, 2), ((145, 42), 3, 4)],
+)
+async def test_network_cards_reflow_for_any_terminal_size(
+    size, card_columns, control_columns
+):
+    ui_shared.save_network_config(
+        {
+            "network_schema_version": 3,
+            "target_onboarding_completed": True,
+            "selected_target_ids": [
+                "cloudflare_ipv4",
+                "google_ipv4",
+                "quad9_ipv4",
+            ],
+            "primary_target_id": "cloudflare_ipv4",
+            "custom_targets": [],
+            "league_auto_detect": False,
+        }
+    )
+    app = VareduraTextualApp()
+    app._after_first_refresh = lambda: None
+    app._start_network = lambda: None
+
+    async with app.run_test(size=size) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "network"
+        await wait_until(lambda: "network" in app._hydrated_tabs, pilot)
+        await pilot.pause()
+
+        pane = app.query_one("#network-pane", VerticalScroll)
+        cards = app.query_one("#network-cards")
+        controls = app.query_one("#network-controls")
+        visible_targets = [card for card in app.query(TargetPingCard) if card.display]
+
+        assert len(app.query("#network-targets-table")) == 0
+        assert [card.target_id for card in visible_targets] == [
+            "google_ipv4",
+            "quad9_ipv4",
+        ]
+        assert cards.has_class(f"cols-{card_columns}") == (card_columns > 1)
+        assert controls.has_class(f"cols-{control_columns}") == (control_columns > 1)
+        if size[1] == 18:
+            assert pane.max_scroll_y > 0
 
 
 def test_callback_from_previous_network_run_is_discarded():

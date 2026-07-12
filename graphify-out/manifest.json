@@ -10,8 +10,8 @@
     "semantic_hash": "89c7af602920e8ef93162eef1eaa8945"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\main.py": {
-    "mtime": 1780969279.1412363,
-    "ast_hash": "f5c79ac574b94b828de1698798d3d211",
+    "mtime": 1783814942.777883,
+    "ast_hash": "0c7fddf50edcf2325f0f4b62b6b36be3",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.vscode\\settings.json": {
@@ -55,13 +55,13 @@
     "semantic_hash": "a3dc411d85402f361ad8c43cc99c827a"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\en.json": {
-    "mtime": 1782449560.2854247,
-    "ast_hash": "b0bda2da49d2456db6ac7ddc4be3a0c4",
+    "mtime": 1783816964.32492,
+    "ast_hash": "8ab93ceca82cc44559de4715e8c48703",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\pt.json": {
-    "mtime": 1782449558.7301536,
-    "ast_hash": "7c89f2cf155657b0f325c4d63ab62577",
+    "mtime": 1783816964.3223228,
+    "ast_hash": "c8b5af73a5aa840d9e73ead871c78b85",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\__init__.py": {
@@ -100,9 +100,9 @@
     "semantic_hash": "11650a1d1251b7cc2afe08b44bc11e90"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\__init__.py": {
-    "mtime": 1771178009.3548727,
-    "ast_hash": "c39cd891e5f9f14f4afaf9eef7b1a5de",
-    "semantic_hash": "c39cd891e5f9f14f4afaf9eef7b1a5de"
+    "mtime": 1783814523.2263064,
+    "ast_hash": "9319387a78fe4002c7194919e9837d08",
+    "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mcp_server\\server.py": {
     "mtime": 1781977014.0356264,
@@ -125,24 +125,24 @@
     "semantic_hash": "33c408c6ba098bb4f5fa1c194edab81f"
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\speed_providers.py": {
-    "mtime": 1782436772.2191353,
-    "ast_hash": "a1d0a6a5deb1d69189f1a1d8f9701b50",
+    "mtime": 1783814942.7798924,
+    "ast_hash": "a2f17e89b59260e024d14fe373f60dde",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\speed_tester.py": {
-    "mtime": 1782436274.923848,
-    "ast_hash": "cb6df00ae2e1ac4dfc9774d1520f3bdf",
+    "mtime": 1783818715.2458346,
+    "ast_hash": "c9658b085624a837906ec12ac7ad67b0",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\stalker.py": {
-    "mtime": 1781978688.043359,
-    "ast_hash": "c1933a6dbeb0d1fccaea781ec20bfab9",
+    "mtime": 1783818715.249729,
+    "ast_hash": "268c909f3a0ab4dc25f70c2e2566bd59",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\__init__.py": {
-    "mtime": 1767292519.5070202,
-    "ast_hash": "6e06414a09616cbdc300bf4c1c99e6f1",
-    "semantic_hash": "6e06414a09616cbdc300bf4c1c99e6f1"
+    "mtime": 1783813179.3372056,
+    "ast_hash": "cfb93a9ddcc9c4b9963c09c87e4242c8",
+    "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\recorder\\gif_generator.py": {
     "mtime": 1779245099.7247365,
@@ -430,23 +430,23 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\textual_app.py": {
-    "mtime": 1782449049.4074256,
-    "ast_hash": "12416e067d9e0ee0b964ded2cc706c63",
+    "mtime": 1783829485.656436,
+    "ast_hash": "1940e11b326545fe6a9f304e279a3fb3",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\ui_shared.py": {
-    "mtime": 1782327875.388673,
-    "ast_hash": "07de2b28cc69789c3ffe6ea0d41b62d9",
+    "mtime": 1783818984.6196373,
+    "ast_hash": "e59da9ea8b407aa48789fb54a3728221",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_textual_app.py": {
-    "mtime": 1782448902.915217,
-    "ast_hash": "d232d670afb99821751cb06227256b93",
+    "mtime": 1783829493.3108566,
+    "ast_hash": "c8d1fc345f245458252e7b93bcc61d36",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\AGENTS.md": {
-    "mtime": 1779242833.190391,
-    "ast_hash": "9a229949cad617368a70280213ebd61a",
+    "mtime": 1783264331.1518695,
+    "ast_hash": "cf92398d1eb58b977df78aafc2a9f4c0",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.claude\\settings.json": {
@@ -455,8 +455,8 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\CLAUDE.md": {
-    "mtime": 1780967478.7459214,
-    "ast_hash": "8a6643a420fdad6bfb583523bc6cef16",
+    "mtime": 1783264337.5178688,
+    "ast_hash": "0b9f1f80b4f8e22a87025b442bd20643",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.agents\\rules\\graphify.md": {
@@ -510,8 +510,8 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\textual_cameras.py": {
-    "mtime": 1782449751.9828396,
-    "ast_hash": "5c26f621cee0973af42c2280269a9d84",
+    "mtime": 1783814942.781909,
+    "ast_hash": "080de90612639be4e0d5a9405e6ab51d",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\amostra_ips_belem.py": {
@@ -575,8 +575,8 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_textual_cameras.py": {
-    "mtime": 1782449761.9886637,
-    "ast_hash": "e60cb4176c88593a6884c6abeaf3bb8d",
+    "mtime": 1783817528.750842,
+    "ast_hash": "ec6da2db3ddd38ea25af55871045925b",
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\todos_ips_belem.txt": {
@@ -585,8 +585,153 @@
     "semantic_hash": ""
   },
   "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_speed_cleanup.py": {
-    "mtime": 1782436792.757687,
-    "ast_hash": "97dc2b2015377acba126b70577304f88",
+    "mtime": 1783818681.0883715,
+    "ast_hash": "626531e1a666f75efb26ffbf7daebc05",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\credenciais.json": {
+    "mtime": 1782331730.3700876,
+    "ast_hash": "50dce96e6c06f7f3c7438916a5c17883",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\ips_conhecidos.json": {
+    "mtime": 1782347959.0774002,
+    "ast_hash": "ea2db3a7b0d0181c6738cd26349e3a2d",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\regioes.json": {
+    "mtime": 1782331730.435001,
+    "ast_hash": "2ac2990962344dd105ddc609c8c27570",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\legacy_app.py": {
+    "mtime": 1783816587.6978037,
+    "ast_hash": "d777d0c260783e07b2b1068fa9a3db7e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\network_ui.py": {
+    "mtime": 1783816158.4501898,
+    "ast_hash": "6adf519d54d0a577a0f7ab6d568cd5d5",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\league_detector.py": {
+    "mtime": 1783818576.929294,
+    "ast_hash": "7ff2852e8f0d9e2ce22fde2008421c2d",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\network_diagnostics.py": {
+    "mtime": 1783819196.2200482,
+    "ast_hash": "b1c4c49b20e9d6e48a6c741d6b5ff0e4",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\network_history.py": {
+    "mtime": 1783816214.1787746,
+    "ast_hash": "c1b7e0c7a07714246ebb1650f21c8503",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\network_repairs.py": {
+    "mtime": 1783819537.8159063,
+    "ast_hash": "8713e480134a44f7d7ba114bcbcf1663",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\ping_scheduler.py": {
+    "mtime": 1783818016.8631458,
+    "ast_hash": "f77005149ec138d66350c6536cbb7a1a",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\ping_targets.py": {
+    "mtime": 1783816091.6441078,
+    "ast_hash": "680b4888cf3024f9ac0303d5a7c83f9e",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\speed_worker.py": {
+    "mtime": 1783815880.5670295,
+    "ast_hash": "a2f83dd19d0858d8220945a84a58ea38",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_league_detector.py": {
+    "mtime": 1783818558.2136176,
+    "ast_hash": "d23a0bda0ee26792f70e5d3ec25cc3d6",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_legacy_network_safety.py": {
+    "mtime": 1783817699.263701,
+    "ast_hash": "778d37b8a223f4151114b9f3d9f7bb51",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_network_config_v3.py": {
+    "mtime": 1783819308.4381652,
+    "ast_hash": "bc972e83f099cfe311c5de45bb2d9797",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_network_diagnostics.py": {
+    "mtime": 1783819256.518978,
+    "ast_hash": "7ce4e0961088b79237e453fefc97b36b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_network_history.py": {
+    "mtime": 1783816228.8861058,
+    "ast_hash": "2d40434a19a37a751fe900147aa8ecd8",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_network_repairs.py": {
+    "mtime": 1783819507.7765582,
+    "ast_hash": "fcd1e01198896a0261b354c5d3c76af6",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_network_ui.py": {
+    "mtime": 1783816158.4501898,
+    "ast_hash": "776f15186aba3052834b4e29523ef347",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_ping_scheduler.py": {
+    "mtime": 1783818016.8651452,
+    "ast_hash": "5173550626f4467300e9bf570f319d4d",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_ping_targets.py": {
+    "mtime": 1783816136.069612,
+    "ast_hash": "c043b4ea96b9967a19be0324278dc08d",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_startup_lazy.py": {
+    "mtime": 1783819708.2827442,
+    "ast_hash": "784b62a185f68754b96864f7e77eb583",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\relatorio_formal_20260712_012241.pdf": {
+    "mtime": 1783830187.3300507,
+    "ast_hash": "dc7c4e3cbd1d0075743539466fd89208",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\aba_docker.png": {
+    "mtime": 1780974125.4800656,
+    "ast_hash": "ffb7f3e3f452076ce82a656cfab0384b",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\aba_docker.svg": {
+    "mtime": 1780974103.2609134,
+    "ast_hash": "2df6ab7f5b3a575eee195511594ef3c7",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\aba_rede_health.png": {
+    "mtime": 1780974125.310278,
+    "ast_hash": "b5af0fedc74b17e6d1c6e95441b86871",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\aba_rede_health.svg": {
+    "mtime": 1780974102.3196602,
+    "ast_hash": "251f3690b06f0f8cef4516fa86024946",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\dashboard_gamificado.png": {
+    "mtime": 1780974223.926058,
+    "ast_hash": "50e9c8ccca8729060cdb51a4ebc99971",
+    "semantic_hash": ""
+  },
+  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\dashboard_gamificado.svg": {
+    "mtime": 1780974223.4125104,
+    "ast_hash": "5fda95d4890a7da2489336a0ec246ead",
     "semantic_hash": ""
   }
 }

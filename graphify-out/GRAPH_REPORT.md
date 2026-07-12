@@ -1,16 +1,16 @@
-# Graph Report - Varedura  (2026-06-26)
+# Graph Report - Varedura  (2026-07-12)
 
 ## Corpus Check
-- 73 files · ~158,497 words
+- 100 files · ~389,191 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3365 nodes · 4460 edges · 204 communities (143 shown, 61 thin omitted)
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 365 edges (avg confidence: 0.77)
+- 4112 nodes · 6068 edges · 236 communities (164 shown, 72 thin omitted)
+- Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 760 edges (avg confidence: 0.7)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `0566f2b8`
+- Built from commit: `41591599`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -216,18 +216,50 @@
 - [[_COMMUNITY_Community 201|Community 201]]
 - [[_COMMUNITY_Community 202|Community 202]]
 - [[_COMMUNITY_Community 203|Community 203]]
+- [[_COMMUNITY_Community 204|Community 204]]
+- [[_COMMUNITY_Community 205|Community 205]]
+- [[_COMMUNITY_Community 206|Community 206]]
+- [[_COMMUNITY_Community 207|Community 207]]
+- [[_COMMUNITY_Community 208|Community 208]]
+- [[_COMMUNITY_Community 209|Community 209]]
+- [[_COMMUNITY_Community 210|Community 210]]
+- [[_COMMUNITY_Community 211|Community 211]]
+- [[_COMMUNITY_Community 212|Community 212]]
+- [[_COMMUNITY_Community 213|Community 213]]
+- [[_COMMUNITY_Community 214|Community 214]]
+- [[_COMMUNITY_Community 215|Community 215]]
+- [[_COMMUNITY_Community 216|Community 216]]
+- [[_COMMUNITY_Community 217|Community 217]]
+- [[_COMMUNITY_Community 218|Community 218]]
+- [[_COMMUNITY_Community 219|Community 219]]
+- [[_COMMUNITY_Community 220|Community 220]]
+- [[_COMMUNITY_Community 221|Community 221]]
+- [[_COMMUNITY_Community 222|Community 222]]
+- [[_COMMUNITY_Community 223|Community 223]]
+- [[_COMMUNITY_Community 224|Community 224]]
+- [[_COMMUNITY_Community 225|Community 225]]
+- [[_COMMUNITY_Community 226|Community 226]]
+- [[_COMMUNITY_Community 227|Community 227]]
+- [[_COMMUNITY_Community 228|Community 228]]
+- [[_COMMUNITY_Community 229|Community 229]]
+- [[_COMMUNITY_Community 230|Community 230]]
+- [[_COMMUNITY_Community 231|Community 231]]
+- [[_COMMUNITY_Community 232|Community 232]]
+- [[_COMMUNITY_Community 233|Community 233]]
+- [[_COMMUNITY_Community 234|Community 234]]
+- [[_COMMUNITY_Community 235|Community 235]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `VareduraTextualApp` - 107 edges
-2. `CamerasMixin` - 72 edges
-3. `WSLDockerCleaner` - 67 edges
-4. `main()` - 24 edges
-5. `do_install()` - 19 edges
-6. `RichRenderable` - 17 edges
-7. `MascotRenderer` - 16 edges
-8. `DailyLogWriter` - 15 edges
-9. `_draw_antenna()` - 14 edges
-10. `_draw_body()` - 14 edges
+1. `VareduraTextualApp` - 161 edges
+2. `CamerasMixin` - 74 edges
+3. `WSLDockerCleaner` - 68 edges
+4. `PingTarget` - 44 edges
+5. `PingScheduler` - 41 edges
+6. `RichRenderable` - 33 edges
+7. `RepairExecutor` - 33 edges
+8. `FakeRunner` - 31 edges
+9. `ShutdownScreen` - 29 edges
+10. `TargetPingCard` - 28 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Copilot Instructions Textual UI Guidelines` --conceptually_related_to--> `Rich Main Menu Application`  [AMBIGUOUS]
@@ -236,10 +268,10 @@
   README.pt-BR.md → README.md
 - `Copilot Instructions Safety Requirements` --semantically_similar_to--> `Explicit Confirmation Safety Model`  [INFERRED] [semantically similar]
   .github/copilot-instructions.md → README.md
-- `test_cameras_tab_renders()` --calls--> `VareduraTextualApp`  [INFERRED]
-  tests/test_textual_cameras.py → cli/textual_app.py
-- `test_cameras_credential_add_and_remove()` --calls--> `VareduraTextualApp`  [INFERRED]
-  tests/test_textual_cameras.py → cli/textual_app.py
+- `test_textual_dashboard_renders_and_menu_switches_to_cleanup()` --calls--> `VareduraTextualApp`  [INFERRED]
+  tests/test_textual_app.py → cli/textual_app.py
+- `test_textual_network_settings_detect_and_apply()` --calls--> `VareduraTextualApp`  [INFERRED]
+  tests/test_textual_app.py → cli/textual_app.py
 
 ## Hyperedges (group relationships)
 - **Docker Cleanup Workflow** — readme_docker_cleanup_feature, main_docker_cleanup_runner, cli_quick_cleanup_flow, cli_admin_tasks_main, docker_core_wsl_docker_cleaner, docker_core_docker_cleanup_flow, docker_core_vhdx_compaction_flow [EXTRACTED 1.00]
@@ -301,7 +333,7 @@
 - **Login Background Visual Composition** — loginbg_abstract_blue_login_background, loginbg_blue_gradient_palette, loginbg_blurred_full_width_backdrop [EXTRACTED 1.00]
 - **YPT Logo Brand Identity Elements** — yptlogo_logo_asset, yptlogo_purple_abstract_mark, yptlogo_gray_we_wordmark [EXTRACTED 1.00]
 
-## Communities (204 total, 61 thin omitted)
+## Communities (236 total, 72 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.00
@@ -325,11 +357,11 @@ Nodes (15): _expand_for_constant_fps(), _finalize_durations(), generate_gif(), G
 
 ### Community 5 - "Community 5"
 Cohesion: 0.09
-Nodes (28): analyze_lag_source(), ContractInfo, get_export_status(), main(), make_connections_panel(), make_help_panel(), make_log_panel(), make_ping_table() (+20 more)
+Nodes (21): main(), make_connections_panel(), make_help_panel(), make_log_panel(), make_ping_table(), make_ports_panel(), Cria a tabela de status dos Pings., Cria a tabela de status dos Pings. (+13 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.08
-Nodes (21): _paths(), Sprite frame registry for the Varedura Roomba mascot.  Each state maps to a li, Mascot animation states., Return sorted list of sprite PNGs for a given state., STATES, MascotRenderer, _panel_styles(), Rendering utilities for the Varedura mascot (rich-pixels sprites). (+13 more)
+Cohesion: 0.10
+Nodes (16): MascotRenderer, _panel_styles(), Rendering utilities for the Varedura mascot (rich-pixels sprites)., Show animated mascot using Rich Live (blocking)., Signal the animation loop to stop., Start mascot animation in a background thread., Stop background mascot animation., Display success or error mascot frame. (+8 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.23
@@ -364,8 +396,8 @@ Cohesion: 0.11
 Nodes (25): Alert History Latest Events Panel, AnyDesk.exe Connection Activity, Background Port Scan, Code-Insiders.exe Local TCP Port, Connection Status Panel, External AWS DNS Ping Check, Gateway 192.168.18.1 Ping Check, GoogleDriveFS.exe Network Activity (+17 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.11
-Nodes (18): handle_key(), prompt_change_contracted_speed(), prompt_change_external(), prompt_change_gateway(), prompt_change_interval(), prompt_change_threshold(), Processa entrada de teclado. Retorna mensagem para log ou None., Processa entrada de teclado. Retorna mensagem para log ou None. (+10 more)
+Cohesion: 0.10
+Nodes (20): handle_key(), prompt_change_contracted_speed(), prompt_change_gateway(), prompt_change_interval(), prompt_change_threshold(), Processa entrada de teclado. Retorna mensagem para log ou None., Processa entrada de teclado. Retorna mensagem para log ou None., Processa entrada de teclado. Retorna mensagem para log ou None. (+12 more)
 
 ### Community 16 - "Community 16"
 Cohesion: 0.10
@@ -380,8 +412,8 @@ Cohesion: 0.12
 Nodes (21): Alert History Latest Events, BYE See You Next Time Keep Things Clean Message, Connection Status Panel, DNS Latency OK, Gateway Latency OK, Gateway OK But No Internet Provider Or DNS Issue, GoogleDriveFS.exe Top Connection, Varedura Mascot Exit Screen (+13 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.10
-Nodes (16): get_docker_vhdx_paths(), _powershell_encoded_command(), _ps_single_quoted(), Lógica principal do limpador WSL Docker (módulo)., Remove PowerShell CLIXML progress records from captured streams., Versão async de compact_vhdx_files com streaming., Versão async de compact_vhdx_files com streaming., Versão async de compact_vhdx_files com streaming. (+8 more)
+Cohesion: 0.16
+Nodes (11): get_docker_vhdx_paths(), _powershell_encoded_command(), _ps_single_quoted(), Lógica principal do limpador WSL Docker (módulo)., Versão async de compact_vhdx_files com streaming., Versão async de compact_vhdx_files com streaming., Versão async de compact_vhdx_files com streaming., Build a RunAs command that captures child stdout/stderr/exit code.          Po (+3 more)
 
 ### Community 20 - "Community 20"
 Cohesion: 0.05
@@ -392,12 +424,12 @@ Cohesion: 0.25
 Nodes (19): b64_hmac_md5(), b64_md5(), binl_to_base64(), binl_to_hex(), binl_to_string(), core_hmac_md5(), hex_hmac_md5(), hex_md5() (+11 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.15
-Nodes (17): Run the Textual app, temporarily handing off to legacy Network Stalker., run_textual_app(), _ask_recording_prompt(), main(), Run the network stalker monitor., Run LMArena models generator., Run the network stalker monitor., Executa o escaner de portas standalone. (+9 more)
+Cohesion: 0.11
+Nodes (29): _ask_recording_prompt(), main(), Lightweight command dispatcher for Varedura.  Keep this module free of Rich, Tex, Start the selected interface with all heavy imports deferred., Display the main menu with a continuously animated mascot.      Returns the user, Start recording the current user session if enabled., Stop session recording and save a single GIF for the whole run., Run the network stalker monitor. (+21 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.13
-Nodes (11): ABC, V's Speed Test Providers - Múltiplos provedores de teste de velocidade  Proved, Provedor Ookla Speedtest.net usando speedtest-cli., Classe base abstrata para provedores de teste de velocidade., Classe base abstrata para provedores de teste de velocidade., Classe base abstrata para provedores de teste de velocidade., Libera recursos do provedor (ex.: fechar driver Selenium).          No-op por, Provedor Ookla Speedtest.net usando speedtest-cli. (+3 more)
+Cohesion: 0.10
+Nodes (15): ABC, V's Speed Test Providers - Múltiplos provedores de teste de velocidade  Proved, Provedor Ookla Speedtest.net usando speedtest-cli., Provedor Ookla Speedtest.net usando speedtest-cli., Classe base abstrata para provedores de teste de velocidade., Classe base abstrata para provedores de teste de velocidade., Classe base abstrata para provedores de teste de velocidade., Classe base abstrata para provedores de teste de velocidade. (+7 more)
 
 ### Community 24 - "Community 24"
 Cohesion: 0.18
@@ -420,16 +452,16 @@ Cohesion: 0.27
 Nodes (14): rnd_bin_to_hex(), rnd_bit_add(), rnd_encode_utf8(), rnd_gamma0256(), rnd_gamma1256(), rnd_round(), rnd_security_format(), rnd_shift() (+6 more)
 
 ### Community 29 - "Community 29"
-Cohesion: 0.11
-Nodes (22): _detect_system_language(), init(), _load_preference(), _load_translations(), Internationalization (i18n) module for Varedura.  Provides a simple JSON-based, Translate a key, with optional format arguments.      Args:         key: Dot-, Translate a key, with optional format arguments.      Args:         key: Dot-, Detect the system language and return a supported language code. (+14 more)
+Cohesion: 0.08
+Nodes (30): change_language(), Show language selection menu., _detect_system_language(), get_supported_languages(), init(), _load_preference(), _load_translations(), Internationalization (i18n) module for Varedura.  Provides a simple JSON-based (+22 more)
 
 ### Community 30 - "Community 30"
-Cohesion: 0.11
-Nodes (24): _confirmation_required(), docker_full_cleanup(), docker_quick_cleanup(), docker_status(), _dry_run_preview(), get_logs(), _is_docker_running(), port_scan() (+16 more)
+Cohesion: 0.13
+Nodes (21): _confirmation_required(), docker_full_cleanup(), docker_quick_cleanup(), docker_status(), _dry_run_preview(), get_logs(), _is_docker_running(), Varedura MCP Server  Exposes Varedura tools via the Model Context Protocol so (+13 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.09
-Nodes (36): get_listening_ports(), get_process_connections_count(), PortInfo, PortScannerState, ProcessConnections, Módulo de Escaneamento de Portas para Network Stalker  Funções para monitorar, Retorna os processos com mais conexões de rede.      Args:         limit: Núm, Informações de uma porta em listening. (+28 more)
+Cohesion: 0.05
+Nodes (60): port_scan(), Scan listening TCP/UDP ports and top processes by connection count.      Retur, Scan listening TCP/UDP ports and top processes by connection count.      Retur, get_listening_ports(), get_process_connections_count(), PortInfo, PortScannerState, ProcessConnections (+52 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.15
@@ -448,12 +480,12 @@ Cohesion: 0.06
 Nodes (35): code:powershell (& .\.venv\Scripts\Activate.ps1  # Use existing .venv or crea), code:python (def compose(self) -> ComposeResult:), code:python (import pytest), code:python (async with app.run_test() as pilot:), code:python (async def test_counter():), code:python (async def test_background_task():), code:python (# Install: pip install pytest-textual-snapshot), code:python (async def test_modal_dialog():) (+27 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.08
-Nodes (20): ContinuousSpeedTester, V's Speed Tester - Monitor de Velocidade de Internet em Tempo Real  Funcionali, Inicia o loop de testes em background., Para o loop de testes.          Força o fechamento de qualquer driver Selenium, Verifica se velocidade está conforme contrato.          Retorna:, Verifica se velocidade está conforme contrato.          Retorna:, Retorna porcentagem da velocidade contratada.          Retorna:             (, Retorna porcentagem da velocidade contratada.          Retorna:             ( (+12 more)
+Cohesion: 0.22
+Nodes (6): Para o loop de testes.          Força o fechamento de qualquer driver Selenium, Para testes de velocidade., Para testes de velocidade., Para o loop de testes.          Força o fechamento de qualquer driver Selenium, Para testes de velocidade., stop_continuous_testing()
 
 ### Community 37 - "Community 37"
-Cohesion: 0.17
-Nodes (11): Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it. (+3 more)
+Cohesion: 0.07
+Nodes (27): Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it., Read the network form, validate, persist and apply it. (+19 more)
 
 ### Community 38 - "Community 38"
 Cohesion: 0.26
@@ -461,39 +493,39 @@ Nodes (11): extract_image_models(), extract_initial_models(), extract_text_model
 
 ### Community 39 - "Community 39"
 Cohesion: 0.08
-Nodes (7): CamerasMixin, UI + workers da aba Câmeras, fundida no VareduraTextualApp., UI + workers da aba Câmeras, fundida no VareduraTextualApp., UI + workers da aba Câmeras, fundida no VareduraTextualApp., UI + workers da aba Câmeras, fundida no VareduraTextualApp., UI + workers da aba Câmeras, fundida no VareduraTextualApp., remover_regiao()
+Nodes (9): CamerasMixin, UI + workers da aba Câmeras, fundida no VareduraTextualApp., UI + workers da aba Câmeras, fundida no VareduraTextualApp., UI + workers da aba Câmeras, fundida no VareduraTextualApp., UI + workers da aba Câmeras, fundida no VareduraTextualApp., UI + workers da aba Câmeras, fundida no VareduraTextualApp., UI + workers da aba Câmeras, fundida no VareduraTextualApp., erro_se_morreu() (+1 more)
 
 ### Community 40 - "Community 40"
 Cohesion: 0.06
-Nodes (17): CamerasMixin, Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura. (+9 more)
+Nodes (17): CamerasMixin, _cleanup_checkbox_id(), _diagnose_network_worker(), on_button_pressed(), on_cleanup_checkbox_changed(), Main Textual TUI for Varedura., Main Textual TUI for Varedura., Main Textual TUI for Varedura. (+9 more)
 
 ### Community 41 - "Community 41"
-Cohesion: 0.21
-Nodes (11): export_combined_report(), prompt_export_report(), Retorna uma cópia consistente do histórico de ping para leitura segura., Inicia exportação do relatório combinado em thread separada.      Args:, Inicia exportação do relatório combinado em thread separada.      Args:, Prompts the user whether to export a full history report.      Args:, Prompts the user whether to export a full history report.      Args:, snapshot_ping_history() (+3 more)
+Cohesion: 0.16
+Nodes (14): export_combined_report(), prompt_export_report(), Retorna uma cópia consistente do histórico de ping para leitura segura., Retorna uma cópia consistente do histórico de ping para leitura segura., Inicia exportação do relatório combinado em thread separada.      Args:, Inicia exportação do relatório combinado em thread separada.      Args:, Inicia exportação do relatório combinado em thread separada.      Args:, Prompts the user whether to export a full history report.      Args: (+6 more)
 
 ### Community 42 - "Community 42"
-Cohesion: 0.14
-Nodes (9): Runtime tracker of consecutive lag-free seconds., Advance the streak. ``ok`` means ping <= threshold and not lost., StreakTracker, DailyLogWriter, Rich/Local daily log writer used by the Textual UI.  This module exposes a `Da, File-like writer that writes log messages to a rotating daily file     and opti, ConfirmModal, on_tool_selected() (+1 more)
+Cohesion: 0.33
+Nodes (3): DailyLogWriter, Rich/Local daily log writer used by the Textual UI.  This module exposes a `Da, File-like writer that writes log messages to a rotating daily file     and opti
 
 ### Community 43 - "Community 43"
-Cohesion: 0.20
-Nodes (9): on_language_select_changed(), on_recording_switch_changed(), Reflect the current (unsaved) settings form in the status panel., Reflect the current (unsaved) settings form in the status panel., Reflect the current (unsaved) settings form in the status panel., Reflect the current (unsaved) settings form in the status panel., Reflect the current (unsaved) settings form in the status panel., Reflect the current (unsaved) settings form in the status panel. (+1 more)
+Cohesion: 0.08
+Nodes (24): ConfirmModal, _future_result(), _initialize_network_after_ready(), on_language_select_changed(), on_main_tab_activated(), on_recording_switch_changed(), on_tool_selected(), Textual application shell for Varedura. (+16 more)
 
 ### Community 44 - "Community 44"
 Cohesion: 0.14
 Nodes (17): carregar_lista(), combinar_credenciais(), Lê um arquivo texto com uma entrada por linha.      Ignora linhas em branco e co, Produto cartesiano usuários×senhas -> pares do cofre.      Se só uma lista vier, normalizar_faixa(), Valida uma faixa de rede e devolve a forma canônica.      Aceita o prefixo legad, Tests for the pure logic of the integrated RTSP scanner (rtsp/ package)., test_carregar_lista_arquivo_ausente() (+9 more)
 
 ### Community 45 - "Community 45"
-Cohesion: 0.18
-Nodes (14): get_speed_tester(), Retorna a instância global do testador de velocidade., Retorna a instância global do testador de velocidade., _generate_combined_pdf_worker(), make_speed_panel(), Cria painel de velocidade mostrando todos provedores em tempo real., Cria painel de velocidade mostrando todos provedores em tempo real., Worker que gera o PDF formal completo em background.      Args:         full_ (+6 more)
+Cohesion: 0.14
+Nodes (17): get_speed_tester(), Retorna a instância global do testador de velocidade., Retorna a instância global do testador de velocidade., Retorna a instância global do testador de velocidade., _generate_combined_pdf_worker(), make_speed_panel(), Cria painel de velocidade mostrando todos provedores em tempo real., Cria painel de velocidade mostrando todos provedores em tempo real. (+9 more)
 
 ### Community 46 - "Community 46"
-Cohesion: 0.10
-Nodes (15): _apply_status_class(), _cleanup_checkbox_id(), _fmt_duration(), _future_result(), on_button_pressed(), on_cleanup_checkbox_changed(), on_main_tab_activated(), _ping_status_class() (+7 more)
+Cohesion: 0.14
+Nodes (9): _apply_status_class(), _fmt_duration(), _live_target_label(), _ping_status_class(), Consume one generation-checked scheduler result on the UI thread., _speed_compliance(), anatel_minimums(), Return (min_download, min_upload) Mbps for ANATEL compliance.      Single source (+1 more)
 
 ### Community 47 - "Community 47"
-Cohesion: 0.08
-Nodes (24): Resolve the network config (autodetect gateway) and apply it., Push the config dict onto the live stalker/speed singletons., Cheap live snapshot of the network monitor for the dashboard., Cycle the mascot sprite frames; only while the dashboard is visible., Cycle the mascot sprite frames; only while the dashboard is visible., Resolve the network config (autodetect gateway) and apply it., Cycle the mascot sprite frames; only while the dashboard is visible., Resolve the network config (autodetect gateway) and apply it. (+16 more)
+Cohesion: 0.06
+Nodes (26): Push the config dict onto the live stalker/speed singletons., Resolve the network config (autodetect gateway) and apply it., Push the config dict onto the live stalker/speed singletons., Cheap live snapshot of the network monitor for the dashboard., Cycle the mascot sprite frames; only while the dashboard is visible., Cycle the mascot sprite frames; only while the dashboard is visible., Resolve the network config (autodetect gateway) and apply it., Cycle the mascot sprite frames; only while the dashboard is visible. (+18 more)
 
 ### Community 48 - "Community 48"
 Cohesion: 0.40
@@ -501,7 +533,7 @@ Nodes (4): Demo, My Experience with GitHub Copilot CLI, Varedura — safe Docker
 
 ### Community 49 - "Community 49"
 Cohesion: 0.06
-Nodes (34): Achievement, achievement_by_id(), check_achievements(), _clamp(), compute_health_score(), GameState, load_game_state(), Subtle gamification core for Varedura: health score, records, achievements.  Pur (+26 more)
+Nodes (36): Achievement, achievement_by_id(), check_achievements(), _clamp(), compute_health_score(), GameState, load_game_state(), Subtle gamification core for Varedura: health score, records, achievements.  Pur (+28 more)
 
 ### Community 50 - "Community 50"
 Cohesion: 0.38
@@ -556,8 +588,8 @@ Cohesion: 0.50
 Nodes (3): Magenta Stylized Wordmark, TIME Logo, Trademark Mark
 
 ### Community 67 - "Community 67"
-Cohesion: 0.09
-Nodes (15): Versão async de cleanup_recycle_bin com streaming., Versão async de cleanup_recycle_bin com streaming., Versão async de cleanup_recycle_bin com streaming., Versão async de stop_docker_wsl., Versão async de stop_docker_wsl., Versão async de stop_docker_wsl., Executa um comando async com streaming de saída em tempo real.          Args:, Executa um comando async com streaming de saída em tempo real.          Args: (+7 more)
+Cohesion: 0.11
+Nodes (14): Remove PowerShell CLIXML progress records from captured streams., Versão async de cleanup_recycle_bin com streaming., Versão async de cleanup_recycle_bin com streaming., Versão async de cleanup_recycle_bin com streaming., Versão async de stop_docker_wsl., Versão async de stop_docker_wsl., Versão async de stop_docker_wsl., Executa um comando async com streaming de saída em tempo real.          Args: (+6 more)
 
 ### Community 68 - "Community 68"
 Cohesion: 0.67
@@ -568,12 +600,12 @@ Cohesion: 0.50
 Nodes (4): MTS Logo, MTS Wordmark, Red Dotted Ring Symbol, Telecom Brand Identity
 
 ### Community 70 - "Community 70"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (10): CleanupStepResult, Versão async de docker_cleanup com streaming de saída em tempo real., Versão async de docker_cleanup com streaming de saída em tempo real., Versão async de docker_cleanup com streaming de saída em tempo real., Verifica se o Docker está rodando, Verifica se o Docker está rodando, Parse the reclaimed space from Docker prune command output.          Handles b, Parse the reclaimed space from Docker prune command output.          Handles b (+2 more)
 
 ### Community 71 - "Community 71"
-Cohesion: 0.14
-Nodes (17): WSLDockerCleaner, Full cleanup is destructive + admin and must gate on confirmation., Full cleanup is destructive + admin and must gate on confirmation., Distro names are interpolated into shell=True commands, so any name with     she, Distro names are interpolated into shell=True commands, so any name with     she, test_compact_vhdx_files_requests_elevation_and_falls_back(), test_compact_vhdx_reports_failure_when_diskpart_fails_without_optimize_vhd(), test_configure_wsl_sparse_elevates_manage_commands() (+9 more)
+Cohesion: 0.12
+Nodes (20): WSLDockerCleaner, The destructive tool must not run without explicit confirmation., The destructive tool must not run without explicit confirmation., Full cleanup is destructive + admin and must gate on confirmation., Full cleanup is destructive + admin and must gate on confirmation., Distro names are interpolated into shell=True commands, so any name with     she, Distro names are interpolated into shell=True commands, so any name with     she, test_compact_vhdx_files_requests_elevation_and_falls_back() (+12 more)
 
 ### Community 72 - "Community 72"
 Cohesion: 0.67
@@ -623,37 +655,41 @@ Nodes (3): Abstract Blue Login Background, Blue Gradient Palette, Blurred Full W
 Cohesion: 1.00
 Nodes (3): Gray WE Wordmark, YPT Logo Asset, Purple Abstract Mark
 
+### Community 93 - "Community 93"
+Cohesion: 0.50
+Nodes (3): __getattr__(), Real-time monitoring tools with lazy public exports., Preserve the historical API without importing the full monitor eagerly.
+
 ### Community 105 - "Community 105"
-Cohesion: 0.18
-Nodes (7): Executa um comando e retorna o resultado, Versão sync para CLI., Versão sync para CLI., Ensure Docker WSL distros are running so fstrim can execute inside them., Ensure Docker WSL distros are running so fstrim can execute inside them., Run fstrim on Docker WSL distros to discard unused filesystem blocks., Run fstrim on Docker WSL distros to discard unused filesystem blocks.
+Cohesion: 0.13
+Nodes (10): Executa um comando e retorna o resultado, Versão sync para CLI., Versão sync para CLI., Ensure Docker WSL distros are running so fstrim can execute inside them., Ensure Docker WSL distros are running so fstrim can execute inside them., Run fstrim on Docker WSL distros to discard unused filesystem blocks., Run fstrim on Docker WSL distros to discard unused filesystem blocks., Recreate Docker VHDX by renaming old and letting Docker Desktop create fresh one (+2 more)
 
 ### Community 106 - "Community 106"
-Cohesion: 0.24
-Nodes (11): _load_prefs(), _load_recording_pref(), Varedura - System Monitor & Docker Cleanup Tool  Usage:     uv run main.py  Main, Load all preferences from disk., Save preferences to disk., Load recording preference from disk (default: enabled)., Save recording preference to disk., Save cleanup step preferences. (+3 more)
+Cohesion: 0.22
+Nodes (10): _load_prefs(), _load_recording_pref(), Load all preferences from disk., Save preferences to disk., Load recording preference from disk (default: enabled)., Save recording preference to disk., Save cleanup step preferences., _save_cleanup_steps() (+2 more)
 
 ### Community 107 - "Community 107"
-Cohesion: 0.12
-Nodes (18): carregar_conhecidos(), carregar_vault(), CredencialIP, esquecer_ip(), lembrar_ip(), Cofre de credenciais + mapa de IPs já resolvidos (auto-login).  Dois arquivos JS, Lê ips_conhecidos.json. Ausente/corrompido -> dict vazio., Insere/atualiza mapa[ip] e persiste. (+10 more)
+Cohesion: 0.07
+Nodes (28): _load_camera_backend(), Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Import RTSP discovery modules only when the Cameras tab is hydrated. (+20 more)
 
 ### Community 108 - "Community 108"
 Cohesion: 0.25
 Nodes (9): detect_default_gateway(), _detect_unix(), _detect_windows(), Lightweight network information helpers (gateway autodetection)., Run a command quietly and return stdout (empty string on failure)., Parse `route print` for the default route (locale-independent)., Parse `ip route` (Linux/Android) or `netstat -rn` (macOS/BSD)., Best-effort detection of the default gateway IP, or None if unknown. (+1 more)
 
 ### Community 109 - "Community 109"
-Cohesion: 0.20
-Nodes (11): change_language(), _is_mcp_configured(), Add or remove the Varedura MCP server from .vscode/mcp.json., Check if the MCP server config exists for this workspace., Add or remove the Varedura MCP server from .vscode/mcp.json., Show language selection menu., Show the settings menu with all configurable options., Show language selection menu. (+3 more)
+Cohesion: 0.29
+Nodes (8): _is_mcp_configured(), Add or remove the Varedura MCP server from .vscode/mcp.json., Check if the MCP server config exists for this workspace., Add or remove the Varedura MCP server from .vscode/mcp.json., Show the settings menu with all configurable options., Show the settings menu with all configurable options., show_settings(), _toggle_mcp_config()
 
 ### Community 110 - "Community 110"
-Cohesion: 0.05
-Nodes (40): Render the merged processes view: active connections (live every tick)         e, Render the merged processes view: active connections (live every tick)         e, Translate the scanner's raw process labels for display., Render the lay-friendly ports view: service, app, what-it-does,         visibili, Render the merged processes view: active connections (live every tick)         e, Translate the scanner's raw process labels for display., Translate the scanner's raw process labels for display., Render the lay-friendly ports view: service, app, what-it-does,         visibili (+32 more)
+Cohesion: 0.06
+Nodes (28): Render the merged processes view: active connections (live every tick)         e, Render the merged processes view: active connections (live every tick)         e, Translate the scanner's raw process labels for display., Render the lay-friendly ports view: service, app, what-it-does,         visibili, Jump to the network ports view and force a fresh scan next tick., Translate the scanner's raw process labels for display., Render the lay-friendly ports view: service, app, what-it-does,         visibili, Render the merged processes view: active connections (live every tick)         e (+20 more)
 
 ### Community 111 - "Community 111"
-Cohesion: 0.16
-Nodes (13): Aba 'Câmeras' (descoberta/validação de câmeras IP·RTSP) para a TUI do Varedura., _rotulo_par(), adicionar_par(), Par, Resolve (InfoStream, Par, caminho) para um IP, com ordenação eficiente.      1., Resolve (InfoStream, Par, caminho) para um IP, com ordenação eficiente.      1., Um par usuário/senha do cofre., Acrescenta se (usuario, senha) ainda não existe. False se duplicado. (+5 more)
+Cohesion: 0.05
+Nodes (58): _execute_repair_worker(), Exception, _bounded_daemon_call(), classify_diagnosis(), _collect_linux_dhcp_configuration(), collect_network_snapshot(), _collect_proxy_configuration(), Confidence (+50 more)
 
 ### Community 112 - "Community 112"
-Cohesion: 0.22
-Nodes (9): get_ping_command(), parse_ping(), Retorna o comando de ping adequado para o SO., Extrai o tempo em ms da resposta do ping., Executa o ping e retorna o tempo ou None se falhar., Retorna o comando de ping adequado para o SO., Extrai o tempo em ms da resposta do ping., Executa o ping e retorna o tempo ou None se falhar. (+1 more)
+Cohesion: 0.12
+Nodes (17): get_ping_command(), get_top_network_hogs(), _get_top_network_hogs_fallback(), parse_ping(), Retorna o comando de ping adequado para o SO., Extrai o tempo em ms da resposta do ping., Executa o ping e retorna o tempo ou None se falhar., Retorna o comando de ping adequado para o SO. (+9 more)
 
 ### Community 114 - "Community 114"
 Cohesion: 0.50
@@ -661,47 +697,47 @@ Nodes (3): Versão async de cleanup_temp_files com streaming., Versão async de 
 
 ### Community 116 - "Community 116"
 Cohesion: 0.15
-Nodes (10): _campo(), ClickOpenDataTable, Um campo de formulário: rótulo em cima, input embaixo., Um campo de formulário: rótulo em cima, input embaixo., Um campo de formulário: rótulo em cima, input embaixo., Um campo de formulário: rótulo em cima, input embaixo., Um campo de formulário: rótulo em cima, input embaixo., DataTable que abre a linha (RowSelected) com um ÚNICO clique.      O DataTable p (+2 more)
+Nodes (12): _campo(), ClickOpenDataTable, Aba 'Câmeras' (descoberta/validação de câmeras IP·RTSP) para a TUI do Varedura., Um campo de formulário: rótulo em cima, input embaixo., Um campo de formulário: rótulo em cima, input embaixo., Um campo de formulário: rótulo em cima, input embaixo., Um campo de formulário: rótulo em cima, input embaixo., Um campo de formulário: rótulo em cima, input embaixo. (+4 more)
 
 ### Community 117 - "Community 117"
 Cohesion: 0.14
 Nodes (8): Session recorder — captures Rich console output as SVG snapshots., Records a Rich console session by taking periodic SVG snapshots.      Usage:, Records a Rich console session by taking periodic SVG snapshots.      Usage:, Generate animated GIF from recorded frames.          Returns:             Pat, Generate animated GIF from recorded frames.          Returns:             Pat, Begin recording with periodic snapshots., Begin recording with periodic snapshots., SessionRecorder
 
 ### Community 121 - "Community 121"
-Cohesion: 0.11
-Nodes (19): load_cleanup_steps(), load_prefs(), Load cleanup step preferences, if they were configured., Save cleanup step preferences., Persist the network monitor configuration., Load cleanup step preferences, if they were configured., Save cleanup step preferences., Load all preferences from disk. (+11 more)
+Cohesion: 0.13
+Nodes (16): load_cleanup_steps(), load_prefs(), load_recording_pref(), Load cleanup step preferences, if they were configured., Save cleanup step preferences., Load cleanup step preferences, if they were configured., Save cleanup step preferences., Load cleanup step preferences, if they were configured. (+8 more)
 
 ### Community 122 - "Community 122"
-Cohesion: 0.11
-Nodes (18): abrir_stream(), _achar_exe(), detectar_player(), erro_se_morreu(), _ffprobe_disponivel(), InfoStream, _montar_comando(), Validação e visualização de streams via ffmpeg (ffprobe/ffplay). (+10 more)
+Cohesion: 0.10
+Nodes (24): _rotulo_par(), Par, Resolve (InfoStream, Par, caminho) para um IP, com ordenação eficiente.      1., Resolve (InfoStream, Par, caminho) para um IP, com ordenação eficiente.      1., Um par usuário/senha do cofre., resolver_ip(), abrir_stream(), _achar_exe() (+16 more)
 
 ### Community 123 - "Community 123"
 Cohesion: 0.33
 Nodes (6): Convert SVG string to high-quality PNG bytes.      Renders at ``width * scale`, Convert SVG string to high-quality PNG bytes.      Renders at ``width * scale`, Low-level SVG → PNG using best available renderer., Low-level SVG → PNG using best available renderer., _render_svg_raw(), _svg_to_png_bytes()
 
 ### Community 125 - "Community 125"
-Cohesion: 0.25
-Nodes (5): Versão async com batch elevated., Versão async com batch elevated., Versão async com batch elevated., Ensure sparseVhd=true is set under [experimental] in .wslconfig.          Also, Ensure sparseVhd=true is set under [experimental] in .wslconfig.          Also
+Cohesion: 0.15
+Nodes (8): Versão async com batch elevated., Versão async com batch elevated., Versão async com batch elevated., Ensure sparseVhd=true is set under [experimental] in .wslconfig.          Also, Ensure sparseVhd=true is set under [experimental] in .wslconfig.          Also, Async version of _fstrim_wsl_distros., Async version of _fstrim_wsl_distros.          Note: Caller is responsible for, Async version of _fstrim_wsl_distros.          Note: Caller is responsible for
 
 ### Community 127 - "Community 127"
-Cohesion: 0.12
-Nodes (18): _add_common_status_rows(), build_cleanup_status_panel(), build_dashboard_summary(), build_settings_status_table(), cleanup_summary(), Return the localized cleanup enabled-count summary., Return the localized cleanup enabled-count summary., Build a compact cleanup preference summary. (+10 more)
+Cohesion: 0.09
+Nodes (23): _target_selection_summary(), _add_common_status_rows(), build_dashboard_summary(), build_settings_status_table(), is_mcp_configured(), Check whether the workspace MCP server is configured., Toggle the workspace MCP server config and return styled messages., Check whether the workspace MCP server is configured. (+15 more)
 
 ### Community 128 - "Community 128"
-Cohesion: 0.33
-Nodes (6): check_keyboard(), _flush_stdin(), Limpa completamente o buffer de entrada do teclado., Verificação não-bloqueante de teclado com:     - Filtragem de escape sequences, Limpa completamente o buffer de entrada do teclado., Verificação não-bloqueante de teclado com:     - Filtragem de escape sequences
+Cohesion: 0.12
+Nodes (15): analyze_lag_source(), check_keyboard(), _flush_stdin(), V's Network Stalker v3.2 - Monitor de Rede em Tempo Real com Escaner de Portas e, Registra uma amostra de ping no histórico completo de forma thread-safe., Registra uma amostra de ping no histórico completo de forma thread-safe., Analisa a origem provável do lag com mais inteligência.      Retorna: (suspeit, Analisa a origem provável do lag com mais inteligência.      Retorna: (suspeit (+7 more)
 
 ### Community 130 - "Community 130"
-Cohesion: 0.22
-Nodes (10): Fecha um driver Selenium sem nunca propagar erro.      Tenta `driver.quit()` (, Fecha um driver Selenium sem nunca propagar erro.      Tenta `driver.quit()` (, _safe_quit(), FakeDriver, Tests for Selenium driver cleanup (no orphaned chrome/chromedriver)., test_provider_cleanup_quits_and_clears_driver(), test_provider_cleanup_without_driver_is_safe(), test_safe_quit_calls_quit() (+2 more)
+Cohesion: 0.14
+Nodes (20): _available_provider_ids(), ContinuousSpeedTester, V's Speed Tester - Monitor de Velocidade de Internet em Tempo Real  Funcionali, Configuração de velocidade contratada., Configuração de velocidade contratada., Testador de velocidade contínuo que roda em background.      Executa testes de, Testador de velocidade contínuo que roda em background.      Executa testes de, SpeedTestConfig (+12 more)
 
 ### Community 131 - "Community 131"
-Cohesion: 0.33
-Nodes (6): make_ascii_graph(), make_graph_panel(), Cria gráfico ASCII de linha a partir do histórico de ping., Cria gráfico ASCII de linha a partir do histórico de ping., Cria painel com ambos os gráficos de ping mostrando info de tempo., Cria painel com ambos os gráficos de ping mostrando info de tempo.
+Cohesion: 0.18
+Nodes (11): make_ascii_graph(), make_graph_panel(), make_header(), Cria gráfico ASCII de linha a partir do histórico de ping., Cria gráfico ASCII de linha a partir do histórico de ping., Cria o cabeçalho do dashboard., Cria gráfico ASCII de linha a partir do histórico de ping., Cria o cabeçalho do dashboard. (+3 more)
 
 ### Community 134 - "Community 134"
-Cohesion: 0.33
-Nodes (5): Jump to the network ports view and force a fresh scan next tick., Jump to the network ports view and force a fresh scan next tick., Jump to the network ports view and force a fresh scan next tick., Jump to the network ports view and force a fresh scan next tick., Jump to the network ports view and force a fresh scan next tick.
+Cohesion: 0.06
+Nodes (42): HTTPRedirectHandler, _bounded_connections(), fetch_live_client_data(), _is_game_port(), _is_game_process(), LeagueCandidate, LeagueDetectionResult, LeagueEndpoint (+34 more)
 
 ### Community 137 - "Community 137"
 Cohesion: 0.39
@@ -724,48 +760,48 @@ Cohesion: 0.20
 Nodes (11): _base24(), detectar_redes(), _eh_privado_utilizavel(), _ip_primario(), _ips_hostname(), Detecção de interfaces IPv4 locais e derivação de redes /24 (stdlib só)., Uma rede /24 local detectada automaticamente., IP de saída padrão via truque UDP-connect (não envia pacote). (+3 more)
 
 ### Community 142 - "Community 142"
-Cohesion: 0.22
-Nodes (9): adicionar_regiao(), carregar_regioes(), Regiões salvas (cartões fixos): faixas remotas e câmeras únicas.  Persistido em, Uma região salva: faixa de rede ('rede') ou câmera única ('camera')., Lê regioes.json. Ausente/corrompido -> lista vazia (loga warning)., Acrescenta se ainda não existe (mesma chave). False se duplicado., Regiao, _salvar_json() (+1 more)
+Cohesion: 0.15
+Nodes (10): adicionar_regiao(), carregar_regioes(), Regiões salvas (cartões fixos): faixas remotas e câmeras únicas.  Persistido em, Uma região salva: faixa de rede ('rede') ou câmera única ('camera')., Lê regioes.json. Ausente/corrompido -> lista vazia (loga warning)., Acrescenta se ainda não existe (mesma chave). False se duplicado., Regiao, remover_regiao() (+2 more)
 
 ### Community 143 - "Community 143"
-Cohesion: 0.28
-Nodes (9): _get_cleanup_steps(), _load_cleanup_steps(), Get cleanup steps, using defaults if not yet configured., Run Docker cleanup using the user's saved step preferences.      On first run (n, Run Docker cleanup using the user's saved step preferences.      On first run (n, Interactive toggle screen for cleanup step preferences.      Shows a numbered li, Load cleanup step preferences. Returns None if never configured., run_docker_cleanup() (+1 more)
+Cohesion: 0.20
+Nodes (12): _build_menu_layout(), _get_cleanup_steps(), _load_cleanup_steps(), Get cleanup steps, using defaults if not yet configured., Build the full menu layout with a given mascot panel., Build the full menu layout with a given mascot panel., Run Docker cleanup using the user's saved step preferences.      On first run (n, Run Docker cleanup using the user's saved step preferences.      On first run (n (+4 more)
 
 ### Community 144 - "Community 144"
 Cohesion: 0.33
 Nodes (6): _prepare_images(), Remove CSS animations from SVG so each frame is a static snapshot., Remove CSS animations from SVG so each frame is a static snapshot., Convert SVG frames to normalised RGBA images + per-frame durations., Convert SVG frames to normalised RGBA images + per-frame durations., _strip_svg_animation()
 
 ### Community 145 - "Community 145"
-Cohesion: 0.14
-Nodes (13): MultiProviderSpeedTester, Gerenciador de múltiplos provedores de teste de velocidade., Retorna lista de provedores disponíveis., Retorna o próximo provedor disponível (rotação round-robin)., Executa teste com o próximo provedor na rotação.         Cada chamada testa ape, Gerenciador de múltiplos provedores de teste de velocidade., Gerenciador de múltiplos provedores de teste de velocidade., Retorna lista de provedores disponíveis. (+5 more)
+Cohesion: 0.09
+Nodes (21): get_multi_provider(), MultiProviderSpeedTester, Gerenciador de múltiplos provedores de teste de velocidade., Retorna lista de provedores disponíveis., Retorna o próximo provedor disponível (rotação round-robin)., Executa teste com o próximo provedor na rotação.         Cada chamada testa ape, Gerenciador de múltiplos provedores de teste de velocidade., Gerenciador de múltiplos provedores de teste de velocidade. (+13 more)
 
 ### Community 146 - "Community 146"
-Cohesion: 0.21
-Nodes (12): load_prefs(), Persiste preferências relevantes para exportação em JSON., Carrega preferências salvas, se o arquivo existir., Persiste preferências relevantes para exportação em JSON., Define a flag e persiste em disco., Carrega preferências salvas, se o arquivo existir., Define a flag e persiste em disco., save_prefs() (+4 more)
+Cohesion: 0.16
+Nodes (15): load_prefs(), Persiste preferências relevantes para exportação em JSON., Carrega preferências salvas, se o arquivo existir., Persiste preferências relevantes para exportação em JSON., Persiste preferências relevantes para exportação em JSON., Define a flag e persiste em disco., Carrega preferências salvas, se o arquivo existir., Carrega preferências salvas, se o arquivo existir. (+7 more)
 
 ### Community 149 - "Community 149"
-Cohesion: 0.25
-Nodes (7): Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez.
+Cohesion: 0.22
+Nodes (8): Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez., Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez.
 
 ### Community 153 - "Community 153"
-Cohesion: 0.22
-Nodes (9): is_android(), make_header(), make_process_table(), Detecta se está rodando no Android (Termux)., Detecta se está rodando no Android (Termux)., Cria o cabeçalho do dashboard., Cria o cabeçalho do dashboard., Cria a tabela de processos suspeitos. (+1 more)
+Cohesion: 0.25
+Nodes (8): is_android(), make_process_table(), Detecta se está rodando no Android (Termux)., Detecta se está rodando no Android (Termux)., Detecta se está rodando no Android (Termux)., Cria a tabela de processos suspeitos., Cria a tabela de processos suspeitos., Cria a tabela de processos suspeitos.
 
 ### Community 154 - "Community 154"
 Cohesion: 0.31
 Nodes (8): buscar_prefixos_por_asn(), obter_amostra_aleatoria(), obter_blocos_rede(), obter_espaco_amostral_completo(), Consulta a API pública do BGPView para descobrir quais blocos de IP     (prefixo, Coleta e retorna uma lista com os blocos de rede (IPv4Network)., Retorna uma lista contendo TODOS os endereços de IP utilizáveis     dentro dos b, Retorna uma quantidade específica de IPs sorteados aleatoriamente.
 
 ### Community 155 - "Community 155"
-Cohesion: 0.11
-Nodes (22): build_dashboard_status(), build_records_panel(), _fmt_data_mb(), _fmt_memory(), _fmt_ping(), _fmt_streak(), _fmt_traffic(), format_duration() (+14 more)
+Cohesion: 0.10
+Nodes (20): build_dashboard_status(), _fmt_data_mb(), _fmt_memory(), _fmt_ping(), _fmt_traffic(), Format a latency value with a status color., Build a live at-a-glance status overview for the dashboard., Format a latency value with a status color (dashboard glance). (+12 more)
 
 ### Community 156 - "Community 156"
-Cohesion: 0.14
-Nodes (9): quick_cleanup(), Entrypoint CLI para executar a limpeza rápida do WSL Docker., Perform a quick cleanup. If a `console` is provided, use it for output., main(), Verifica se o script está rodando como administrador/root, Verifica se o script está rodando como administrador/root, Reinicia o script com privilégios de administrador/root, console() (+1 more)
+Cohesion: 0.17
+Nodes (6): quick_cleanup(), Entrypoint CLI para executar a limpeza rápida do WSL Docker., Perform a quick cleanup. If a `console` is provided, use it for output., console(), test_quick_cleanup_reuses_central_cleaner(), test_legacy_monitor_returns_without_ping_when_onboarding_is_incomplete()
 
 ### Community 157 - "Community 157"
-Cohesion: 0.14
-Nodes (14): build_cleanup_steps_table(), get_cleanup_steps(), Get cleanup step preferences, falling back to defaults., Get cleanup step preferences, falling back to defaults., Build a Rich table with cleanup step state., Build a Rich table with cleanup step state., Build a Rich table with cleanup step state., Return enabled cleanup step keys in configured display order. (+6 more)
+Cohesion: 0.12
+Nodes (16): build_cleanup_steps_table(), get_cleanup_steps(), Get cleanup step preferences, falling back to defaults., Get cleanup step preferences, falling back to defaults., Build a Rich table with cleanup step state., Build a Rich table with cleanup step state., Build a Rich table with cleanup step state., Return enabled cleanup step keys in configured display order. (+8 more)
 
 ### Community 158 - "Community 158"
 Cohesion: 0.40
@@ -776,92 +812,172 @@ Cohesion: 0.40
 Nodes (5): caminhos(), _dedup(), Caminhos RTSP conhecidos pela comunidade, por fabricante.  Baseado em listas púb, Remove duplicatas preservando a ordem., Retorna os caminhos a testar; filtra por marca se informada.
 
 ### Community 165 - "Community 165"
-Cohesion: 0.16
-Nodes (14): _build_rtsp_request(), escanear_rede(), hosts_da_faixa(), Funções para testar câmeras IP e streams RTSP usando apenas a stdlib., Expande uma faixa (prefixo "a.b.c" ou CIDR) na lista de IPs a varrer., Varre uma faixa de rede procurando hosts com a porta RTSP aberta.      faixa: pr, Resultado de um teste de stream RTSP., Retorna True se a porta TCP estiver aberta no host. (+6 more)
+Cohesion: 0.14
+Nodes (16): _build_rtsp_request(), escanear_portas_camera(), escanear_rede(), hosts_da_faixa(), Funções para testar câmeras IP e streams RTSP usando apenas a stdlib., Expande uma faixa (prefixo "a.b.c" ou CIDR) na lista de IPs a varrer., Varre uma faixa de rede procurando hosts com a porta RTSP aberta.      faixa: pr, Resultado de um teste de stream RTSP. (+8 more)
 
 ### Community 166 - "Community 166"
-Cohesion: 0.22
-Nodes (9): Start recording the current user session if enabled., Stop session recording and save a single GIF for the whole run., Start recording the current user session if enabled., Stop session recording and save a single GIF for the whole run., Toggle automatic GIF recording., Toggle automatic GIF recording., _start_recording_session(), _stop_recording_session() (+1 more)
+Cohesion: 0.07
+Nodes (37): _system_ssl_context(), _action_id(), _certificate_is_ca(), _command_status(), _der_tlvs(), _disruptive_block_reason(), _flush_preview(), _kill_process() (+29 more)
 
 ### Community 167 - "Community 167"
-Cohesion: 0.15
-Nodes (11): _chrome_service(), Resultado de um teste de velocidade., Resultado de um teste de velocidade., Resultado de um teste de velocidade., Cria um Service do chromedriver que NÃO abre janela de console no Windows., Executa teste no SIMET usando Flutter Web.         Flutter renderiza em canvas,, Executa teste no SIMET usando Flutter Web.         Flutter renderiza em canvas,, Executa teste no SIMET usando Flutter Web.         Flutter renderiza em canvas, (+3 more)
+Cohesion: 0.08
+Nodes (24): _chrome_service(), Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r, Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r, Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r, Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r, Resultado de um teste de velocidade., Resultado de um teste de velocidade., Resultado de um teste de velocidade. (+16 more)
 
 ### Community 168 - "Community 168"
-Cohesion: 0.14
-Nodes (11): _escolher_arquivo_txt(), Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Abre o explorador de arquivos (em thread) e preenche o campo escolhido., Importa .txt de usuários e/ou senhas e combina (produto cartesiano). (+3 more)
+Cohesion: 0.20
+Nodes (8): _escolher_arquivo_txt(), Importa .txt de usuários e/ou senhas e combina (produto cartesiano)., Abre o explorador de arquivos (em thread) e preenche o campo escolhido., Abre o explorador de arquivos (em thread) e preenche o campo escolhido., Abre o explorador de arquivos (em thread) e preenche o campo escolhido., Abre o explorador de arquivos nativo e retorna (caminho, abriu_ok).      caminho, Abre o explorador de arquivos nativo e retorna (caminho, abriu_ok).      caminho, Abre o explorador de arquivos nativo e retorna (caminho, abriu_ok).      caminho
 
 ### Community 169 - "Community 169"
-Cohesion: 0.33
-Nodes (6): _build_menu_layout(), Build the full menu layout with a given mascot panel., Display the main menu with a continuously animated mascot.      Returns the user, Build the full menu layout with a given mascot panel., Display the main menu with a continuously animated mascot.      Returns the user, show_animated_menu()
+Cohesion: 0.10
+Nodes (23): _diagnose(), FakeBackend, FakeCommandRunner, _interface(), Deterministic tests for the layered, policy-aware diagnostic engine., _snapshot(), test_active_link_without_default_route_is_local_only(), test_cancellation_is_preserved_even_when_snapshot_has_no_route() (+15 more)
 
 ### Community 170 - "Community 170"
-Cohesion: 0.13
-Nodes (11): FastComProvider, ProgressState, Provedor Netflix Fast.com usando requests., Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r, Provedor Netflix Fast.com usando requests., Provedor Netflix Fast.com usando requests., Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r, Executa teste usando a API do Fast.com (Netflix).          A API do Fast.com r (+3 more)
+Cohesion: 0.14
+Nodes (10): FastComProvider, ProgressState, Provedor Netflix Fast.com usando requests., Provedor Netflix Fast.com usando requests., Provedor Netflix Fast.com usando requests., Provedor Netflix Fast.com usando requests., Estado de progresso em tempo real do teste de velocidade., Estado de progresso em tempo real do teste de velocidade. (+2 more)
 
 ### Community 171 - "Community 171"
-Cohesion: 0.14
-Nodes (14): Update the dashboard status panel with live network data., Update the dashboard status + records panels with live data., Update the dashboard status + records panels with live data., Update the dashboard status + records panels with live data., Update the dashboard status + records panels with live data., Update the dashboard status + records panels with live data., Update the dashboard status + records panels with live data., Update the dashboard status + records panels with live data. (+6 more)
+Cohesion: 0.15
+Nodes (12): Update the dashboard status panel with live network data., Update the dashboard status + records panels with live data., Update the dashboard status + records panels with live data., Update the dashboard status + records panels with live data., Update the dashboard status + records panels with live data., Update the dashboard status + records panels with live data., Update the dashboard status + records panels with live data., Update the dashboard status + records panels with live data. (+4 more)
 
 ### Community 172 - "Community 172"
-Cohesion: 0.50
-Nodes (4): Mascot Frame Registry, Mascot module for Varedura — animated ASCII art character., MascotRenderer, Mascot Sprite Generation
+Cohesion: 0.40
+Nodes (4): Mascot Frame Registry, Mascot exports with the Pillow/rich-pixels renderer loaded on demand., MascotRenderer, Mascot Sprite Generation
 
 ### Community 173 - "Community 173"
-Cohesion: 0.18
-Nodes (8): Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We, Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We, Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We, Fecha o driver Selenium em aberto (chamado no encerramento/parada)., Fecha o driver Selenium em aberto (chamado no encerramento/parada)., Fecha qualquer driver Selenium em aberto (parada/encerramento).          Segur, Fecha qualquer driver Selenium em aberto (parada/encerramento).          Segur, SimetProvider
+Cohesion: 0.12
+Nodes (12): Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We, Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We, Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We, Fecha o driver Selenium em aberto (chamado no encerramento/parada)., Provedor NIC.br SIMET usando Selenium.      IMPORTANTE: O SIMET usa Flutter We, Fecha o driver Selenium em aberto (chamado no encerramento/parada)., Fecha o driver Selenium em aberto (chamado no encerramento/parada)., Fecha qualquer driver Selenium em aberto (parada/encerramento).          Segur (+4 more)
 
 ### Community 174 - "Community 174"
-Cohesion: 0.11
-Nodes (18): build_achievements_row(), build_scanner_tables(), cleanup_label(), Persist the network monitor configuration., Return the localized label for a cleanup step key., Return the localized label for a cleanup step key., Build Rich scanner tables from a PortScannerState-like object., Run selected cleanup steps and report coarse progress. (+10 more)
+Cohesion: 0.18
+Nodes (11): build_achievements_row(), build_scanner_tables(), Build Rich scanner tables from a PortScannerState-like object., Build Rich scanner tables from a PortScannerState-like object., Build the achievements badge wall from a GameState., Save cleanup step preferences., Build Rich scanner tables from a PortScannerState-like object., Build the achievements badge wall from a GameState. (+3 more)
 
 ### Community 175 - "Community 175"
-Cohesion: 0.14
-Nodes (10): get_multi_provider(), Retorna a instância global do gerenciador de provedores., Retorna a instância global do gerenciador de provedores., Retorna a instância global do gerenciador de provedores., Executa um único teste de velocidade usando múltiplos provedores., Loop contínuo de testes em background - alterna entre provedores., Resultado de um teste de velocidade., Estatísticas de histórico de velocidade com suporte a múltiplos provedores. (+2 more)
+Cohesion: 0.10
+Nodes (14): Executa um único teste de velocidade usando múltiplos provedores., Loop contínuo de testes em background - alterna entre provedores., Resultado de um teste de velocidade., Resultado de um teste de velocidade., Executa um único teste de velocidade usando múltiplos provedores., Loop contínuo de testes em background - alterna entre provedores., Reserve one test before scheduling its worker.          The reservation itself, Run one provider test, optionally consuming a prior reservation. (+6 more)
 
 ### Community 177 - "Community 177"
-Cohesion: 0.09
-Nodes (18): Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard. (+10 more)
+Cohesion: 0.20
+Nodes (9): Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard., Cheap live snapshot of the network monitor for the dashboard. (+1 more)
 
 ### Community 178 - "Community 178"
-Cohesion: 0.22
-Nodes (6): BrasilBandaLargaProvider, Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium., Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium., Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium., Fecha o driver Selenium em aberto (chamado no encerramento/parada)., Fecha o driver Selenium em aberto (chamado no encerramento/parada).
+Cohesion: 0.17
+Nodes (8): BrasilBandaLargaProvider, Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium., Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium., Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium., Fecha o driver Selenium em aberto (chamado no encerramento/parada)., Provedor Brasil Banda Larga (ESAQ/Anatel) usando Selenium., Fecha o driver Selenium em aberto (chamado no encerramento/parada)., Fecha o driver Selenium em aberto (chamado no encerramento/parada).
 
 ### Community 179 - "Community 179"
-Cohesion: 0.33
-Nodes (6): get_top_network_hogs(), _get_top_network_hogs_fallback(), Identifica os processos (Top 5) com mais conexões de rede ativas.      NOTA: U, Identifica os processos (Top 5) com mais conexões de rede ativas.      NOTA: U, Fallback usando I/O counters (menos preciso, usado quando sem permissão)., Fallback usando I/O counters (menos preciso, usado quando sem permissão).
+Cohesion: 0.09
+Nodes (34): _ask_recording_prompt(), _build_menu_layout(), _ensure_legacy_network_targets(), main(), Legacy Rich interface for Varedura.  Usage:     uv run main.py  Main entry point, Add or remove the Varedura MCP server from .vscode/mcp.json., Build the full menu layout with a given mascot panel., Display the main menu with a continuously animated mascot.      Returns the user (+26 more)
 
 ### Community 180 - "Community 180"
 Cohesion: 0.33
 Nodes (5): servers, varedura, args, command, type
 
 ### Community 181 - "Community 181"
-Cohesion: 0.15
-Nodes (7): Encerra deixando claro o que está sendo finalizado.          Se nada pesado esti, Overlay de encerramento: mostra o que está sendo finalizado + barra.      Ao mon, _run_shutdown(), ShutdownScreen, ModalScreen, PingStats, Estatísticas de histórico de ping com timestamps.
+Cohesion: 0.07
+Nodes (44): Runtime tracker of consecutive lag-free seconds., Advance the streak. ``ok`` means ping <= threshold and not lost., StreakTracker, Require explicit confirmation for exactly one allow-listed repair., RepairConfirmationScreen, Encerra deixando claro o que está sendo finalizado.          Se nada pesado esti, Overlay de encerramento: mostra o que está sendo finalizado + barra.      Ao mon, Static widget that displays Rich renderables. (+36 more)
 
 ### Community 197 - "Community 197"
-Cohesion: 0.23
-Nodes (11): isolated_state(), Tests for the integrated Câmeras (RTSP) tab in the Varedura Textual app., Keep the RTSP vault/regions and prefs off the real files, and offline., test_cameras_browse_fills_input(), test_cameras_credential_add_and_remove(), test_cameras_import_credential_lists(), test_cameras_open_port_saved_without_credential(), test_cameras_port_scan_populates_table() (+3 more)
+Cohesion: 0.31
+Nodes (12): isolated_state(), open_cameras(), Tests for the integrated Câmeras (RTSP) tab in the Varedura Textual app., Keep the RTSP vault/regions and prefs off the real files, and offline., test_cameras_browse_fills_input(), test_cameras_credential_add_and_remove(), test_cameras_import_credential_lists(), test_cameras_open_port_saved_without_credential() (+4 more)
 
 ### Community 198 - "Community 198"
-Cohesion: 0.25
-Nodes (8): is_mcp_configured(), Check whether the workspace MCP server is configured., Toggle the workspace MCP server config and return styled messages., Check whether the workspace MCP server is configured., Toggle the workspace MCP server config and return styled messages., Check whether the workspace MCP server is configured., Toggle the workspace MCP server config and return styled messages., toggle_mcp_config()
+Cohesion: 0.14
+Nodes (18): PingScheduler, Tell the scheduler HTTPS/TCP works despite possible ICMP filtering., Schedule a gateway, up to five saved targets and one League target.      ``poll(, _Clock, _gateway(), _league(), _ManualExecutor, Deterministic cadence, concurrency, backoff and generation tests. (+10 more)
 
 ### Community 199 - "Community 199"
-Cohesion: 0.29
-Nodes (6): load_network_config(), Load the network monitor configuration, merged over defaults., Load the network monitor configuration, merged over defaults., get_supported_languages(), Return tuple of supported language codes., Return tuple of supported language codes.
+Cohesion: 0.11
+Nodes (24): build_cleanup_status_panel(), build_records_panel(), cleanup_summary(), _fmt_streak(), format_duration(), load_network_config(), Shared state and Rich renderables for the Varedura interfaces., Load the network monitor configuration, merged over defaults. (+16 more)
 
 ### Community 200 - "Community 200"
-Cohesion: 0.33
-Nodes (6): build_tool_option(), Build a Rich renderable suitable for a Textual OptionList option., Build a Rich renderable suitable for a Textual OptionList option., Build a Rich renderable suitable for a Textual OptionList option., Build a Rich renderable suitable for a Textual OptionList option., Build a Rich renderable suitable for a Textual OptionList option.
+Cohesion: 0.12
+Nodes (12): build_tool_option(), cleanup_label_key(), Build a Rich renderable suitable for a Textual OptionList option., Build a Rich renderable suitable for a Textual OptionList option., Build a Rich renderable suitable for a Textual OptionList option., Build a Rich renderable suitable for a Textual OptionList option., Build a Rich renderable suitable for a Textual OptionList option., Return the i18n label key for a cleanup step key. (+4 more)
 
 ### Community 201 - "Community 201"
-Cohesion: 0.67
-Nodes (3): _run_dashboard_poller(), get_system_network_stats(), Retorna estatísticas gerais de rede do sistema.      Returns:         Dicioná
+Cohesion: 0.23
+Nodes (28): NetworkInterface, RepairExecutor, _action(), _fake_der_certificate(), FakeRunner, Tests for safe repair enumeration, authorization and rollback behavior., _report(), test_app_ca_is_single_ca_and_copied_to_fingerprint_store() (+20 more)
+
+### Community 202 - "Community 202"
+Cohesion: 0.50
+Nodes (3): Reflow responsivo da aba credenciais: 2 colunas (largo) ou         empilhado em, Reflow responsivo da aba credenciais: 2 colunas (largo) ou         empilhado em, Reflow responsivo da aba credenciais: 2 colunas (largo) ou         empilhado em
 
 ### Community 203 - "Community 203"
+Cohesion: 0.14
+Nodes (16): mask_ip(), NetworkHistoryRecord, NetworkSessionHistory, _private_host(), Thread-safe, target-aware ping history and privacy-preserving exports., Generate a compact report with one statistics block per target generation., Mask an endpoint as IPv4 /24 or IPv6 /64 while retaining correlation., Own all ping samples for one application session without mixing targets. (+8 more)
+
+### Community 204 - "Community 204"
+Cohesion: 0.08
+Nodes (4): _CompletedPopen, _HangingPopen, Catalogue, validation, migration and bounded ICMP probe tests., test_probe_ping_has_parent_timeout()
+
+### Community 205 - "Community 205"
+Cohesion: 0.12
+Nodes (16): build_ping_command(), create_custom_target(), _failure_status(), from_config(), _from_legacy_config(), parse_ping_latency(), PingSample, probe_ping() (+8 more)
+
+### Community 206 - "Community 206"
+Cohesion: 0.11
+Nodes (21): build_ports_summary(), Lay-friendly one-line summary + legend for the network ports view., Lay-friendly one-line summary + legend for the network ports view., classify_exposure(), describe_port(), is_exposed(), Catálogo de portas → serviço amigável para usuários leigos.  Módulo **puro** (se, Conveniência: True se o socket escuta em todas as interfaces (exposto). (+13 more)
+
+### Community 207 - "Community 207"
+Cohesion: 0.17
+Nodes (11): merge_visible_selection(), on_button_pressed(), on_custom_submitted(), on_search_changed(), on_targets_changed(), _option_label(), Lazy Textual screens for network target selection and safe repairs., Apply filtered-list changes without dropping hidden selections. (+3 more)
+
+### Community 208 - "Community 208"
+Cohesion: 0.15
+Nodes (13): _base_interval(), _Flight, Fair, bounded scheduler for multiple ICMP targets.  The scheduler is inert until, Atomically replace desired targets and invalidate changed work., Suspend external probes while continuing to observe the gateway., Collect finished work and submit currently due probes without blocking., _requires_default_route(), SchedulerTargetSnapshot (+5 more)
+
+### Community 209 - "Community 209"
+Cohesion: 0.11
+Nodes (18): atualizado_em, caminho, codec, resolucao, senha, url, usuario, atualizado_em (+10 more)
+
+### Community 211 - "Community 211"
+Cohesion: 0.17
+Nodes (8): Future, Validated persistent selection stored under the network preferences., TargetSelection, ContractInfo, Informações do contrato de internet para relatório formal., Informações do contrato de internet para relatório formal., StalkerConfig, _ManualFuture
+
+### Community 212 - "Community 212"
+Cohesion: 0.18
+Nodes (11): _run_cleanup_worker(), cleanup_label(), Persist the network monitor configuration., Return the localized label for a cleanup step key., Return the localized label for a cleanup step key., Run selected cleanup steps and report coarse progress., Return the localized label for a cleanup step key., Run selected cleanup steps and report coarse progress.      Returns ``(success, (+3 more)
+
+### Community 213 - "Community 213"
+Cohesion: 0.31
+Nodes (6): _set_prefs(), test_corrupt_numeric_preferences_fall_back_before_first_compose(), test_corrupt_schema_and_invalid_legacy_host_return_to_onboarding(), test_legacy_automatic_default_does_not_start_external_ping(), test_legacy_explicit_host_becomes_primary_custom_target(), test_v3_save_removes_legacy_scalar_and_preserves_privacy_flags()
+
+### Community 214 - "Community 214"
+Cohesion: 0.32
+Nodes (4): main(), Verifica se o script está rodando como administrador/root, Verifica se o script está rodando como administrador/root, Reinicia o script com privilégios de administrador/root
+
+### Community 215 - "Community 215"
+Cohesion: 0.25
+Nodes (3): CommandRunner, ProbeBackend, Protocol
+
+### Community 216 - "Community 216"
+Cohesion: 0.29
+Nodes (6): Inicia o loop de testes em background., Inicia testes contínuos de velocidade., Inicia testes contínuos de velocidade., Inicia o loop de testes em background., Inicia testes contínuos de velocidade., start_continuous_testing()
+
+### Community 217 - "Community 217"
+Cohesion: 0.53
+Nodes (4): _probe_modules(), test_entrypoint_import_is_a_lightweight_dispatcher(), test_idle_speed_tester_does_not_materialize_providers(), test_textual_shell_defers_optional_backends_and_images()
+
+### Community 218 - "Community 218"
+Cohesion: 0.40
+Nodes (4): get_export_status(), Retorna status da exportação se completada., Retorna status da exportação se completada., Retorna status da exportação se completada.
+
+### Community 220 - "Community 220"
+Cohesion: 0.50
+Nodes (3): _paths(), Sprite frame registry for the Varedura Roomba mascot.  Each state maps to a li, Return sorted list of sprite PNGs for a given state.
+
+### Community 221 - "Community 221"
+Cohesion: 0.50
+Nodes (3): Verifica se velocidade está conforme contrato.          Retorna:, Verifica se velocidade está conforme contrato.          Retorna:, Verifica se velocidade está conforme contrato.          Retorna:
+
+### Community 222 - "Community 222"
+Cohesion: 0.50
+Nodes (3): Retorna porcentagem da velocidade contratada.          Retorna:             (, Retorna porcentagem da velocidade contratada.          Retorna:             (, Retorna porcentagem da velocidade contratada.          Retorna:             (
+
+### Community 223 - "Community 223"
+Cohesion: 0.50
+Nodes (3): Retorna um snapshot thread-safe dos dados atuais.          Inclui resultados p, Retorna um snapshot thread-safe dos dados atuais.          Inclui resultados p, Retorna um snapshot thread-safe dos dados atuais.          Inclui resultados p
+
+### Community 224 - "Community 224"
 Cohesion: 0.67
-Nodes (3): The destructive tool must not run without explicit confirmation., The destructive tool must not run without explicit confirmation., test_mcp_quick_cleanup_requires_confirmation()
+Nodes (3): main(), Isolated child-process entry point for one bandwidth provider.  The parent passe, run_provider()
 
 ## Ambiguous Edges - Review These
 - `Rich Main Menu Application` → `Copilot Instructions Textual UI Guidelines`  [AMBIGUOUS]
@@ -874,9 +990,9 @@ Nodes (3): The destructive tool must not run without explicit confirmation., The
   tests/static/images/hwlogo_paraguaypsn.gif · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **1372 isolated node(s):** `PreToolUse`, `PreToolUse`, `python.testing.pytestArgs`, `python.testing.unittestEnabled`, `python.testing.pytestEnabled` (+1367 more)
+- **1393 isolated node(s):** `version`, `pares`, `version`, `usuario`, `senha` (+1388 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **61 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **72 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -889,9 +1005,9 @@ _Questions this graph is uniquely positioned to answer:_
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
 - **What is the exact relationship between `Blank White Logo Banner` and `Paraguay PSN Huawei Branding`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `VareduraTextualApp` connect `Community 40` to `Community 5`, `Community 134`, `Community 22`, `Community 31`, `Community 36`, `Community 37`, `Community 39`, `Community 42`, `Community 171`, `Community 43`, `Community 46`, `Community 47`, `Community 177`, `Community 49`, `Community 181`, `Community 197`, `Community 198`, `Community 199`, `Community 108`, `Community 110`, `Community 116`, `Community 121`?**
-  _High betweenness centrality (0.105) - this node is a cross-community bridge._
-- **Why does `WSLDockerCleaner` connect `Community 71` to `Community 2`, `Community 67`, `Community 70`, `Community 105`, `Community 42`, `Community 174`, `Community 143`, `Community 114`, `Community 19`, `Community 156`, `Community 125`, `Community 30`?**
-  _High betweenness centrality (0.056) - this node is a cross-community bridge._
-- **Why does `CamerasMixin` connect `Community 39` to `Community 168`, `Community 40`, `Community 202`, `Community 107`, `Community 139`, `Community 142`, `Community 111`, `Community 177`, `Community 116`, `Community 149`, `Community 181`, `Community 122`?**
+- **Why does `VareduraTextualApp` connect `Community 40` to `Community 128`, `Community 6`, `Community 134`, `Community 31`, `Community 36`, `Community 37`, `Community 166`, `Community 39`, `Community 42`, `Community 43`, `Community 171`, `Community 46`, `Community 47`, `Community 177`, `Community 49`, `Community 179`, `Community 181`, `Community 197`, `Community 198`, `Community 200`, `Community 201`, `Community 203`, `Community 207`, `Community 210`, `Community 211`, `Community 218`, `Community 108`, `Community 110`, `Community 111`, `Community 127`?**
+  _High betweenness centrality (0.124) - this node is a cross-community bridge._
+- **Why does `CamerasMixin` connect `Community 39` to `Community 168`, `Community 40`, `Community 202`, `Community 107`, `Community 139`, `Community 142`, `Community 116`, `Community 149`, `Community 181`, `Community 122`?**
+  _High betweenness centrality (0.059) - this node is a cross-community bridge._
+- **Why does `WSLDockerCleaner` connect `Community 71` to `Community 2`, `Community 67`, `Community 70`, `Community 105`, `Community 42`, `Community 143`, `Community 114`, `Community 19`, `Community 179`, `Community 212`, `Community 214`, `Community 156`, `Community 125`, `Community 30`?**
   _High betweenness centrality (0.043) - this node is a cross-community bridge._
