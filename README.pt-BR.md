@@ -1,66 +1,70 @@
-# 🧹 Varedura
+# Varedura
 
 <p align="center">
-  <img src="screenshots/demo.gif" alt="Varedura demo" width="720" />
+  <img src="screenshots/demo.gif" alt="Demonstração do Terminal Varedura" width="960" />
 </p>
 
 <p align="center">
-  <strong>Ferramenta multiplataforma de limpeza Docker, monitor de rede & servidor MCP — construído inteiramente com GitHub Copilot CLI</strong>
+  <strong>Interface de terminal para manutenção Docker, diagnóstico de rede, ponte de câmeras e servidor MCP.</strong><br />
+  <em>Construído com GitHub Copilot CLI para o DEV Challenge.</em>
 </p>
 
 <p align="center">
-  <em>"Varedura" — varrer / limpar</em>
-</p>
-
-<p align="center">
-  <a href="https://github.com/joaosnet/Varedura/blob/main/LICENSE"><img src="https://img.shields.io/badge/licença-MIT-blue.svg" alt="MIT License" /></a>
-  <a href="https://github.com/joaosnet/Varedura"><img src="https://img.shields.io/badge/python-≥3.14-3776AB.svg?logo=python&logoColor=white" alt="Python 3.14+" /></a>
+  <a href="https://github.com/joaosnet/Varedura/blob/main/LICENSE"><img src="https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg" alt="Licença MIT" /></a>
+  <a href="https://github.com/joaosnet/Varedura"><img src="https://img.shields.io/badge/python-%E2%89%A53.14-3776AB.svg?logo=python&logoColor=white" alt="Python 3.14+" /></a>
   <a href="https://github.com/joaosnet/Varedura"><img src="https://img.shields.io/badge/plataforma-Windows%20|%20Linux%20|%20macOS-lightgrey.svg" alt="Plataforma" /></a>
   <a href="https://dev.to/challenges/github-2026-01-21"><img src="https://img.shields.io/badge/DEV-GitHub%20Copilot%20CLI%20Challenge-black?logo=dev.to" alt="DEV Challenge" /></a>
 </p>
 
 <p align="center">
-  <sub>Disponível em: <a href="README.md">English</a> · <a href="README.pt-BR.md">Português (pt-BR)</a></sub>
+  <sub>Disponível em: <a href="README.md">English</a> · <a href="README.pt-BR.md">Português (pt-BR)</a> · <a href="README.es.md">Español</a></sub>
 </p>
 
 <p align="center">
-  <a href="#-instalação-rápida">Instalar</a> ·
-  <a href="#-funcionalidades">Funcionalidades</a> ·
-  <a href="#-servidor-mcp--integração-copilot-cli">MCP + Copilot</a> ·
-  <a href="#%EF%B8%8F-multiplataforma">Multiplataforma</a> ·
-  <a href="#-construído-com-github-copilot-cli">Copilot CLI</a>
+  <a href="#instalação-rápida">Instalação</a> ·
+  <a href="#módulos-principais">Módulos Principais</a> ·
+  <a href="#servidor-mcp">Servidor MCP</a> ·
+  <a href="#suporte-multiplataforma">Multiplataforma</a> ·
+  <a href="#segurança-e-operações">Segurança</a> ·
+  <a href="#estudo-de-caso-copilot-cli">Case Copilot CLI</a>
 </p>
 
 ---
 
-## 📦 Instalação Rápida
+## Instalação Rápida
 
-### Uma linha (recomendado)
+### Instalação em uma linha
 
-**Windows** (PowerShell):
+**Windows (PowerShell)**:
 ```powershell
 irm https://raw.githubusercontent.com/joaosnet/Varedura/main/install.ps1 | iex
 ```
 
-**Linux / macOS**:
+**Linux / macOS (Bash)**:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/joaosnet/Varedura/main/install.sh | bash
 ```
 
-Após instalar, digite **`varedura`** em qualquer terminal para iniciar.
+O instalador verifica dependências do sistema (`uv`, `Docker`, `Git`), instala componentes ausentes, detecta o idioma local e adiciona o executável ao seu PATH.
 
-> O instalador detecta automaticamente o sistema operacional, verifica ferramentas necessárias (`uv`, `Docker`, `Git`), instala apenas o que falta, e suporta **Português** e **Inglês**. Se o Varedura já estiver instalado, oferece opções de **reinstalar** ou **desinstalar**.
+Inicie a aplicação a partir de qualquer terminal:
+```bash
+varedura
+```
 
-### Outros métodos de instalação
+### Métodos alternativos de instalação
 
 <details>
-<summary><strong>Instalar com uv (manual)</strong></summary>
+<summary><strong>Instalação via uv tool</strong></summary>
 
 ```bash
 uv tool install git+https://github.com/joaosnet/Varedura.git --python ">=3.14"
 ```
 
-Depois execute: `varedura`
+Para atualizar uma instalação existente:
+```bash
+uv tool upgrade varedura
+```
 
 </details>
 
@@ -70,128 +74,128 @@ Depois execute: `varedura`
 ```bash
 git clone https://github.com/joaosnet/Varedura.git
 cd Varedura
-uv run main.py           # TUI (recomendado)
+uv run main.py
 ```
 
 </details>
 
 <details>
-<summary><strong>Módulos CLI (sem TUI)</strong></summary>
+<summary><strong>Execução headless via CLI</strong></summary>
+
+Execute módulos específicos diretamente sem carregar a interface gráfica Textual:
 
 ```bash
-uv run python -m cli.quick_cleanup             # Limpeza rápida do Docker
-uv run python -m cli.main_cleaner              # Limpeza completa com barra de progresso
-uv run python -m cli.admin_tasks compact_vhdx  # Tarefas admin (Windows)
+uv run python -m cli.quick_cleanup             # Prune rápido do Docker
+uv run python -m cli.main_cleaner              # Pipeline completo de limpeza
+uv run python -m cli.admin_tasks compact_vhdx  # Compactação de VHDX do WSL2 (Admin)
 ```
 
 </details>
 
 <details>
-<summary><strong>Desinstalar</strong></summary>
+<summary><strong>Desinstalação</strong></summary>
 
-**Via instalador:**
 ```powershell
 # Windows
 .\install.ps1 -Uninstall
 ```
+
 ```bash
 # Linux / macOS
 ./install.sh --uninstall
 ```
 
-**Ou via uv:**
+Ou remova diretamente pelo `uv`:
 ```bash
 uv tool uninstall varedura
 ```
 
 </details>
 
-### Requisitos
+### Requisitos do Sistema
 
-| Requisito | Notas |
-|---|---|
-| **Python ≥ 3.14.2** | Gerenciado automaticamente pelo `uv` durante a instalação |
-| **uv** | Instalado automaticamente pelo instalador se ausente |
-| **Docker** | Opcional — necessário para funcionalidades de limpeza Docker |
-| **Admin / root** | Opcional — necessário para compactação VHDX e config WSL (Windows) |
-
----
-
-## 📌 Estado Atual do Projeto
-
-Atualmente, o Varedura é um app de terminal baseado em **Textual + Rich**, com módulos separados para limpeza Docker, diagnóstico de rede, integração MCP e gravação de sessão.
-
-- Interface principal: TUI Textual em `cli/textual_app.py` com renderização Rich
-- Interface Rich legada: `varedura --legacy-rich` ou `VAREDURA_UI=rich varedura`
-- Limpeza Docker: lógica sync + async em `docker_cleaner/core.py`
-- Ferramentas de rede: `monitor/stalker.py`, `monitor/port_scanner.py`, `monitor/speed_tester.py`
-- Servidor MCP: `mcp_server/server.py` (5 ferramentas para agentes de IA)
-- Gravador de sessão: captura SVG + geração de GIF em `recorder/`
-- i18n: suporte bilíngue em `i18n/en.json` e `i18n/pt.json`
-- Utilitário de modelos: parser/gerador LM Arena em `lmarena/`
+| Requisito | Escopo | Observações |
+|---|---|---|
+| **Python ≥ 3.14** | Runtime principal | Gerenciado automaticamente pelo `uv` |
+| **uv** | Gerenciador de pacotes e ferramentas | Instalado pelo script se ausente |
+| **Docker Engine / Desktop** | Módulo de limpeza | Opcional; necessário para tarefas de container |
+| **Privilégios de Administrador / sudo** | Manutenção do sistema | Necessário para compactar VHDX no WSL2 e encerrar processos |
 
 ---
 
-## ✨ Funcionalidades
+## Módulos Principais
 
-### 🐳 Limpeza de Docker
-- **Prune completo** — containers, imagens, volumes, redes e cache de build
-- **Opções granulares** — escolha o que limpar via menu interativo
-- **Compactação de VHDX** — recuperação de espaço em discos virtuais WSL2 (Windows)
-- **Configuração WSL sparse** — otimiza uso de memória e disco (Windows)
-- **Limpeza de arquivos temporários** — remove arquivos em pastas temporárias
-- **Transmissão em tempo real** — acompanhe a saída dos comandos linha a linha
+```
+Varedura
+├── cli/              TUI Textual, atalhos de teclado, fallback Rich
+├── docker_cleaner/   Cliente Docker, integração WSL2, otimizador VHDX
+├── monitor/          Monitor de latência ICMP, port scanner, testes de velocidade
+├── varedura/         Ponte de câmeras, sanitização RTSP, empacotador HLS
+├── mcp_server/       Servidor stdio do Model Context Protocol para IA
+├── recorder/         Captura vetorial SVG e exportação em GIF
+└── i18n/             Esquema bilíngue (pt-BR / en-US) com persistência local
+```
 
-### 🔍 Network Stalker
-- Monitoramento de rede em tempo real com gráficos de latência
-- Scanner de portas com identificação de processos
-- Teste de velocidade de internet (multi-provedor: Speedtest.net, Fast.com)
-- Verificação de conformidade ANATEL (regulação de banda larga brasileira)
-- Exportação de relatórios em PDF com históricos
-- Preferências persistentes para exportação
+### Motor de Manutenção Docker
 
-### 🤖 Servidor MCP (Integração com IA)
-- Expõe ferramentas do Varedura para o **GitHub Copilot CLI** e outros agentes via [Model Context Protocol](https://modelcontextprotocol.io/)
-- 5 ferramentas disponíveis: `docker_status`, `docker_quick_cleanup`, `docker_full_cleanup`, `port_scan`, `get_logs`
-- Configuração automática do `.vscode/mcp.json` pelo menu de Configurações
-- Funciona perfeitamente com o modo agente do GitHub Copilot CLI
+Origem: `docker_cleaner/core.py`, `cli/admin_tasks.py`
 
-### 🎬 Gravador de Sessão
-- Gravação automática de GIF das sessões de terminal
-- Captura de snapshots SVG → geração de GIF animado
-- Atualiza automaticamente `screenshots/demo.gif` para o README
-- Liga/desliga pelo menu de Configurações
+- Remove containers parados, redes órfãs, volumes não utilizados e cache de build em um único ciclo.
+- Permite limpeza seletiva por meio de menus interativos.
+- No Windows, recupera espaço físico em disco executando `wsl --shutdown` e `Optimize-VHD` nos discos virtuais do WSL2.
+- Configura alocação esparsa no WSL para conter o crescimento contínuo do VHDX.
+- Transmite a saída dos subprocessos linha por linha diretamente no painel de logs da interface.
 
-### 🤖 Mascote Animado
-- Robô pixel-art com animações baseadas em estado
-- Estados: Idle, Working, Success, Error, Scanning, Wave
-- Balões de fala com mensagens contextuais
+### Diagnóstico de Rede & Stalker
 
-### 📊 Logs & Relatórios
-- Logs diários em `logs/YYYY-MM-DD.log`
-- Exportação em PDF para relatórios de monitoramento
-- Exportação CSV de histórico de ping e velocidade
-- Captura automática de exceções (Python, asyncio, threading)
+Origem: `monitor/stalker.py`, `monitor/port_scanner.py`, `monitor/speed_tester.py`
 
-### 🌍 Internacionalização
-- **Detecta automaticamente** o idioma do sistema (Português / Inglês)
-- **Troque a qualquer momento** pelo menu de Configurações
-- **350+ chaves de tradução** cobrindo toda a interface
-- **Persiste** a escolha em `~/.varedura_lang.json`
+- Monitoramento contínuo de latência ICMP calculando métricas de mínimo, máximo, média e jitter.
+- Renderização de gráficos sparkline no terminal para identificação visual de instabilidades.
+- Varredura multi-thread de portas TCP/UDP correlacionando portas abertas com processos e PIDs locais.
+- Testes de largura de banda via provedores Speedtest.net e Fast.com.
+- Avaliação de conformidade das velocidades com as metas regulatórias da ANATEL.
+- Exportação dos diagnósticos nos formatos PDF e CSV.
 
-### 🧠 Modelos LM Arena
-- Faz parsing e normalização de listas de modelos para fluxos LM Arena
-- Gera saídas estruturadas a partir de `lmarena/lmarena_models.txt`
+### Ponte Local de Câmeras
+
+Origem: `varedura/camera_bridge.py`
+
+- Converte fluxos RTSP de câmeras de segurança locais em snapshots HTTP e streams HLS sob demanda.
+- Projetado para integração com aplicações locais confiáveis (como o *Mural dos Sonhos*).
+- Remove credenciais, endereços IP e URLs originais dos manifestos públicos.
+- Controla sessões ativas por meio de heartbeats com TTL e encerra instâncias órfãs do FFmpeg.
+
+```powershell
+varedura-camera-bridge --output-dir "C:\caminho\para\mural\runtime\cameras"
+```
+
+### Interface de Terminal & Gravação de Sessões
+
+Origem: `cli/textual_app.py`, `recorder/`
+
+- Construído sobre a biblioteca Textual, com controle por teclado, navegação em estilo vim e redimensionamento dinâmico.
+- Modo alternativo legado em Rich disponível via `varedura --legacy-rich` ou `VAREDURA_UI=rich`.
+- Gravador integrado que captura o terminal em vetores SVG e gera arquivos GIF otimizados.
+- Mascote de status com estados discretos (Ocioso, Escaneando, Processando, Erro).
+
+### Internacionalização
+
+Origem: `i18n/`
+
+- Detecta o idioma do sistema operacional no primeiro início (`pt-BR` / `en-US`).
+- Permite alternar o idioma a qualquer momento na tela de configurações sem reiniciar o terminal.
+- Salva as preferências em `~/.varedura_lang.json`.
 
 ---
 
-## 🤖 Servidor MCP & Integração Copilot CLI
+## Servidor MCP
 
-O Varedura inclui um **servidor MCP (Model Context Protocol)** que expõe suas ferramentas para agentes de IA como o **GitHub Copilot CLI**.
+O Varedura expõe suas funcionalidades operacionais por meio de um servidor local [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). Isso permite que ferramentas de IA, como o GitHub Copilot CLI, executem diagnósticos e manutenções diretamente.
 
 ### Configuração
 
-No menu do Varedura, vá em **Configurações → Servidor MCP** para configurar automaticamente, ou adicione manualmente em `.vscode/mcp.json`:
+Adicione a definição do servidor ao seu `.vscode/mcp.json` ou perfil de agentes:
 
 ```json
 {
@@ -205,173 +209,91 @@ No menu do Varedura, vá em **Configurações → Servidor MCP** para configurar
 }
 ```
 
-### Ferramentas MCP Disponíveis
+### Ferramentas Disponíveis
 
-| Ferramenta | Descrição |
-|------------|-----------|
-| `docker_status` | Uso de disco Docker, containers rodando, contagem de imagens/volumes |
-| `docker_quick_cleanup` | Prune de containers, imagens, volumes, redes e build cache |
-| `docker_full_cleanup` | Limpeza completa + shutdown WSL + compactação VHDX (Windows) |
-| `port_scan` | Escaneamento de portas TCP/UDP, top processos por conexões |
-| `get_logs` | Recuperar entradas recentes do log (até 500 linhas) |
+| Ferramenta | Parâmetros | Descrição |
+|---|---|---|
+| `docker_status` | Nenhum | Retorna consumo de disco, containers em execução e contagem de imagens |
+| `docker_quick_cleanup` | Nenhum | Remove containers encerrados, imagens e cache de build órfãos |
+| `docker_full_cleanup` | Nenhum | Executa limpeza geral, encerra o WSL e compacta arquivos VHDX no Windows |
+| `port_scan` | `target_host`, `ports` | Identifica portas TCP/UDP em escuta e relaciona com processos locais |
+| `get_logs` | `lines` | Lê as linhas mais recentes do arquivo de log ativo |
 
-### Uso com Copilot CLI
-
-Uma vez configurado, o GitHub Copilot CLI pode usar as ferramentas diretamente:
+### Exemplos no GitHub Copilot CLI
 
 ```
-> Quanto espaço Docker estou usando?             → chama docker_status
-> Limpar todos os recursos Docker não usados     → chama docker_quick_cleanup
-> Quais portas estão escutando no meu sistema?   → chama port_scan
-> Mostrar as últimas 50 entradas do log          → chama get_logs
+Usuário: "Verifique o uso de disco do Docker e liste containers ativos."
+Agente -> invoca varedura:docker_status
+
+Usuário: "Quais processos estão escutando nas portas de 8000 a 9000?"
+Agente -> invoca varedura:port_scan
+
+Usuário: "Execute a limpeza completa do Docker e compacte o disco do WSL."
+Agente -> invoca varedura:docker_full_cleanup
 ```
 
 ---
 
-## 🖥️ Multiplataforma
-
-Varedura roda em **Windows**, **Linux** e **macOS**:
+## Suporte Multiplataforma
 
 | Funcionalidade | Windows | Linux | macOS |
-|----------------|---------|-------|-------|
-| Docker prune/limpeza | ✅ | ✅ | ✅ |
-| Parar processos Docker | ✅ `taskkill` | ✅ `systemctl`/`killall` | ✅ `killall`/`open` |
-| Compactação VHDX | ✅ `Optimize-VHD` | ⬜ N/A | ⬜ N/A |
-| Config WSL sparse | ✅ | ⬜ N/A | ⬜ N/A |
-| Limpeza de temp | ✅ `%TEMP%` | ✅ `/tmp` | ✅ `/tmp` |
-| Limpeza da lixeira | ✅ PowerShell | ⬜ Ignorado | ⬜ Ignorado |
-| Elevação admin | ✅ UAC | ✅ `sudo` | ✅ `sudo` |
-| Network Stalker | ✅ | ✅ | ✅ |
-| Servidor MCP | ✅ | ✅ | ✅ |
-| Instalação one-liner | ✅ `irm \| iex` | ✅ `curl \| bash` | ✅ `curl \| bash` |
+|---|---|---|---|
+| Limpeza Docker | Completo | Completo | Completo |
+| Encerramento de processos | `taskkill /F` | `systemctl` / `killall` | `killall` |
+| Compactação VHDX do WSL2 | `Optimize-VHD` | N/A | N/A |
+| Alocação esparsa no WSL | PowerShell WMI | N/A | N/A |
+| Limpeza de diretórios temp | `%TEMP%` | `/tmp` | `/tmp` |
+| Esvaziamento de lixeira | PowerShell Shell.Application | N/A | N/A |
+| Elevação de privilégios | UAC (`runas`) | `sudo` | `sudo` |
+| Monitor Network Stalker | Completo | Completo | Completo |
+| Servidor MCP | Stdio | Stdio | Stdio |
+| Instalador em uma linha | Script PowerShell | Script Shell | Script Shell |
 
-> Recursos exclusivos do Windows (VHDX, WSL sparse) são ignorados com segurança em outras plataformas com uma mensagem informativa.
-
----
-
-## 🏗️ File Tree Atual (Mar 2026)
-
-```
-Varedura/
-├── .github/
-├── .vscode/
-├── build/
-│   └── lib/
-│       ├── cli/
-│       ├── docker_cleaner/
-│       ├── i18n/
-│       ├── mascot/
-│       ├── mcp_server/
-│       ├── monitor/
-│       └── recorder/
-├── cli/
-│   ├── admin_tasks.py
-│   ├── main_cleaner.py
-│   ├── quick_cleanup.py
-│   └── richlog.py
-├── docker_cleaner/
-│   └── core.py
-├── exports/
-├── i18n/
-│   ├── en.json
-│   └── pt.json
-├── lmarena/
-│   ├── generator.py
-│   ├── lmarena_models.txt
-│   └── models.py
-├── mascot/
-│   ├── frames.py
-│   ├── generate_sprites.py
-│   ├── images/
-│   └── renderer.py
-├── mcp_server/
-│   ├── __main__.py
-│   └── server.py
-├── monitor/
-│   ├── port_scanner.py
-│   ├── speed_providers.py
-│   ├── speed_tester.py
-│   └── stalker.py
-├── recorder/
-│   ├── gif_generator.py
-│   └── session_recorder.py
-├── recordings/
-├── screenshots/
-├── tests/
-│   ├── images/
-│   ├── static/
-│   ├── test_export_pdf.py
-│   ├── test_export_prefs.py
-│   └── test_export_prompt.py
-├── install.ps1
-├── install.sh
-├── LICENSE
-├── main.py
-├── POST-SUBMISSION.md
-├── pyproject.toml
-├── README.md
-├── README.pt-BR.md
-├── router_template.html
-└── uv.lock
-```
+> Operações não suportadas em determinado sistema operacional exibem mensagens informativas nos logs sem gerar exceções não tratadas.
 
 ---
 
-## ⚠️ Segurança
+## Segurança e Operações
 
-**Operações destrutivas** sempre requerem confirmação explícita do usuário:
+Rotinas de limpeza destrutiva exigem validações explícitas antes de qualquer execução:
 
-| Comando | Efeito |
-|---------|--------|
-| `docker system prune -af --volumes` | Remove TODOS os containers, imagens, volumes e redes não usados |
-| `taskkill /F` / `killall` | Mata processos Docker à força |
-| `wsl --shutdown` | Para todas as distribuições WSL (Windows) |
-| `Optimize-VHD` | Compacta arquivos VHDX (Windows, requer admin) |
+| Operação | Alvo | Medida de Proteção |
+|---|---|---|
+| `docker system prune -af --volumes` | Objetos Docker não utilizados | Exige confirmação explícita em modal antes de iniciar |
+| Encerramento de processos | Daemons Docker travados | Exibe a lista de PIDs afetados antes do envio do sinal |
+| `wsl --shutdown` | Subsistema WSL | Alerta o usuário caso haja sessões de terminal ativas |
+| `Optimize-VHD` | Arquivo de disco do WSL2 | Valida elevação de Administrador e ausência de travas de leitura |
 
-**Recomendações:**
-1. ✅ Faça backup de dados importantes antes de executar limpeza
-2. ✅ Revise as opções selecionadas antes de confirmar
-3. ✅ Execute como admin/root para funcionalidade completa
-4. ✅ Monitore os logs em tempo real durante a execução
-
----
-
-## 🧪 Testes
+Para verificar a lógica dos módulos localmente sem risco:
 
 ```bash
-uv run python -m pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
-Todas as operações destrutivas são mockadas nos testes — nenhum comando Docker é executado de verdade.
+A suíte de testes isola chamadas de sistema através de subprocessos simulados e adaptadores mock da API do Docker.
 
 ---
 
-## 🤖 Construído com GitHub Copilot CLI
+## Estudo de Caso Copilot CLI
 
-> *Este projeto foi construído para o [GitHub Copilot CLI Challenge](https://dev.to/challenges/github-2026-01-21).*
+O Varedura foi desenvolvido para o [GitHub Copilot CLI Challenge](https://dev.to/challenges/github-2026-01-21) usando o GitHub Copilot CLI como parceiro de desenvolvimento em todas as fases de arquitetura, implementação e testes.
 
-**Todas as funcionalidades** do Varedura foram desenvolvidas usando [GitHub Copilot CLI](https://github.com/features/copilot/cli) como ferramenta principal de desenvolvimento — desde decisões de arquitetura até implementação, debugging e testes.
+### Etapas Centrais de Desenvolvimento
 
-Como o Copilot CLI foi usado ao longo do projeto:
+1. **Arquitetura de Subprocessos e Elevação**
+   O Copilot CLI auxiliou na estruturação da camada de compatibilidade entre o UAC do PowerShell e o `sudo` do Unix, encapsulando comandos específicos de plataforma em executores dedicados (`cli/admin_tasks.py`).
 
-- **🏗️ Arquitetura** — Projetou o modelo de execução dual sync/async, integração MCP e abstração cross-platform
-- **🐳 Docker Cleaner** — Implementou WSLDockerCleaner com streaming de saída, elevação admin e compactação VHDX
-- **🔍 Monitor de Rede** — Construiu o stalker, scanner de portas e speed tester com suporte multi-provedor
-- **🤖 Servidor MCP** — Criou o servidor Model Context Protocol expondo todas as ferramentas para agentes IA
-- **🎨 TUI & Mascote** — Projetou o sistema de menus Rich e o mascote robô pixel-art animado
-- **🌍 Sistema i18n** — Implementou 350+ chaves de tradução bilíngues com auto-detecção
-- **📦 Instalador** — Criou os scripts de instalação standalone (install.sh + install.ps1) seguindo padrões UV/OpenClaw
-- **🎬 Gravador de Sessão** — Construiu o pipeline de gravação SVG→GIF para geração automática de demos
-- **🧪 Testes** — Escreveu testes unitários com mocking adequado para todas as operações destrutivas
+2. **Pipelines Síncronos e Assíncronos**
+   Para manter a interface Textual responsiva durante a exclusão de volumes extensos do Docker, o Copilot CLI organizou uma fila assíncrona que envia a saída do terminal para o event loop sem travamentos de tela.
 
----
+3. **Implementação do Protocolo MCP via Stdio**
+   A integração com o Model Context Protocol foi construída mapeando as rotinas internas para especificações JSON-RPC 2.0 sobre stdio, permitindo invocação imediata de ferramentas por agentes autônomos.
 
-## 📄 Licença
-
-MIT — consulte [LICENSE](LICENSE) para detalhes.
+4. **Estratégia de Testes e Mocks**
+   O Copilot CLI gerou fixtures de teste (`tests/`) simulando respostas do daemon Docker, latências de rede e bloqueios de arquivos, viabilizando a validação de regras de segurança sem modificar o computador do desenvolvedor.
 
 ---
 
-<p align="center">
-  Construído com ❤️ usando <a href="https://github.com/features/copilot/cli">GitHub Copilot CLI</a>
-</p>
+## Licença
+
+MIT. Consulte [LICENSE](LICENSE) para detalhes.
