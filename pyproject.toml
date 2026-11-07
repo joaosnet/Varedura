@@ -41,12 +41,14 @@ dev = [
 
 [project.scripts]
 varedura = "main:main"
+varedura-camera-bridge = "varedura.camera_bridge:main"
+varedura-daemon = "varedura.daemon_api:main"
 
 [tool.setuptools]
 py-modules = ["main"]
 
 [tool.setuptools.packages.find]
-include = ["cli", "docker_cleaner", "monitor", "mascot", "recorder", "mcp_server", "i18n", "rtsp"]
+include = ["cli", "docker_cleaner", "monitor", "mascot", "recorder", "mcp_server", "i18n", "rtsp", "varedura"]
 
 [tool.setuptools.package-data]
 i18n = ["*.json"]
@@ -72,7 +74,7 @@ asyncio_mode = "strict"
 
 [tool.coverage.run]
 branch = true
-source = ["cli", "docker_cleaner", "monitor", "mcp_server", "recorder", "mascot", "i18n"]
+source = ["cli", "docker_cleaner", "monitor", "mcp_server", "recorder", "mascot", "i18n", "varedura"]
 omit = ["*/__main__.py", "*/__init__.py"]
 
 [tool.coverage.report]

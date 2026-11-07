@@ -94,9 +94,11 @@ async def test_cameras_port_scan_populates_table(monkeypatch):
         app.query_one("#cameras-subtabs", TabbedContent).active = "tab-portas"
         await pilot.pause()
         app.query_one("#portas-host").value = "192.168.1.10"
+        app.query_one("#btn-portas").scroll_visible(animate=False)
+        await pilot.pause()
         await pilot.click("#btn-portas")
         await wait_until(
-            lambda: app.query_one("#portas-tabela", DataTable).row_count == 3, pilot
+            lambda: app.query_one("#portas-tabela", DataTable).row_count == 3, pilot, attempts=200
         )
 
 
@@ -114,14 +116,20 @@ async def test_cameras_credential_add_and_remove(monkeypatch):
 
         app.query_one("#cred-user").value = "admin"
         app.query_one("#cred-pass").value = "1234"
-        await pilot.click("#btn-cred-add")
+        app.query_one("#btn-cred-add").scroll_visible(animate=False)
         await pilot.pause()
-        assert app.query_one("#cred-tabela", DataTable).row_count == 1
+        await pilot.click("#btn-cred-add")
+        await wait_until(
+            lambda: app.query_one("#cred-tabela", DataTable).row_count == 1, pilot
+        )
         assert len(app._vault) == 1
 
-        await pilot.click("#btn-cred-del")
+        app.query_one("#btn-cred-del").scroll_visible(animate=False)
         await pilot.pause()
-        assert app.query_one("#cred-tabela", DataTable).row_count == 0
+        await pilot.click("#btn-cred-del")
+        await wait_until(
+            lambda: app.query_one("#cred-tabela", DataTable).row_count == 0, pilot
+        )
 
 
 @pytest.mark.asyncio

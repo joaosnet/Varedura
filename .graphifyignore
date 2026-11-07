@@ -1,0 +1,10 @@
+# Inventário e estado privado das câmeras/rede.
+/credenciais.json
+/ips_conhecidos.json
+/regioes.json
+/camera_bridge_state.json
+/.camera-locations.private.json
+/roteador_creds.txt
+/.env
+/logs/
+

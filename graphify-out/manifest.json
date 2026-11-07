@@ -1,737 +1,1550 @@
 {
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\install.ps1": {
+  "install.ps1": {
     "mtime": 1771197471.4153144,
+    "seen": 1794064536.9653437,
     "ast_hash": "b6df262930e23ffb16b5d6b266c28328",
     "semantic_hash": "b6df262930e23ffb16b5d6b266c28328"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\install.sh": {
+  "install.sh": {
     "mtime": 1771196084.1091766,
+    "seen": 1794064536.965349,
     "ast_hash": "89c7af602920e8ef93162eef1eaa8945",
     "semantic_hash": "89c7af602920e8ef93162eef1eaa8945"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\main.py": {
+  "main.py": {
     "mtime": 1783814942.777883,
+    "seen": 1794064536.9653504,
     "ast_hash": "0c7fddf50edcf2325f0f4b62b6b36be3",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.vscode\\settings.json": {
+  ".vscode/settings.json": {
     "mtime": 1763239130.3424973,
+    "seen": 1794064536.9653053,
     "ast_hash": "4e8d88920c3328a1f8fdc599870e5df9",
     "semantic_hash": "4e8d88920c3328a1f8fdc599870e5df9"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\admin_tasks.py": {
+  "cli/admin_tasks.py": {
     "mtime": 1771173816.1189728,
+    "seen": 1794064536.9653115,
     "ast_hash": "428fc9f936e7d87333b5eb6f9501b694",
     "semantic_hash": "428fc9f936e7d87333b5eb6f9501b694"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\main_cleaner.py": {
+  "cli/main_cleaner.py": {
     "mtime": 1767295135.9624865,
+    "seen": 1794064536.965319,
     "ast_hash": "f320583c7facad4e731f81524f3f5fa9",
     "semantic_hash": "f320583c7facad4e731f81524f3f5fa9"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\quick_cleanup.py": {
+  "cli/quick_cleanup.py": {
     "mtime": 1777693843.1562593,
+    "seen": 1794064536.965323,
     "ast_hash": "060a37b7d20f6f722e673574341ea468",
     "semantic_hash": "060a37b7d20f6f722e673574341ea468"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\richlog.py": {
+  "cli/richlog.py": {
     "mtime": 1767295135.9645193,
+    "seen": 1794064536.9653254,
     "ast_hash": "36a35df2f5610534830644d9cea45d50",
     "semantic_hash": "36a35df2f5610534830644d9cea45d50"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\__init__.py": {
+  "cli/__init__.py": {
     "mtime": 1779245151.5342066,
+    "seen": 1794064536.9653084,
     "ast_hash": "f032b09e48a0fbeeebe480b619e5c55c",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\docker_cleaner\\core.py": {
+  "docker_cleaner/core.py": {
     "mtime": 1781978629.3454676,
+    "seen": 1794064536.9653344,
     "ast_hash": "e84d305bc14c8e705c89ec1ee6b1adfe",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\docker_cleaner\\__init__.py": {
+  "docker_cleaner/__init__.py": {
     "mtime": 1763240054.253031,
+    "seen": 1794064536.9653327,
     "ast_hash": "a3dc411d85402f361ad8c43cc99c827a",
     "semantic_hash": "a3dc411d85402f361ad8c43cc99c827a"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\en.json": {
+  "i18n/en.json": {
     "mtime": 1783816964.32492,
+    "seen": 1794064536.9653404,
     "ast_hash": "8ab93ceca82cc44559de4715e8c48703",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\pt.json": {
+  "i18n/pt.json": {
     "mtime": 1783816964.3223228,
+    "seen": 1794064536.965342,
     "ast_hash": "c8b5af73a5aa840d9e73ead871c78b85",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\i18n\\__init__.py": {
+  "i18n/__init__.py": {
     "mtime": 1779245092.1052766,
+    "seen": 1794064536.9653387,
     "ast_hash": "25b054c22dfe1bc046b5ef9ce3a7f5ae",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\lmarena\\generator.py": {
-    "mtime": 1767295135.9645193,
-    "ast_hash": "22ae30f7bf7adebd07262bcfb3423b87",
-    "semantic_hash": "22ae30f7bf7adebd07262bcfb3423b87"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\lmarena\\models.py": {
-    "mtime": 1767295135.9680512,
-    "ast_hash": "8a05edf67cafaef1ab130cacd427f85f",
-    "semantic_hash": "8a05edf67cafaef1ab130cacd427f85f"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\lmarena\\__init__.py": {
-    "mtime": 1763240054.253031,
-    "ast_hash": "b3669ab81d3e4443ac34d1594981b17e",
-    "semantic_hash": "b3669ab81d3e4443ac34d1594981b17e"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\frames.py": {
+  "mascot/frames.py": {
     "mtime": 1771206143.8185277,
+    "seen": 1794064536.9653544,
     "ast_hash": "0b27fc2b1a35f6b1c0342c071ccc1866",
     "semantic_hash": "0b27fc2b1a35f6b1c0342c071ccc1866"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\generate_sprites.py": {
+  "mascot/generate_sprites.py": {
     "mtime": 1771205398.4224494,
+    "seen": 1794064536.9653563,
     "ast_hash": "a818d7582a3ff32bf2619c6f01601cbd",
     "semantic_hash": "a818d7582a3ff32bf2619c6f01601cbd"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\renderer.py": {
+  "mascot/renderer.py": {
     "mtime": 1771205749.1422787,
+    "seen": 1794064536.9653578,
     "ast_hash": "11650a1d1251b7cc2afe08b44bc11e90",
     "semantic_hash": "11650a1d1251b7cc2afe08b44bc11e90"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\__init__.py": {
+  "mascot/__init__.py": {
     "mtime": 1783814523.2263064,
+    "seen": 1794064536.9653525,
     "ast_hash": "9319387a78fe4002c7194919e9837d08",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mcp_server\\server.py": {
+  "mcp_server/server.py": {
     "mtime": 1781977014.0356264,
+    "seen": 1794064536.9653628,
     "ast_hash": "481d6105f72b539c76ab7378f844e5cf",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mcp_server\\__init__.py": {
+  "mcp_server/__init__.py": {
     "mtime": 1771182470.418116,
+    "seen": 1794064536.9653597,
     "ast_hash": "bcbc8863b3e0af09794f2c7b37bcb8f5",
     "semantic_hash": "bcbc8863b3e0af09794f2c7b37bcb8f5"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mcp_server\\__main__.py": {
+  "mcp_server/__main__.py": {
     "mtime": 1771182472.152069,
+    "seen": 1794064536.965361,
     "ast_hash": "dcb87f4f32c3ce33528b502661838717",
     "semantic_hash": "dcb87f4f32c3ce33528b502661838717"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\port_scanner.py": {
+  "monitor/port_scanner.py": {
     "mtime": 1771172062.447185,
+    "seen": 1794064536.96545,
     "ast_hash": "33c408c6ba098bb4f5fa1c194edab81f",
     "semantic_hash": "33c408c6ba098bb4f5fa1c194edab81f"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\speed_providers.py": {
+  "monitor/speed_providers.py": {
     "mtime": 1783814942.7798924,
+    "seen": 1794064536.965452,
     "ast_hash": "a2f17e89b59260e024d14fe373f60dde",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\speed_tester.py": {
+  "monitor/speed_tester.py": {
     "mtime": 1783818715.2458346,
+    "seen": 1794064536.965454,
     "ast_hash": "c9658b085624a837906ec12ac7ad67b0",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\stalker.py": {
+  "monitor/stalker.py": {
     "mtime": 1783818715.249729,
+    "seen": 1794064536.965458,
     "ast_hash": "268c909f3a0ab4dc25f70c2e2566bd59",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\__init__.py": {
+  "monitor/__init__.py": {
     "mtime": 1783813179.3372056,
+    "seen": 1794064536.9654336,
     "ast_hash": "cfb93a9ddcc9c4b9963c09c87e4242c8",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\recorder\\gif_generator.py": {
+  "recorder/gif_generator.py": {
     "mtime": 1779245099.7247365,
+    "seen": 1794064536.9654672,
     "ast_hash": "2f2aed18e9c378570076255e66702c28",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\recorder\\session_recorder.py": {
+  "recorder/session_recorder.py": {
     "mtime": 1779245095.8136573,
+    "seen": 1794064536.9654691,
     "ast_hash": "fe36239005abb0abfcc45f33b88db18c",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\recorder\\__init__.py": {
+  "recorder/__init__.py": {
     "mtime": 1771178045.5546434,
+    "seen": 1794064536.965465,
     "ast_hash": "573884929912674baf58789ecb4cb66a",
     "semantic_hash": "573884929912674baf58789ecb4cb66a"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\arp.py": {
-    "mtime": 1767371313.7841663,
-    "ast_hash": "78cde094dc513aade63637b3810fef7a",
-    "semantic_hash": "78cde094dc513aade63637b3810fef7a"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\router_phishing.py": {
-    "mtime": 1767359265.1857114,
-    "ast_hash": "6108aa95fd0b3c80178ecd4e0a2a056e",
-    "semantic_hash": "6108aa95fd0b3c80178ecd4e0a2a056e"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_docker_cleanup.py": {
+  "tests/test_docker_cleanup.py": {
     "mtime": 1781986262.493528,
+    "seen": 1794064536.9655178,
     "ast_hash": "0e68b31fb4e912cc93b87fe938b85b87",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_export_pdf.py": {
+  "tests/test_export_pdf.py": {
     "mtime": 1779245104.5965338,
+    "seen": 1794064536.9655197,
     "ast_hash": "d07958efdf8b01c583d19829dc286b52",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_export_prefs.py": {
+  "tests/test_export_prefs.py": {
     "mtime": 1779245110.4595149,
+    "seen": 1794064536.9655213,
     "ast_hash": "b3f046ef77a6d272cdf52472c45f92c0",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_export_prompt.py": {
+  "tests/test_export_prompt.py": {
     "mtime": 1779245113.9770947,
+    "seen": 1794064536.9655232,
     "ast_hash": "3d2d3b183cb54a74178bdc65488ec5ef",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\frameaspdes\\english\\ssmpdes.js": {
+  "tests/static/frameaspdes/english/ssmpdes.js": {
     "mtime": 1767371586.9583104,
+    "seen": 1794064536.9655004,
     "ast_hash": "4e18a0bc65fd9d8a107d0e971f4a8490",
     "semantic_hash": "4e18a0bc65fd9d8a107d0e971f4a8490"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\resource\\common\\jquery.min.js": {
+  "tests/static/resource/common/jquery.min.js": {
     "mtime": 1767371587.0712962,
+    "seen": 1794064536.965505,
     "ast_hash": "dc5e7f18c8d36ac1d3d4753a87c98d0a",
     "semantic_hash": "dc5e7f18c8d36ac1d3d4753a87c98d0a"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\resource\\common\\md5.js": {
+  "tests/static/resource/common/md5.js": {
     "mtime": 1767371587.496223,
+    "seen": 1794064536.9655066,
     "ast_hash": "f0bc7ebe7cf76eccf156d5f93e2bdd20",
     "semantic_hash": "f0bc7ebe7cf76eccf156d5f93e2bdd20"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\resource\\common\\RndSecurityFormat.js": {
+  "tests/static/resource/common/RndSecurityFormat.js": {
     "mtime": 1767371587.4324224,
+    "seen": 1794064536.9655027,
     "ast_hash": "b903d1ae2d914c8a7ebe8342f9051600",
     "semantic_hash": "b903d1ae2d914c8a7ebe8342f9051600"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\resource\\common\\safelogin.js": {
+  "tests/static/resource/common/safelogin.js": {
     "mtime": 1767371587.4677706,
+    "seen": 1794064536.9655087,
     "ast_hash": "c583bea2cf099f2a953e724da4df52e4",
     "semantic_hash": "c583bea2cf099f2a953e724da4df52e4"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\POST-SUBMISSION.md": {
+  "POST-SUBMISSION.md": {
     "mtime": 1771211055.0319371,
+    "seen": 1794064536.9655926,
     "ast_hash": "376c047472bb409e1e226aeac0555e30",
     "semantic_hash": "376c047472bb409e1e226aeac0555e30"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\README.md": {
-    "mtime": 1779245331.2052832,
-    "ast_hash": "b4892b3d3f5509de4c20c8cc1525a0cc",
+  "README.md": {
+    "mtime": 1794064435.2112753,
+    "seen": 1794064536.9655974,
+    "ast_hash": "a2d0df6e110597bb4be68451e2dd3ead",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\README.pt-BR.md": {
-    "mtime": 1779245335.8915713,
-    "ast_hash": "4ec52fa117987f925d31f345801fb656",
+  "README.pt-BR.md": {
+    "mtime": 1794064465.0817046,
+    "seen": 1794064536.9655998,
+    "ast_hash": "65a2b10b13bc0394b5df9f12e20dbeaf",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\roteador_creds.txt": {
-    "mtime": 1767360015.5741842,
-    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
-    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\router_template.html": {
-    "mtime": 1767371586.896195,
-    "ast_hash": "86d7b366c7654d9cc537bf58a0786b96",
-    "semantic_hash": "86d7b366c7654d9cc537bf58a0786b96"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.github\\copilot-instructions.md": {
+  ".github/copilot-instructions.md": {
     "mtime": 1771177141.826205,
+    "seen": 1794064536.965586,
     "ast_hash": "190f0b5a4f0d618d8fde3734a666d399",
     "semantic_hash": "190f0b5a4f0d618d8fde3734a666d399"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\lmarena\\lmarena_models.txt": {
-    "mtime": 1763236837.8160136,
-    "ast_hash": "7772c6bf61aed0dad6cab765a7d2c651",
-    "semantic_hash": "7772c6bf61aed0dad6cab765a7d2c651"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\images\\error_1.png": {
+  "mascot/images/error_1.png": {
     "mtime": 1771205404.2179694,
+    "seen": 1794064536.965628,
     "ast_hash": "4e48a3a943fc2bfeaed60ece40d80274",
     "semantic_hash": "4e48a3a943fc2bfeaed60ece40d80274"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\images\\idle_1.png": {
+  "mascot/images/idle_1.png": {
     "mtime": 1771205404.20233,
+    "seen": 1794064536.9656303,
     "ast_hash": "634d8a9c9fdbe7f536e4afe100ed8eac",
     "semantic_hash": "634d8a9c9fdbe7f536e4afe100ed8eac"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\images\\idle_2.png": {
+  "mascot/images/idle_2.png": {
     "mtime": 1771205404.203337,
+    "seen": 1794064536.9656324,
     "ast_hash": "991a5ed68751c18516076bf0b1737228",
     "semantic_hash": "991a5ed68751c18516076bf0b1737228"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\images\\idle_3.png": {
+  "mascot/images/idle_3.png": {
     "mtime": 1771205404.203337,
+    "seen": 1794064536.9656346,
     "ast_hash": "819645d82fbcd8fb7a9585afd40b9791",
     "semantic_hash": "819645d82fbcd8fb7a9585afd40b9791"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\images\\scanning_1.png": {
+  "mascot/images/scanning_1.png": {
     "mtime": 1771205404.224053,
+    "seen": 1794064536.9656365,
     "ast_hash": "a9a644cfd8e74eb317c8ff6acc3458d6",
     "semantic_hash": "a9a644cfd8e74eb317c8ff6acc3458d6"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\images\\scanning_2.png": {
+  "mascot/images/scanning_2.png": {
     "mtime": 1771205404.224053,
+    "seen": 1794064536.9656394,
     "ast_hash": "a3309cdda7571c8068c97541de7b5d37",
     "semantic_hash": "a3309cdda7571c8068c97541de7b5d37"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\images\\success_1.png": {
+  "mascot/images/success_1.png": {
     "mtime": 1771205404.2158813,
+    "seen": 1794064536.9656415,
     "ast_hash": "c40f91fb095bcb3c04ef114906b44fb7",
     "semantic_hash": "c40f91fb095bcb3c04ef114906b44fb7"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\images\\wave_1.png": {
+  "mascot/images/wave_1.png": {
     "mtime": 1771205404.2205112,
+    "seen": 1794064536.965644,
     "ast_hash": "64ca8401b7993af321cd38325f406d45",
     "semantic_hash": "64ca8401b7993af321cd38325f406d45"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\images\\wave_2.png": {
+  "mascot/images/wave_2.png": {
     "mtime": 1771205404.2205112,
+    "seen": 1794064536.9656458,
     "ast_hash": "705bc17a50734c9756c1e1a1a8e4418a",
     "semantic_hash": "705bc17a50734c9756c1e1a1a8e4418a"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\images\\working_1.png": {
+  "mascot/images/working_1.png": {
     "mtime": 1771205404.2057693,
+    "seen": 1794064536.965648,
     "ast_hash": "a383421eb1428e59f14138ca6947634f",
     "semantic_hash": "a383421eb1428e59f14138ca6947634f"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\images\\working_2.png": {
+  "mascot/images/working_2.png": {
     "mtime": 1771205404.2113369,
+    "seen": 1794064536.96565,
     "ast_hash": "167b3d05c116efe14385b8409bfb1d8e",
     "semantic_hash": "167b3d05c116efe14385b8409bfb1d8e"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\mascot\\images\\working_3.png": {
+  "mascot/images/working_3.png": {
     "mtime": 1771205404.2138495,
+    "seen": 1794064536.9656522,
     "ast_hash": "0469da27b729f96c94adea2c82e1e769",
     "semantic_hash": "0469da27b729f96c94adea2c82e1e769"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\recordings\\session_20260215_173332.gif": {
-    "mtime": 1771187620.762559,
-    "ast_hash": "ed5b54f07325fda573ab095428dec207",
-    "semantic_hash": "ed5b54f07325fda573ab095428dec207"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\recordings\\session_20260215_174653.gif": {
-    "mtime": 1771188421.350203,
-    "ast_hash": "d309504d38cf2a66d53f4eb9605fd1a5",
-    "semantic_hash": "d309504d38cf2a66d53f4eb9605fd1a5"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\recordings\\session_20260215_175820.gif": {
-    "mtime": 1771189103.2071378,
-    "ast_hash": "da4d82ff57b3974b7b44617f27fcf9de",
-    "semantic_hash": "da4d82ff57b3974b7b44617f27fcf9de"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\recordings\\session_20260215_180006.gif": {
-    "mtime": 1771189213.3355763,
-    "ast_hash": "9624efcc641ff607ace1c8b50b81405b",
-    "semantic_hash": "9624efcc641ff607ace1c8b50b81405b"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\recordings\\session_20260215_205209.gif": {
-    "mtime": 1771199539.9476817,
-    "ast_hash": "591d380c1b8cb019829f2f77a60042b3",
-    "semantic_hash": "591d380c1b8cb019829f2f77a60042b3"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\recordings\\session_20260215_221014.gif": {
-    "mtime": 1771204228.8071306,
-    "ast_hash": "0f35c2bee529c21eaa0d422d5f2c7e86",
-    "semantic_hash": "0f35c2bee529c21eaa0d422d5f2c7e86"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\recordings\\session_20260215_231703.gif": {
-    "mtime": 1771208251.851068,
-    "ast_hash": "775d9d3142d514a4e6c389f46598f6f4",
-    "semantic_hash": "775d9d3142d514a4e6c389f46598f6f4"
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\screenshots\\Captura de tela 2026-01-14 125838.png": {
+  "screenshots/Captura de tela 2026-01-14 125838.png": {
     "mtime": 1768406318.938084,
+    "seen": 1794064536.965755,
     "ast_hash": "78e6943c454f0c1c6a4339398ff2b267",
     "semantic_hash": "78e6943c454f0c1c6a4339398ff2b267"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\screenshots\\demo.gif": {
-    "mtime": 1771208251.851068,
-    "ast_hash": "775d9d3142d514a4e6c389f46598f6f4",
-    "semantic_hash": "775d9d3142d514a4e6c389f46598f6f4"
+  "screenshots/demo.gif": {
+    "mtime": 1794063560.304639,
+    "seen": 1794064536.9657571,
+    "ast_hash": "59c1d1e86ad99e68de666177bdc6fdeb",
+    "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\images\\hwlog_dvodacom.jpg": {
+  "tests/images/hwlog_dvodacom.jpg": {
     "mtime": 1767357483.2244473,
+    "seen": 1794064536.9658012,
     "ast_hash": "a1dc391387d9d5e682254a2a92d4fda6",
     "semantic_hash": "a1dc391387d9d5e682254a2a92d4fda6"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\images\\loginbg_telmex.jpg": {
+  "tests/images/loginbg_telmex.jpg": {
     "mtime": 1767357482.8981056,
+    "seen": 1794064536.9658036,
     "ast_hash": "c71bc01e908414bed11b1f3e2db4b528",
     "semantic_hash": "c71bc01e908414bed11b1f3e2db4b528"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\images\\logo_ts.jpg": {
+  "tests/images/logo_ts.jpg": {
     "mtime": 1767357482.857916,
+    "seen": 1794064536.9658055,
     "ast_hash": "34a5d655a331a90219a96a3e0af79ef5",
     "semantic_hash": "34a5d655a331a90219a96a3e0af79ef5"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\images\\copyright_log.jpg": {
+  "tests/static/images/copyright_log.jpg": {
     "mtime": 1767357611.6360662,
+    "seen": 1794064536.965808,
     "ast_hash": "3486c10c6fe540288e5f63a9afb77719",
     "semantic_hash": "3486c10c6fe540288e5f63a9afb77719"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\images\\greenline.jpg": {
+  "tests/static/images/greenline.jpg": {
     "mtime": 1767357611.621938,
+    "seen": 1794064536.9658098,
     "ast_hash": "20438cd464fe4f1a569cb412262927fa",
     "semantic_hash": "20438cd464fe4f1a569cb412262927fa"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\images\\hwlog.jpg": {
+  "tests/static/images/hwlog.jpg": {
     "mtime": 1767357611.5782206,
+    "seen": 1794064536.9658117,
     "ast_hash": "66e48562a44b797653a0b6fcd517ce47",
     "semantic_hash": "66e48562a44b797653a0b6fcd517ce47"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\images\\hwlogo_cyta.jpg": {
+  "tests/static/images/hwlogo_cyta.jpg": {
     "mtime": 1767371587.1395936,
+    "seen": 1794064536.965814,
     "ast_hash": "42a5ceaa9a6d2b4afc259a0fa1450215",
     "semantic_hash": "42a5ceaa9a6d2b4afc259a0fa1450215"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\images\\hwlogo_mytime.gif": {
+  "tests/static/images/hwlogo_mytime.gif": {
     "mtime": 1767371587.352985,
+    "seen": 1794064536.965816,
     "ast_hash": "8daa567ad4018ea1b6b0fc52f123af88",
     "semantic_hash": "8daa567ad4018ea1b6b0fc52f123af88"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\images\\hwlogo_orangemt.gif": {
+  "tests/static/images/hwlogo_orangemt.gif": {
     "mtime": 1767371586.9237828,
+    "seen": 1794064536.9658182,
     "ast_hash": "228df80a96bc51c834047eb3159de14b",
     "semantic_hash": "228df80a96bc51c834047eb3159de14b"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\images\\hwlogo_paraguaypsn.gif": {
+  "tests/static/images/hwlogo_paraguaypsn.gif": {
     "mtime": 1767371587.1962135,
+    "seen": 1794064536.9658203,
     "ast_hash": "da3cf9ea172abd65a625efed7c8f58db",
     "semantic_hash": "da3cf9ea172abd65a625efed7c8f58db"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\images\\hwlogo_tm.gif": {
+  "tests/static/images/hwlogo_tm.gif": {
     "mtime": 1767371587.1831255,
+    "seen": 1794064536.9658225,
     "ast_hash": "b5abb7f2a6e5a76ed415502e68d9c3c0",
     "semantic_hash": "b5abb7f2a6e5a76ed415502e68d9c3c0"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\images\\hwlogo_truergpwdsn.gif": {
+  "tests/static/images/hwlogo_truergpwdsn.gif": {
     "mtime": 1767371587.22398,
+    "seen": 1794064536.9658246,
     "ast_hash": "cc5406191dc3d9f136d24a088fec9a08",
     "semantic_hash": "cc5406191dc3d9f136d24a088fec9a08"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\images\\loginbg.jpg": {
+  "tests/static/images/loginbg.jpg": {
     "mtime": 1767357611.500475,
+    "seen": 1794064536.9658265,
     "ast_hash": "e3c2c92dba42e7b35b5b7cfc5e441742",
     "semantic_hash": "e3c2c92dba42e7b35b5b7cfc5e441742"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\static\\images\\yptlogo.jpg": {
+  "tests/static/images/yptlogo.jpg": {
     "mtime": 1767357483.38453,
+    "seen": 1794064536.965829,
     "ast_hash": "e3c016227d63105948b11c2305f0e6e5",
     "semantic_hash": "e3c016227d63105948b11c2305f0e6e5"
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.codex\\hooks.json": {
+  ".codex/hooks.json": {
     "mtime": 1779242766.8436813,
+    "seen": 1794064536.965297,
     "ast_hash": "a0193c3d6ae1a93b509fa9de36427d61",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\textual_app.py": {
+  "cli/textual_app.py": {
     "mtime": 1783830758.9364853,
+    "seen": 1794064536.965327,
     "ast_hash": "71b319ea64d5758d7cd876c6eef805c1",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\ui_shared.py": {
+  "cli/ui_shared.py": {
     "mtime": 1783818984.6196373,
+    "seen": 1794064536.9653308,
     "ast_hash": "e59da9ea8b407aa48789fb54a3728221",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_textual_app.py": {
+  "tests/test_textual_app.py": {
     "mtime": 1783830769.7826903,
+    "seen": 1794064536.9655607,
     "ast_hash": "2d8f0285cc9532039179db87d28c8e59",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\AGENTS.md": {
-    "mtime": 1783264331.1518695,
-    "ast_hash": "cf92398d1eb58b977df78aafc2a9f4c0",
+  "AGENTS.md": {
+    "mtime": 1787009441.3497956,
+    "seen": 1794064536.9655883,
+    "ast_hash": "a8761edfc4a1c77377c0a34988dcaf7b",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.claude\\settings.json": {
+  ".claude/settings.json": {
     "mtime": 1780967478.753023,
+    "seen": 1794064536.9652836,
     "ast_hash": "5d6ecd96cf065b16e8bb9fbf5d7d8f0d",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\CLAUDE.md": {
+  "CLAUDE.md": {
     "mtime": 1783264337.5178688,
+    "seen": 1794064536.9655905,
     "ast_hash": "0b9f1f80b4f8e22a87025b442bd20643",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.agents\\rules\\graphify.md": {
-    "mtime": 1779246000.2288082,
-    "ast_hash": "a0e4d192b9e2e17256124dbfc8e24e6a",
-    "semantic_hash": ""
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.agents\\workflows\\graphify.md": {
-    "mtime": 1779246000.2288082,
-    "ast_hash": "84de69efd46ab0b8430393bd4188f8f2",
-    "semantic_hash": ""
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\netinfo.py": {
+  "monitor/netinfo.py": {
     "mtime": 1780971433.0122504,
+    "seen": 1794064536.9654372,
     "ast_hash": "c907c23959b9a68f0f1e898008d29bfb",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\gamification.py": {
+  "cli/gamification.py": {
     "mtime": 1780972915.011233,
+    "seen": 1794064536.9653137,
     "ast_hash": "0e4635c6911d9b497cfc36c9b8339e0a",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_gamification.py": {
+  "tests/test_gamification.py": {
     "mtime": 1780974050.64725,
+    "seen": 1794064536.9655252,
     "ast_hash": "367f5fd4baef33b7d104be5e46b30690",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\.github\\workflows\\ci.yml": {
+  ".github/workflows/ci.yml": {
     "mtime": 1781976972.679148,
+    "seen": 1794064536.9653018,
     "ast_hash": "258aae74ce367af6bc1d644b31a50b31",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_netinfo.py": {
+  "tests/test_netinfo.py": {
     "mtime": 1781985381.512255,
+    "seen": 1794064536.9655342,
     "ast_hash": "3a7173730116a28a53105ed61ac9d286",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_port_scanner.py": {
+  "tests/test_port_scanner.py": {
     "mtime": 1781985368.306353,
+    "seen": 1794064536.9655523,
     "ast_hash": "d68f00430bd87127c780f8bc08bb55bc",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\port_catalog.py": {
+  "monitor/port_catalog.py": {
     "mtime": 1782327485.2168782,
+    "seen": 1794064536.9654481,
     "ast_hash": "0f394a046287d76339ac9bd3c53ee110",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_port_catalog.py": {
+  "tests/test_port_catalog.py": {
     "mtime": 1782328575.4597216,
+    "seen": 1794064536.9655504,
     "ast_hash": "4ec10ec56659cd1b80e3f8353fd207f2",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\textual_cameras.py": {
+  "cli/textual_cameras.py": {
     "mtime": 1783814942.781909,
+    "seen": 1794064536.9653292,
     "ast_hash": "080de90612639be4e0d5a9405e6ab51d",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\amostra_ips_belem.py": {
+  "rtsp/amostra_ips_belem.py": {
     "mtime": 1782331712.2104163,
+    "seen": 1794064536.9654732,
     "ast_hash": "240564f6ecdfc9fa9925392cfbbffa57",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\credenciais.py": {
+  "rtsp/credenciais.py": {
     "mtime": 1782335139.728257,
+    "seen": 1794064536.9654768,
     "ast_hash": "b08a1dc2fa022cf62e6fc65c6bb9c6a8",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\geo.py": {
+  "rtsp/geo.py": {
     "mtime": 1782333284.429155,
+    "seen": 1794064536.9654787,
     "ast_hash": "3ae58f592dccbc723935e85d3dff887b",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\log.py": {
-    "mtime": 1782333262.3958673,
-    "ast_hash": "bff5bb5e8fa14eda6b93306899054fc7",
+  "rtsp/log.py": {
+    "mtime": 1793753075.0927246,
+    "seen": 1794064536.9654806,
+    "ast_hash": "aa4bff471717973e577473032ea3da60",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\mapa.py": {
+  "rtsp/mapa.py": {
     "mtime": 1782331675.5843291,
+    "seen": 1794064536.9654825,
     "ast_hash": "ab7d69992d49b237c625b10d9b7f2f48",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\paths.py": {
+  "rtsp/paths.py": {
     "mtime": 1782331607.6782615,
+    "seen": 1794064536.9654841,
     "ast_hash": "7bb120a918b8f7e99c53cea89d13201d",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\rede.py": {
+  "rtsp/rede.py": {
     "mtime": 1782331621.2189758,
+    "seen": 1794064536.9654858,
     "ast_hash": "9d34d19f89250c5acdb5eed09320cd04",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\regioes.py": {
+  "rtsp/regioes.py": {
     "mtime": 1782331637.8450289,
+    "seen": 1794064536.9654877,
     "ast_hash": "c918944fc2c43abcbf8a51087c666a66",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\scanner.py": {
+  "rtsp/scanner.py": {
     "mtime": 1782333269.7982533,
+    "seen": 1794064536.9654894,
     "ast_hash": "f5114d037b5d0d842d85c924b9fbf506",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\video.py": {
+  "rtsp/video.py": {
     "mtime": 1782332863.9647977,
+    "seen": 1794064536.965491,
     "ast_hash": "db35b813275367610e68af554277d6d8",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\rtsp\\__init__.py": {
+  "rtsp/__init__.py": {
     "mtime": 1782331496.9712386,
+    "seen": 1794064536.9654715,
     "ast_hash": "4e8d084407d4de7f703117e0cc3002ea",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_rtsp_modules.py": {
+  "tests/test_rtsp_modules.py": {
     "mtime": 1782335319.3085203,
+    "seen": 1794064536.9655542,
     "ast_hash": "295af5240fa53af939e19e4853997203",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_textual_cameras.py": {
-    "mtime": 1783817528.750842,
-    "ast_hash": "ec6da2db3ddd38ea25af55871045925b",
+  "tests/test_textual_cameras.py": {
+    "mtime": 1787005714.7983105,
+    "seen": 1794064536.9655626,
+    "ast_hash": "ae5d014198bf3e0a716ff8f938037896",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\todos_ips_belem.txt": {
+  "todos_ips_belem.txt": {
     "mtime": 1782331730.4689813,
+    "seen": 1794064536.9656215,
     "ast_hash": "2a917151d72810844ad7ba4b0d41ca7b",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_speed_cleanup.py": {
+  "tests/test_speed_cleanup.py": {
     "mtime": 1783818681.0883715,
+    "seen": 1794064536.9655564,
     "ast_hash": "626531e1a666f75efb26ffbf7daebc05",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\credenciais.json": {
-    "mtime": 1782331730.3700876,
-    "ast_hash": "50dce96e6c06f7f3c7438916a5c17883",
-    "semantic_hash": ""
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\ips_conhecidos.json": {
-    "mtime": 1782347959.0774002,
-    "ast_hash": "ea2db3a7b0d0181c6738cd26349e3a2d",
-    "semantic_hash": ""
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\regioes.json": {
-    "mtime": 1782331730.435001,
-    "ast_hash": "2ac2990962344dd105ddc609c8c27570",
-    "semantic_hash": ""
-  },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\legacy_app.py": {
+  "cli/legacy_app.py": {
     "mtime": 1783816587.6978037,
+    "seen": 1794064536.965316,
     "ast_hash": "d777d0c260783e07b2b1068fa9a3db7e",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\cli\\network_ui.py": {
+  "cli/network_ui.py": {
     "mtime": 1783816158.4501898,
+    "seen": 1794064536.965321,
     "ast_hash": "6adf519d54d0a577a0f7ab6d568cd5d5",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\league_detector.py": {
+  "monitor/league_detector.py": {
     "mtime": 1783818576.929294,
+    "seen": 1794064536.9654355,
     "ast_hash": "7ff2852e8f0d9e2ce22fde2008421c2d",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\network_diagnostics.py": {
+  "monitor/network_diagnostics.py": {
     "mtime": 1783819196.2200482,
+    "seen": 1794064536.965439,
     "ast_hash": "b1c4c49b20e9d6e48a6c741d6b5ff0e4",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\network_history.py": {
+  "monitor/network_history.py": {
     "mtime": 1783816214.1787746,
+    "seen": 1794064536.9654408,
     "ast_hash": "c1b7e0c7a07714246ebb1650f21c8503",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\network_repairs.py": {
+  "monitor/network_repairs.py": {
     "mtime": 1783819537.8159063,
+    "seen": 1794064536.965443,
     "ast_hash": "8713e480134a44f7d7ba114bcbcf1663",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\ping_scheduler.py": {
+  "monitor/ping_scheduler.py": {
     "mtime": 1783818016.8631458,
+    "seen": 1794064536.9654446,
     "ast_hash": "f77005149ec138d66350c6536cbb7a1a",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\ping_targets.py": {
+  "monitor/ping_targets.py": {
     "mtime": 1783816091.6441078,
+    "seen": 1794064536.9654465,
     "ast_hash": "680b4888cf3024f9ac0303d5a7c83f9e",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\monitor\\speed_worker.py": {
+  "monitor/speed_worker.py": {
     "mtime": 1783815880.5670295,
+    "seen": 1794064536.965456,
     "ast_hash": "a2f83dd19d0858d8220945a84a58ea38",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_league_detector.py": {
+  "tests/test_league_detector.py": {
     "mtime": 1783818558.2136176,
+    "seen": 1794064536.96553,
     "ast_hash": "d23a0bda0ee26792f70e5d3ec25cc3d6",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_legacy_network_safety.py": {
+  "tests/test_legacy_network_safety.py": {
     "mtime": 1783817699.263701,
+    "seen": 1794064536.9655318,
     "ast_hash": "778d37b8a223f4151114b9f3d9f7bb51",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_network_config_v3.py": {
+  "tests/test_network_config_v3.py": {
     "mtime": 1783819308.4381652,
+    "seen": 1794064536.9655364,
     "ast_hash": "bc972e83f099cfe311c5de45bb2d9797",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_network_diagnostics.py": {
+  "tests/test_network_diagnostics.py": {
     "mtime": 1783819256.518978,
+    "seen": 1794064536.9655383,
     "ast_hash": "7ce4e0961088b79237e453fefc97b36b",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_network_history.py": {
+  "tests/test_network_history.py": {
     "mtime": 1783816228.8861058,
+    "seen": 1794064536.9655404,
     "ast_hash": "2d40434a19a37a751fe900147aa8ecd8",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_network_repairs.py": {
+  "tests/test_network_repairs.py": {
     "mtime": 1783819507.7765582,
+    "seen": 1794064536.9655423,
     "ast_hash": "fcd1e01198896a0261b354c5d3c76af6",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_network_ui.py": {
+  "tests/test_network_ui.py": {
     "mtime": 1783816158.4501898,
+    "seen": 1794064536.9655445,
     "ast_hash": "776f15186aba3052834b4e29523ef347",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_ping_scheduler.py": {
+  "tests/test_ping_scheduler.py": {
     "mtime": 1783818016.8651452,
+    "seen": 1794064536.9655466,
     "ast_hash": "5173550626f4467300e9bf570f319d4d",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_ping_targets.py": {
+  "tests/test_ping_targets.py": {
     "mtime": 1783816136.069612,
+    "seen": 1794064536.9655483,
     "ast_hash": "c043b4ea96b9967a19be0324278dc08d",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\tests\\test_startup_lazy.py": {
+  "tests/test_startup_lazy.py": {
     "mtime": 1783819708.2827442,
+    "seen": 1794064536.9655585,
     "ast_hash": "784b62a185f68754b96864f7e77eb583",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\relatorio_formal_20260712_012241.pdf": {
-    "mtime": 1783830187.3300507,
-    "ast_hash": "dc7c4e3cbd1d0075743539466fd89208",
+  "tests/test_camera_bridge.py": {
+    "mtime": 1785849599.7214496,
+    "seen": 1794064536.9655125,
+    "ast_hash": "33e58506452b2a5e6cf07afcc311c99f",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\aba_docker.png": {
-    "mtime": 1780974125.4800656,
-    "ast_hash": "ffb7f3e3f452076ce82a656cfab0384b",
+  "varedura/camera_bridge.py": {
+    "mtime": 1793754033.797185,
+    "seen": 1794064536.9655783,
+    "ast_hash": "05dfe5e5a78bfed41aa83334f0e3f9dc",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\aba_docker.svg": {
-    "mtime": 1780974103.2609134,
-    "ast_hash": "2df6ab7f5b3a575eee195511594ef3c7",
+  "varedura/__init__.py": {
+    "mtime": 1785279903.7234125,
+    "seen": 1794064536.9655666,
+    "ast_hash": "59f7c294d370c11a651b62ebbbd6703a",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\aba_rede_health.png": {
-    "mtime": 1780974125.310278,
-    "ast_hash": "b5af0fedc74b17e6d1c6e95441b86871",
+  "tests/test_graphify_privacy.py": {
+    "mtime": 1785332772.9464421,
+    "seen": 1794064536.9655275,
+    "ast_hash": "45eb302c099dcc1753421a32df517522",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\aba_rede_health.svg": {
-    "mtime": 1780974102.3196602,
-    "ast_hash": "251f3690b06f0f8cef4516fa86024946",
+  "mobile/test/models_test.dart": {
+    "mtime": 1787004355.8383963,
+    "seen": 1794064536.9654021,
+    "ast_hash": "285873ec59d5add82c878065b155dd93",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\dashboard_gamificado.png": {
-    "mtime": 1780974223.926058,
-    "ast_hash": "50e9c8ccca8729060cdb51a4ebc99971",
+  "mobile/test/widget_test.dart": {
+    "mtime": 1787004361.8564312,
+    "seen": 1794064536.9654121,
+    "ast_hash": "541d7bd7855f1252a23458eedaee7933",
     "semantic_hash": ""
   },
-  "C:\\Users\\joaod\\Documents\\GitHub\\Varedura\\exports\\dashboard_gamificado.svg": {
-    "mtime": 1780974223.4125104,
-    "ast_hash": "5fda95d4890a7da2489336a0ec246ead",
+  "rtsp/camera_engine.py": {
+    "mtime": 1787004209.8299532,
+    "seen": 1794064536.9654753,
+    "ast_hash": "35b6c280732ed762edc02b3881657228",
+    "semantic_hash": ""
+  },
+  "rtsp/xiongmai.py": {
+    "mtime": 1787003936.07151,
+    "seen": 1794064536.9654927,
+    "ast_hash": "af1a7148f827fc9da2dda100aa89d7b4",
+    "semantic_hash": ""
+  },
+  "tests/test_ai_vision.py": {
+    "mtime": 1787003995.1070595,
+    "seen": 1794064536.9655104,
+    "ast_hash": "a454e8c85c7eb55365730db56d937df2",
+    "semantic_hash": ""
+  },
+  "tests/test_camera_engine.py": {
+    "mtime": 1787003904.5510247,
+    "seen": 1794064536.9655142,
+    "ast_hash": "218448b19a88be4965137a433c81c546",
+    "semantic_hash": ""
+  },
+  "tests/test_daemon_api.py": {
+    "mtime": 1787004035.2613266,
+    "seen": 1794064536.965516,
+    "ast_hash": "28bcd4bd6872f3f8a92b775d2116d633",
+    "semantic_hash": ""
+  },
+  "tests/test_xiongmai_p2p.py": {
+    "mtime": 1787003899.4250476,
+    "seen": 1794064536.9655647,
+    "ast_hash": "9551cd639a89e39142d1ec6c81f7b79a",
+    "semantic_hash": ""
+  },
+  "varedura/daemon_api.py": {
+    "mtime": 1787010182.788172,
+    "seen": 1794064536.9655802,
+    "ast_hash": "d204ccab01db8e2ec69011f932175698",
+    "semantic_hash": ""
+  },
+  "varedura/ai_vision/detector.py": {
+    "mtime": 1787003971.5399175,
+    "seen": 1794064536.9655716,
+    "ast_hash": "dd0d313fd6bfed40ffaed3dbd10b7a5a",
+    "semantic_hash": ""
+  },
+  "varedura/ai_vision/rules.py": {
+    "mtime": 1787003982.00071,
+    "seen": 1794064536.9655738,
+    "ast_hash": "af904c579916a2d0ca320d2b20ddeb60",
+    "semantic_hash": ""
+  },
+  "varedura/ai_vision/stream_processor.py": {
+    "mtime": 1787003988.5722098,
+    "seen": 1794064536.965576,
+    "ast_hash": "dbf3db55aefd2e86f0b17da21ca58df9",
+    "semantic_hash": ""
+  },
+  "varedura/ai_vision/__init__.py": {
+    "mtime": 1787003961.6274774,
+    "seen": 1794064536.9655695,
+    "ast_hash": "534286f2413cfd50d415ddb7317bd58d",
+    "semantic_hash": ""
+  },
+  "workbench.html": {
+    "mtime": 1787007803.8119667,
+    "seen": 1794064536.9656236,
+    "ast_hash": "548de6d84d4ad3b0dbbe8e80cb457116",
+    "semantic_hash": ""
+  },
+  "workbench.md": {
+    "mtime": 1787007818.697519,
+    "seen": 1794064536.9656255,
+    "ast_hash": "ceceb499cf237535469d8fe3e12f2b85",
+    "semantic_hash": ""
+  },
+  "mobile/analysis_options.yaml": {
+    "mtime": 1787004268.6623845,
+    "seen": 1794064536.9653647,
+    "ast_hash": "06211d6840c210269e86eff6d3e4c32c",
+    "semantic_hash": ""
+  },
+  "mobile/pubspec.yaml": {
+    "mtime": 1787004263.8964057,
+    "seen": 1794064536.9654,
+    "ast_hash": "0f61e87f0098d218de848e157d653841",
+    "semantic_hash": ""
+  },
+  "mobile/android/build.gradle.kts": {
+    "mtime": 1787005931.3409936,
+    "seen": 1794064536.965371,
+    "ast_hash": "803fe22651fbe96ed401eb0b66a492d1",
+    "semantic_hash": ""
+  },
+  "mobile/android/settings.gradle.kts": {
+    "mtime": 1787005931.5410767,
+    "seen": 1794064536.9653723,
+    "ast_hash": "f276a44edd917afd836899357fdae60e",
+    "semantic_hash": ""
+  },
+  "mobile/android/app/build.gradle.kts": {
+    "mtime": 1787005931.311261,
+    "seen": 1794064536.9653668,
+    "ast_hash": "cee128fd0ba62e8b7bb785fcd49c88cc",
+    "semantic_hash": ""
+  },
+  "mobile/android/app/src/main/kotlin/com/varedura/varedura_mobile/MainActivity.kt": {
+    "mtime": 1787005931.3282616,
+    "seen": 1794064536.9653685,
+    "ast_hash": "c94263f2863593dfb8a9ad3b6c054c38",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/AppDelegate.swift": {
+    "mtime": 1772722433.1793563,
+    "seen": 1794064536.965376,
+    "ast_hash": "9e1de9c329a3fe4931876063de95132b",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Runner-Bridging-Header.h": {
+    "mtime": 1756404450.5508866,
+    "seen": 1794064536.9653811,
+    "ast_hash": "7ad7b5cea096132de13ba526b2b9efbe",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/SceneDelegate.swift": {
+    "mtime": 1772722433.187527,
+    "seen": 1794064536.9653826,
+    "ast_hash": "0c3e86af131f6a9e547c80b5ed058914",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json": {
+    "mtime": 1740963560.5184898,
+    "seen": 1794064536.9653778,
+    "ast_hash": "31a08e429403e265cabfb31b3d65f049",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json": {
+    "mtime": 1740963560.5184898,
+    "seen": 1794064536.9653792,
+    "ast_hash": "b9e927ac17345f2d5f052fe68a3487f9",
+    "semantic_hash": ""
+  },
+  "mobile/ios/RunnerTests/RunnerTests.swift": {
+    "mtime": 1787005932.1327467,
+    "seen": 1794064536.9653742,
+    "ast_hash": "24e5d095048eb86c30423f4e04b6e57b",
+    "semantic_hash": ""
+  },
+  "mobile/linux/flutter/generated_plugin_registrant.cc": {
+    "mtime": 1787005933.6729658,
+    "seen": 1794064536.9653842,
+    "ast_hash": "d07afe003d5837167bdd357d593f20a0",
+    "semantic_hash": ""
+  },
+  "mobile/linux/flutter/generated_plugin_registrant.h": {
+    "mtime": 1787005933.671011,
+    "seen": 1794064536.9653857,
+    "ast_hash": "d295462c9da9f7fef22dc86c34492318",
+    "semantic_hash": ""
+  },
+  "mobile/linux/runner/main.cc": {
+    "mtime": 1740963560.5353575,
+    "seen": 1794064536.9653873,
+    "ast_hash": "539395bcd63dba20afed0838d136189f",
+    "semantic_hash": ""
+  },
+  "mobile/linux/runner/my_application.cc": {
+    "mtime": 1787005932.2395575,
+    "seen": 1794064536.9653888,
+    "ast_hash": "4d92e1225228d71936ddbeb26e985f74",
+    "semantic_hash": ""
+  },
+  "mobile/linux/runner/my_application.h": {
+    "mtime": 1768096128.6281073,
+    "seen": 1794064536.9653904,
+    "ast_hash": "ffa1a7c0a2ad45a2c14a921596516ff8",
+    "semantic_hash": ""
+  },
+  "mobile/macos/Flutter/GeneratedPluginRegistrant.swift": {
+    "mtime": 1787005933.690596,
+    "seen": 1794064536.9653919,
+    "ast_hash": "c840bc53b61279c2fb631741134c2ed7",
+    "semantic_hash": ""
+  },
+  "mobile/macos/Runner/AppDelegate.swift": {
+    "mtime": 1740963560.545361,
+    "seen": 1794064536.9653952,
+    "ast_hash": "4b52e0b89ebfef9baf45b04548c463d6",
+    "semantic_hash": ""
+  },
+  "mobile/macos/Runner/MainFlutterWindow.swift": {
+    "mtime": 1740963560.553671,
+    "seen": 1794064536.9653983,
+    "ast_hash": "93c22dae2d93f3dc1402e121901f582b",
+    "semantic_hash": ""
+  },
+  "mobile/macos/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json": {
+    "mtime": 1740963560.545361,
+    "seen": 1794064536.9653964,
+    "ast_hash": "1d48e925145d4b573a3b5d7960a1c585",
+    "semantic_hash": ""
+  },
+  "mobile/macos/RunnerTests/RunnerTests.swift": {
+    "mtime": 1787005932.6961381,
+    "seen": 1794064536.9653933,
+    "ast_hash": "8059f5d27a19c556eeafb49b3f9b7bdd",
+    "semantic_hash": ""
+  },
+  "mobile/web/manifest.json": {
+    "mtime": 1787005932.7856824,
+    "seen": 1794064536.9654138,
+    "ast_hash": "468346760064befa1bee9743b41f9ea9",
+    "semantic_hash": ""
+  },
+  "mobile/windows/flutter/generated_plugin_registrant.cc": {
+    "mtime": 1787005933.681303,
+    "seen": 1794064536.9654157,
+    "ast_hash": "a8f91348d8d9090f22ec69d597c41e1f",
+    "semantic_hash": ""
+  },
+  "mobile/windows/flutter/generated_plugin_registrant.h": {
+    "mtime": 1787005933.6782973,
+    "seen": 1794064536.9654174,
+    "ast_hash": "0ea33875f9f8e118f9c2ded03e2e2835",
+    "semantic_hash": ""
+  },
+  "mobile/windows/runner/flutter_window.cpp": {
+    "mtime": 1740963560.5682867,
+    "seen": 1794064536.9654195,
+    "ast_hash": "2f463f9b7da67a2d692a012f9ea85e0c",
+    "semantic_hash": ""
+  },
+  "mobile/windows/runner/flutter_window.h": {
+    "mtime": 1740963560.5682867,
+    "seen": 1794064536.9654212,
+    "ast_hash": "7defcc89d4a26d56e801241d624d48fb",
+    "semantic_hash": ""
+  },
+  "mobile/windows/runner/main.cpp": {
+    "mtime": 1787005932.908728,
+    "seen": 1794064536.965423,
+    "ast_hash": "11e830e2f7d72c44a8829f51be3322f8",
+    "semantic_hash": ""
+  },
+  "mobile/windows/runner/resource.h": {
+    "mtime": 1740963560.5682867,
+    "seen": 1794064536.9654245,
+    "ast_hash": "1ade5dd15e613479a15e8832ed276f2b",
+    "semantic_hash": ""
+  },
+  "mobile/windows/runner/utils.cpp": {
+    "mtime": 1740963560.570566,
+    "seen": 1794064536.9654264,
+    "ast_hash": "432461b09d862a2f8dadf380ff0e34e5",
+    "semantic_hash": ""
+  },
+  "mobile/windows/runner/utils.h": {
+    "mtime": 1740963560.57258,
+    "seen": 1794064536.965428,
+    "ast_hash": "fd81e143f5614eb6fd75efe539002853",
+    "semantic_hash": ""
+  },
+  "mobile/windows/runner/win32_window.cpp": {
+    "mtime": 1740963560.57258,
+    "seen": 1794064536.96543,
+    "ast_hash": "571eb8234dbc2661be03aa5f2a4d2fca",
+    "semantic_hash": ""
+  },
+  "mobile/windows/runner/win32_window.h": {
+    "mtime": 1740963560.57258,
+    "seen": 1794064536.9654317,
+    "ast_hash": "7569387d58711ab975940f4df3b4bcda",
+    "semantic_hash": ""
+  },
+  "mobile/README.md": {
+    "mtime": 1787005932.7264428,
+    "seen": 1794064536.9656017,
+    "ast_hash": "05c734b97444548ba317cad777a47b70",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md": {
+    "mtime": 1740963560.528656,
+    "seen": 1794064536.965604,
+    "ast_hash": "f7ee1b402881509d197f34963e569927",
+    "semantic_hash": ""
+  },
+  "mobile/linux/CMakeLists.txt": {
+    "mtime": 1787005932.1676435,
+    "seen": 1794064536.9656065,
+    "ast_hash": "fd1a34abd644c9704b3c4661e5ff47c8",
+    "semantic_hash": ""
+  },
+  "mobile/linux/flutter/CMakeLists.txt": {
+    "mtime": 1740963560.5353575,
+    "seen": 1794064536.9656086,
+    "ast_hash": "2195470ce31675d31db5a37590d011f6",
+    "semantic_hash": ""
+  },
+  "mobile/linux/runner/CMakeLists.txt": {
+    "mtime": 1740963560.5353575,
+    "seen": 1794064536.965611,
+    "ast_hash": "30cc1614b16214b66c014af09ba699eb",
+    "semantic_hash": ""
+  },
+  "mobile/web/index.html": {
+    "mtime": 1787005932.7742083,
+    "seen": 1794064536.9656131,
+    "ast_hash": "9e7b218edc5c0fe1a924515c54f2fa85",
+    "semantic_hash": ""
+  },
+  "mobile/windows/CMakeLists.txt": {
+    "mtime": 1787005932.8167036,
+    "seen": 1794064536.965615,
+    "ast_hash": "5a8c5a481125265b98c3726c7f4428a7",
+    "semantic_hash": ""
+  },
+  "mobile/windows/flutter/CMakeLists.txt": {
+    "mtime": 1740963560.56439,
+    "seen": 1794064536.9656174,
+    "ast_hash": "bbf66fed5180bd9ae8198b8d7c4a0001",
+    "semantic_hash": ""
+  },
+  "mobile/windows/runner/CMakeLists.txt": {
+    "mtime": 1740963560.56439,
+    "seen": 1794064536.9656196,
+    "ast_hash": "028602ab9754bffe716659ada7590d29",
+    "semantic_hash": ""
+  },
+  "mobile/android/app/src/main/res/mipmap-hdpi/ic_launcher.png": {
+    "mtime": 1740963560.4926035,
+    "seen": 1794064536.9656546,
+    "ast_hash": "13e9c72ec37fac220397aa819fa1ef2d",
+    "semantic_hash": ""
+  },
+  "mobile/android/app/src/main/res/mipmap-mdpi/ic_launcher.png": {
+    "mtime": 1740963560.4946141,
+    "seen": 1794064536.9656565,
+    "ast_hash": "6270344430679711b81476e29878caa7",
+    "semantic_hash": ""
+  },
+  "mobile/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png": {
+    "mtime": 1740963560.4946141,
+    "seen": 1794064536.9656587,
+    "ast_hash": "a0a8db5985280b3679d99a820ae2db79",
+    "semantic_hash": ""
+  },
+  "mobile/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png": {
+    "mtime": 1740963560.496685,
+    "seen": 1794064536.9656606,
+    "ast_hash": "afe1b655b9f32da22f9a4301bb8e6ba8",
+    "semantic_hash": ""
+  },
+  "mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png": {
+    "mtime": 1740963560.496685,
+    "seen": 1794064536.965663,
+    "ast_hash": "57838d52c318faff743130c3fcfae0c6",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png": {
+    "mtime": 1741359572.3169408,
+    "seen": 1794064536.9656744,
+    "ast_hash": "c785f8932297af4acd5f5ccb7630f01c",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png": {
+    "mtime": 1741359572.6288984,
+    "seen": 1794064536.9656768,
+    "ast_hash": "a2f8558fb1d42514111fbbb19fb67314",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png": {
+    "mtime": 1741359571.357154,
+    "seen": 1794064536.965679,
+    "ast_hash": "2247a840b6ee72b8a069208af170e5b1",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png": {
+    "mtime": 1741359573.3514447,
+    "seen": 1794064536.9656808,
+    "ast_hash": "1b3b1538136316263c7092951e923e9d",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png": {
+    "mtime": 1741359574.3089142,
+    "seen": 1794064536.965683,
+    "ast_hash": "be8887071dd7ec39cb754d236aa9584f",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png": {
+    "mtime": 1741359569.873296,
+    "seen": 1794064536.965685,
+    "ast_hash": "043119ef4faa026ff82bd03f241e5338",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png": {
+    "mtime": 1741359573.0725193,
+    "seen": 1794064536.9656868,
+    "ast_hash": "2b1452c4c1bda6177b4fbbb832df217f",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png": {
+    "mtime": 1741359570.2387154,
+    "seen": 1794064536.965689,
+    "ast_hash": "2247a840b6ee72b8a069208af170e5b1",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png": {
+    "mtime": 1741359574.0707226,
+    "seen": 1794064536.9656909,
+    "ast_hash": "8245359312aea1b0d2412f79a07b0ca5",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png": {
+    "mtime": 1741359570.4805055,
+    "seen": 1794064536.965693,
+    "ast_hash": "5b3c0902200ce596e9848f22e1f0fe0e",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png": {
+    "mtime": 1741359571.726259,
+    "seen": 1794064536.965695,
+    "ast_hash": "5b3c0902200ce596e9848f22e1f0fe0e",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png": {
+    "mtime": 1741359569.4844632,
+    "seen": 1794064536.965697,
+    "ast_hash": "e419d22a37bc40ba185aca1acb6d4ac6",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png": {
+    "mtime": 1741359570.8652315,
+    "seen": 1794064536.965699,
+    "ast_hash": "36c0d7a7132bdde18898ffdfcfcdc4d2",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png": {
+    "mtime": 1741359574.6156204,
+    "seen": 1794064536.965701,
+    "ast_hash": "643842917530acf4c5159ae851b0baf2",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png": {
+    "mtime": 1741359573.7572932,
+    "seen": 1794064536.9657035,
+    "ast_hash": "665cb5e3c5729da6d639d26eff47a503",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png": {
+    "mtime": 1741359569.1304889,
+    "seen": 1794064536.9657056,
+    "ast_hash": "978c1bee49d7ad5fc1a4d81099b13e18",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png": {
+    "mtime": 1741359568.6977258,
+    "seen": 1794064536.9657078,
+    "ast_hash": "978c1bee49d7ad5fc1a4d81099b13e18",
+    "semantic_hash": ""
+  },
+  "mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png": {
+    "mtime": 1741359568.2095404,
+    "seen": 1794064536.96571,
+    "ast_hash": "978c1bee49d7ad5fc1a4d81099b13e18",
+    "semantic_hash": ""
+  },
+  "mobile/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_1024.png": {
+    "mtime": 1741359567.4116898,
+    "seen": 1794064536.9657118,
+    "ast_hash": "c9becc9105f8cabce934d20c7bfb6aac",
+    "semantic_hash": ""
+  },
+  "mobile/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_128.png": {
+    "mtime": 1741359565.2555962,
+    "seen": 1794064536.965714,
+    "ast_hash": "3ded30823804caaa5ccc944067c54a36",
+    "semantic_hash": ""
+  },
+  "mobile/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_16.png": {
+    "mtime": 1741359566.2878072,
+    "seen": 1794064536.9657161,
+    "ast_hash": "8bf511604bc6ed0a6aeb380c5113fdcf",
+    "semantic_hash": ""
+  },
+  "mobile/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png": {
+    "mtime": 1741359567.7796054,
+    "seen": 1794064536.9657185,
+    "ast_hash": "dfe2c93d1536ae02f085cc63faa3430e",
+    "semantic_hash": ""
+  },
+  "mobile/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_32.png": {
+    "mtime": 1741359566.7203007,
+    "seen": 1794064536.9657207,
+    "ast_hash": "8e0ae58e362a6636bdfccbc04da2c58c",
+    "semantic_hash": ""
+  },
+  "mobile/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png": {
+    "mtime": 1741359565.831417,
+    "seen": 1794064536.9657226,
+    "ast_hash": "0ad44039155424738917502c69667699",
+    "semantic_hash": ""
+  },
+  "mobile/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_64.png": {
+    "mtime": 1741359564.814181,
+    "seen": 1794064536.9657247,
+    "ast_hash": "04e7b6ef05346c70b663ca1d97de3ad5",
+    "semantic_hash": ""
+  },
+  "mobile/web/favicon.png": {
+    "mtime": 1740963560.553671,
+    "seen": 1794064536.9657266,
+    "ast_hash": "5dcef449791fa27946b3d35ad8803796",
+    "semantic_hash": ""
+  },
+  "mobile/web/icons/Icon-192.png": {
+    "mtime": 1740963560.553671,
+    "seen": 1794064536.965729,
+    "ast_hash": "ac9a721a12bbc803b44f645561ecb1e1",
+    "semantic_hash": ""
+  },
+  "mobile/web/icons/Icon-512.png": {
+    "mtime": 1740963560.5615973,
+    "seen": 1794064536.9657311,
+    "ast_hash": "96e752610906ba2a93c65f8abe1645f1",
+    "semantic_hash": ""
+  },
+  "mobile/web/icons/Icon-maskable-192.png": {
+    "mtime": 1741359588.7493591,
+    "seen": 1794064536.965733,
+    "ast_hash": "c457ef57daa1d16f64b27b786ec2ea3c",
+    "semantic_hash": ""
+  },
+  "mobile/web/icons/Icon-maskable-512.png": {
+    "mtime": 1741359588.4417095,
+    "seen": 1794064536.9657354,
+    "ast_hash": "301a7604d45b3e739efc881eb04896ea",
+    "semantic_hash": ""
+  },
+  "screenshots/mobile_camera_player.jpg": {
+    "mtime": 1787006015.6810262,
+    "seen": 1794064536.9657638,
+    "ast_hash": "7c50a8d951743491066a9ba11e4290a4",
+    "semantic_hash": ""
+  },
+  "screenshots/mobile_diagnostics.jpg": {
+    "mtime": 1787006031.467552,
+    "seen": 1794064536.9657676,
+    "ast_hash": "eabd8fd3e6caaa9c21083545719f2e66",
+    "semantic_hash": ""
+  },
+  "screenshots/mobile_node_manager.jpg": {
+    "mtime": 1787006050.710911,
+    "seen": 1794064536.965772,
+    "ast_hash": "1555d9715e7ef4caa32cf54bf8cf4383",
+    "semantic_hash": ""
+  },
+  "screenshots/tui_cameras.png": {
+    "mtime": 1787005999.423703,
+    "seen": 1794064536.9657764,
+    "ast_hash": "fc6534bf9c287cba5c63dbc673ffd85a",
+    "semantic_hash": ""
+  },
+  "screenshots/tui_cameras.svg": {
+    "mtime": 1787005999.23251,
+    "seen": 1794064536.9657784,
+    "ast_hash": "9e281287086b05a4a0cdac71cf4ac801",
+    "semantic_hash": ""
+  },
+  "screenshots/tui_dashboard.png": {
+    "mtime": 1787005998.3834002,
+    "seen": 1794064536.9657805,
+    "ast_hash": "2cb47dbbc9bb20acb3c46bb853a20ef8",
+    "semantic_hash": ""
+  },
+  "screenshots/tui_dashboard.svg": {
+    "mtime": 1787005998.0752592,
+    "seen": 1794064536.9657826,
+    "ast_hash": "46f4e854fcf24c51cec9557d51daa742",
+    "semantic_hash": ""
+  },
+  "screenshots/tui_docker.png": {
+    "mtime": 1787006000.0898485,
+    "seen": 1794064536.9657845,
+    "ast_hash": "859142944d924abd54bb3e6b7a299c61",
+    "semantic_hash": ""
+  },
+  "screenshots/tui_docker.svg": {
+    "mtime": 1787005999.9532108,
+    "seen": 1794064536.9657867,
+    "ast_hash": "9b16753168684cb51cc84f1f549ffe23",
+    "semantic_hash": ""
+  },
+  "screenshots/tui_network.png": {
+    "mtime": 1787006000.9858675,
+    "seen": 1794064536.9657886,
+    "ast_hash": "07f93d25ae72f9494a53482e5f209567",
+    "semantic_hash": ""
+  },
+  "screenshots/tui_network.svg": {
+    "mtime": 1787006000.7456932,
+    "seen": 1794064536.9657907,
+    "ast_hash": "84a9230818282d2c2e7b09d1659277a8",
+    "semantic_hash": ""
+  },
+  "screenshots/tui_settings.png": {
+    "mtime": 1787006001.6124825,
+    "seen": 1794064536.9657927,
+    "ast_hash": "03df9b3971b9b764c99c38feaba1ffc2",
+    "semantic_hash": ""
+  },
+  "screenshots/tui_settings.svg": {
+    "mtime": 1787006001.4558449,
+    "seen": 1794064536.9657948,
+    "ast_hash": "4bd446ed9707654ca890c0757a74ffc9",
+    "semantic_hash": ""
+  },
+  "mobile/test/user_journey_e2e_test.dart": {
+    "mtime": 1787009095.4123292,
+    "seen": 1794064536.9654102,
+    "ast_hash": "5c8cfa7e2e370c4242e7cf2452880f19",
+    "semantic_hash": ""
+  },
+  "mobile/test/screenshot_generator_test.dart": {
+    "mtime": 1787009082.146606,
+    "seen": 1794064536.965408,
+    "ast_hash": "ed094fb5e7618e5f6ce860b274b4840e",
+    "semantic_hash": ""
+  },
+  "screenshots/mobile_camera_grid.png": {
+    "mtime": 1787010358.0148494,
+    "seen": 1794064536.9657614,
+    "ast_hash": "b41587dbf9e187ae1e732a4a724281ce",
+    "semantic_hash": ""
+  },
+  "screenshots/mobile_camera_player.png": {
+    "mtime": 1787010362.1710448,
+    "seen": 1794064536.965766,
+    "ast_hash": "16b6403be7c3f656d1fa4150ebaeddab",
+    "semantic_hash": ""
+  },
+  "screenshots/mobile_diagnostics.png": {
+    "mtime": 1787010366.4151697,
+    "seen": 1794064536.96577,
+    "ast_hash": "ef8a8d13adf2e050b0f32052e16631c8",
+    "semantic_hash": ""
+  },
+  "screenshots/mobile_node_manager.png": {
+    "mtime": 1787010370.6040666,
+    "seen": 1794064536.965774,
+    "ast_hash": "52a2296ed6692582dc29e0e1ff98141b",
+    "semantic_hash": ""
+  },
+  "download_cctv_samples.py": {
+    "mtime": 1787009488.125389,
+    "seen": 1794064536.9653366,
+    "ast_hash": "0daeaa8da49afe9b431ddf8aa880773f",
+    "semantic_hash": ""
+  },
+  "prepare_authentic_cctv.py": {
+    "mtime": 1787009508.4116921,
+    "seen": 1794064536.9654598,
+    "ast_hash": "aae7b8944908036331aec778b27d6fa0",
+    "semantic_hash": ""
+  },
+  "serve_fake_camera.py": {
+    "mtime": 1787009058.0856786,
+    "seen": 1794064536.9654987,
+    "ast_hash": "230d9734076b962655136fe60cd7d563",
+    "semantic_hash": ""
+  },
+  "scripts/capture_real_mobile_app.py": {
+    "mtime": 1787010058.0642495,
+    "seen": 1794064536.9654946,
+    "ast_hash": "1a457c6bfeb9c5087db9fe00a3626116",
+    "semantic_hash": ""
+  },
+  "scripts/verify_workbench_render.py": {
+    "mtime": 1787010103.829044,
+    "seen": 1794064536.9654965,
+    "ast_hash": "dcc76ecedbddbeceeb0574f5e73126f3",
+    "semantic_hash": ""
+  },
+  ".agents/rules/visual-verification.md": {
+    "mtime": 1787009445.0760815,
+    "seen": 1794064536.9655826,
+    "ast_hash": "0c8b8f1cd6fca8fc5aa513fc61d5cb7c",
+    "semantic_hash": ""
+  },
+  "snapshot.png": {
+    "mtime": 1787009064.5870435,
+    "seen": 1794064536.9657989,
+    "ast_hash": "52fd16305c6a46ad330f19e640dbd003",
+    "semantic_hash": ""
+  },
+  "mobile/assets/cctv/driveway.jpg": {
+    "mtime": 1787009514.4802454,
+    "seen": 1794064536.9656653,
+    "ast_hash": "4346a790b5df42566046d32f07695893",
+    "semantic_hash": ""
+  },
+  "mobile/assets/cctv/front_porch.jpg": {
+    "mtime": 1787009515.3541923,
+    "seen": 1794064536.9656675,
+    "ast_hash": "5e32caf7b3e35398cf43064317f53cd7",
+    "semantic_hash": ""
+  },
+  "mobile/assets/cctv/perimeter.jpg": {
+    "mtime": 1787009516.590541,
+    "seen": 1794064536.9656699,
+    "ast_hash": "395425b1392279ae3d2b7d51ca7fdd42",
+    "semantic_hash": ""
+  },
+  "mobile/assets/cctv/server_room.jpg": {
+    "mtime": 1787009517.3323479,
+    "seen": 1794064536.9656723,
+    "ast_hash": "b546c52385ab7260f160279f0bfd60a0",
+    "semantic_hash": ""
+  },
+  "runtime/cctv_samples/driveway.jpg": {
+    "mtime": 1787009514.476469,
+    "seen": 1794064536.9657376,
+    "ast_hash": "4346a790b5df42566046d32f07695893",
+    "semantic_hash": ""
+  },
+  "runtime/cctv_samples/front_porch.jpg": {
+    "mtime": 1787009515.3471007,
+    "seen": 1794064536.9657397,
+    "ast_hash": "5e32caf7b3e35398cf43064317f53cd7",
+    "semantic_hash": ""
+  },
+  "runtime/cctv_samples/perimeter.jpg": {
+    "mtime": 1787009516.5816221,
+    "seen": 1794064536.9657419,
+    "ast_hash": "395425b1392279ae3d2b7d51ca7fdd42",
+    "semantic_hash": ""
+  },
+  "runtime/cctv_samples/raw_driveway.jpg": {
+    "mtime": 1787009514.2754998,
+    "seen": 1794064536.965744,
+    "ast_hash": "7a5469e2f7a9b29eff6de722726ecd94",
+    "semantic_hash": ""
+  },
+  "runtime/cctv_samples/raw_front_porch.jpg": {
+    "mtime": 1787009515.3120015,
+    "seen": 1794064536.965746,
+    "ast_hash": "aac3ea5eaa68b41d1965aaeac0486ded",
+    "semantic_hash": ""
+  },
+  "runtime/cctv_samples/raw_perimeter.jpg": {
+    "mtime": 1787009516.52035,
+    "seen": 1794064536.9657483,
+    "ast_hash": "210b05d0fd96c8ded68feb72c5037d26",
+    "semantic_hash": ""
+  },
+  "runtime/cctv_samples/raw_server_room.jpg": {
+    "mtime": 1787009517.27511,
+    "seen": 1794064536.9657502,
+    "ast_hash": "bbe46ae356feef233681d61be70fe2ee",
+    "semantic_hash": ""
+  },
+  "runtime/cctv_samples/server_room.jpg": {
+    "mtime": 1787009517.3241746,
+    "seen": 1794064536.9657526,
+    "ast_hash": "b546c52385ab7260f160279f0bfd60a0",
+    "semantic_hash": ""
+  },
+  "screenshots/workbench_preview.png": {
+    "mtime": 1787010385.9589741,
+    "seen": 1794064536.9657967,
+    "ast_hash": "1de95a2fca086572673b571f2de8559f",
+    "semantic_hash": ""
+  },
+  "pyproject.toml": {
+    "mtime": 1787004458.969126,
+    "seen": 1794064536.965462,
+    "ast_hash": "54bdf79b36eda214f50eca760cca197f",
+    "semantic_hash": ""
+  },
+  "README.es.md": {
+    "mtime": 1794064492.8621597,
+    "seen": 1794064536.9655952,
+    "ast_hash": "50cedb623827c640e9752e1c79d9934b",
+    "semantic_hash": ""
+  },
+  "screenshots/demo_legacy.gif": {
+    "mtime": 1771208251.851068,
+    "seen": 1794064536.9657593,
+    "ast_hash": "775d9d3142d514a4e6c389f46598f6f4",
     "semantic_hash": ""
   }
 }

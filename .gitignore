@@ -190,7 +190,9 @@ tests/arp.py
 credenciais.json
 ips_conhecidos.json
 regioes.json
+camera_bridge_state.json
 logs/rtsp.log*
+logs/camera_bridge.log*
 
 # Hidden tools
 lmarena/
