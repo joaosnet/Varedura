@@ -650,9 +650,6 @@ class VareduraTextualApp(
         Binding("p", "capture_screenshot", t("screenshot.bind_label"), show=True),
         Binding("escape", "dashboard", t("textual.bind_dashboard"), show=True),
         Binding("f12", "toggle_keyboard_page", t("termux.bind_kbd_page"), show=False),
-        # Termux: o Enter inicial de um macro das teclas extras ("\\nmenu\\n")
-        # é segurado por instantes para não acionar o widget em foco.
-        Binding("enter", "termux_macro_enter", show=False, priority=True),
         Binding("delete", "cam_del_regiao", t("rtsp.bind_del"), show=False),
         Binding("l", "cam_log", t("rtsp.bind_log"), show=False),
     ]
@@ -1471,10 +1468,7 @@ class VareduraTextualApp(
             self.notify(msg, severity="warning")
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
-        return self._termux_macro_check_action(action)
-
-    def on_key(self, event) -> None:
-        self._termux_macro_on_key(event)
+        return True
 
     def _switch_main_tab(self, tab_id: str, subtab_id: str | None = None) -> None:
         # Clear focus off dashboard buttons before hiding the dashboard TabPane

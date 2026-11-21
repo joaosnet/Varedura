@@ -323,9 +323,11 @@ async def test_termux_onboarding_non_blocking_f12_and_screenshot(monkeypatch, tm
 
     monkeypatch.setattr(
         "varedura.termux_env.extra_key_macros",
-        lambda path=None: ("menu", "netscan", "toggle-page"),
+        lambda path=None: ("menu", "netscan", "toggle-page", "sshd", "claro-monitor"),
     )
     suspended: list[list[str]] = []
+    # Janela folgada: sob carga o pilot espaça as teclas mais que os 150 ms reais.
+    monkeypatch.setattr("cli.textual_termux_keys._MACRO_WINDOW_SECONDS", 3.0)
 
     app = VareduraTextualApp()
     app._run_suspended_command = lambda cmd, pause=False: suspended.append(cmd) or 0
@@ -345,13 +347,14 @@ async def test_termux_onboarding_non_blocking_f12_and_screenshot(monkeypatch, tm
         assert kbd_calls == ["toggled"]
 
         # Macro das teclas extras ("\ntoggle-page\n") também aciona o alternador
-        await pilot.press("enter", *"toggle-page", "enter")
+        await pilot.press("ctrl+j", *"toggle-page", "ctrl+j")
         await pilot.pause()
         assert kbd_calls == ["toggled", "toggled"]
 
         # "\nnetscan\n": abre a ferramenta em vez de disparar os atalhos
         # das letras (o "s" abriria Configurações).
-        await pilot.press("enter", *"netscan", "enter")
+        # As teclas extras enviam LF (ctrl+j), não CR (enter).
+        await pilot.press("ctrl+j", *"netscan", "ctrl+j")
         await pilot.pause()
         assert suspended == [["netscan"]]
         assert app.query_one("#main-tabs").active == "dashboard"
@@ -359,11 +362,24 @@ async def test_termux_onboarding_non_blocking_f12_and_screenshot(monkeypatch, tm
         # "\nmenu\n" volta ao Painel a partir de outra aba.
         app.query_one("#main-tabs").active = "settings"
         await pilot.pause()
-        await pilot.press("enter", *"menu", "enter")
+        await pilot.press("ctrl+j", *"menu", "ctrl+j")
         await pilot.pause()
         assert app.query_one("#main-tabs").active == "dashboard"
 
+        # "claro-monitor" tem um "l" (abriria o log no editor) e "sshd" um "d"
+        # (trocaria o tema): nenhuma letra pode virar atalho.
+        theme_before = app.theme
+        logs: list[str] = []
+        app.action_cam_log = lambda: logs.append("log")
+        suspended.clear()
+        await pilot.press("enter", *"sshd", "enter")
+        await pilot.press("ctrl+j", *"claro-monitor", "ctrl+j")
+        await pilot.pause()
+        assert app.theme == theme_before and logs == []
+        assert suspended == [["sshd"], ["claro-monitor"]]
+
         # Um Enter comum continua chegando ao widget em foco (após a janela).
+        monkeypatch.setattr("cli.textual_termux_keys._MACRO_WINDOW_SECONDS", 0.05)
         pressed: list[str] = []
         app._switch_main_tab = lambda tab, **kw: pressed.append(tab)
         app.query_one("#dash-btn-network").focus()

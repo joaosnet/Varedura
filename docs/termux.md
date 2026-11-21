@@ -192,7 +192,7 @@ Toda TUI com mouse ativo tem três atritos no Termux; o `TermuxKeysMixin` ([`cli
 - **Tecla ⌨ temporária**: com o mouse do terminal ativo, tocar na tela não abre o teclado. Ao iniciar, `set_keyboard_key(True)` acrescenta `{"key": "KEYBOARD"}` no início da última linha da barra `extra-keys` do usuário; ao sair (`on_unmount`, `atexit` e no início da execução seguinte) ela é removida. Só é alterada uma linha `extra-keys = [...]` já existente, em JSON de uma linha; o restante de `~/.termux/termux.properties` fica intacto.
 - **Macros das teclas extras**: botões como `{"macro": "
 menu
-"}` digitam comandos de shell. `extra_key_macros()` lê esses comandos e, dentro da TUI, o Enter inicial é segurado por 150 ms: se o que vem a seguir é um macro conhecido, vira ação do Varedura (`menu` → Painel, `toggle-page` → alternador, `clear` → nada, demais → executa o comando com a TUI suspensa); caso contrário o Enter é reenviado ao widget em foco. Durante a captura nenhum atalho de letra é disparado.
+"}` digitam comandos de shell. `extra_key_macros()` lê esses comandos e, dentro da TUI, o LF inicial (que o Textual lê como `ctrl+j`; Enter também vale) é segurado por 150 ms: se o que vem a seguir é um macro conhecido, vira ação do Varedura (`menu` → Painel, `toggle-page` → alternador, `clear` → nada, demais → executa o comando com a TUI suspensa); caso contrário o Enter é reenviado ao widget em foco. Durante a captura nenhum atalho de letra é disparado.
 - **Diálogo nativo**: tocar num campo com o teclado fechado abre `termux-dialog text` (Termux:API) com o rótulo do campo; o texto confirmado vai para o campo. O teclado é considerado aberto quando o terminal encolhe para menos de 75 % da maior altura já vista.
 
 ### Alternador de botões extra-keys (`F12`)

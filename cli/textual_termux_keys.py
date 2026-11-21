@@ -17,13 +17,16 @@ from __future__ import annotations
 import atexit
 import shlex
 
-from textual import work
+from textual import events, work
 from textual.widgets import Input, Label
 
 from i18n import t
 from varedura import termux_env
 
 _MACRO_WINDOW_SECONDS = 0.15
+# As teclas extras enviam LF ("\\n"), que o Textual lê como ctrl+j; um Enter de
+# verdade é CR.  Os dois delimitam um macro.
+_MACRO_DELIMITERS = ("enter", "ctrl+j")
 _KEYBOARD_OPEN_RATIO = 0.75
 
 
@@ -32,7 +35,7 @@ class TermuxKeysMixin:
         self._macro_commands: tuple[str, ...] = ()
         self._macro_capturing = False
         self._macro_buf = ""
-        self._macro_bypass = False
+        self._macro_held = None
         self._macro_timer = None
         self._keyboard_key_installed = False
         self._native_dialog_active = False
@@ -67,71 +70,85 @@ class TermuxKeysMixin:
             and not isinstance(self.focused, Input)
         )
 
-    def _termux_macro_check_action(self, action: str) -> bool:
-        if action == "termux_macro_enter":
-            if self._macro_bypass:
-                self._macro_bypass = False
-                return False  # Enter reenviado: segue para o widget em foco
-            return self._macro_capturing or self._termux_macro_enabled()
-        # Durante a captura, as letras do macro não podem acionar atalhos.
-        return not self._macro_capturing
+    async def on_event(self, event) -> None:
+        """Filtra as teclas ANTES do despacho normal.
 
-    def action_termux_macro_enter(self) -> None:
-        if self._macro_capturing:
+        Tem de ser aqui: atalhos prioritários rodam na chegada do evento, mas
+        as letras só voltam ao app depois de passar pelo widget em foco.  Com
+        um binding para o LF, os dois LF de ``"\\nmenu\\n"`` eram tratados
+        antes das letras, e estas viravam atalhos.
+        """
+        if isinstance(event, events.Key) and await self._termux_macro_filter(event):
+            return
+        await super().on_event(event)
+
+    async def _termux_macro_filter(self, event) -> bool:
+        """Devolve True se a tecla foi consumida pela captura de macro."""
+        delimiter = event.key in _MACRO_DELIMITERS
+        if not self._macro_capturing:
+            if delimiter and self._termux_macro_enabled():
+                self._macro_capturing = True
+                self._macro_held = event
+                self._macro_buf = ""
+                self._macro_arm_timer()
+                return True
+            return False
+
+        if delimiter:
             command, self._macro_buf = self._macro_buf, ""
-            self._macro_stop_capture()
+            held = self._macro_take_held()
             if command in self._macro_commands:
                 self._run_termux_macro(command)
-            elif not command:
-                self._macro_replay_enter()
-            return
-        self._macro_capturing = True
+                return True
+            if not command and held is not None:
+                # Dois Enter seguidos: entrega o primeiro e segura o segundo.
+                await super().on_event(held)
+                if self._termux_macro_enabled():
+                    self._macro_capturing = True
+                    self._macro_held = event
+                    self._macro_arm_timer()
+                    return True
+                return False
+            return True  # texto que não é macro: descarta
+
+        char = event.character
+        if isinstance(char, str) and len(char) == 1 and char.isprintable():
+            candidate = self._macro_buf + char
+            if any(command.startswith(candidate) for command in self._macro_commands):
+                self._macro_buf = candidate
+                self._macro_arm_timer()
+                return True
+
+        # Não é um macro: devolve o Enter segurado e deixa a tecla seguir.
+        untouched = not self._macro_buf
         self._macro_buf = ""
-        self._macro_arm_timer()
+        held = self._macro_take_held()
+        if untouched and held is not None:
+            await super().on_event(held)
+        return False
 
     def _macro_arm_timer(self) -> None:
         if self._macro_timer is not None:
             self._macro_timer.stop()
         self._macro_timer = self.set_timer(_MACRO_WINDOW_SECONDS, self._macro_timeout)
 
-    def _macro_stop_capture(self) -> None:
+    def _macro_take_held(self):
+        """Encerra a captura e devolve a tecla que estava segurada."""
         self._macro_capturing = False
         if self._macro_timer is not None:
             self._macro_timer.stop()
             self._macro_timer = None
+        held, self._macro_held = self._macro_held, None
+        return held
 
-    def _macro_timeout(self) -> None:
+    async def _macro_timeout(self) -> None:
         if not self._macro_capturing:
             return
         untouched = not self._macro_buf
         self._macro_buf = ""
-        self._macro_stop_capture()
-        if untouched:
-            self._macro_replay_enter()  # era um Enter comum
-
-    def _macro_replay_enter(self) -> None:
-        self._macro_bypass = True
-        self.simulate_key("enter")
-
-    def _termux_macro_on_key(self, event) -> None:
-        if not self._macro_capturing:
-            return
-        char = getattr(event, "character", None)
-        if not (isinstance(char, str) and len(char) == 1 and char.isprintable()):
-            return
-        candidate = self._macro_buf + char
-        if any(command.startswith(candidate) for command in self._macro_commands):
-            self._macro_buf = candidate
-            event.stop()
-            event.prevent_default()
-            self._macro_arm_timer()
-            return
-        # Não é um macro: desiste e devolve o Enter que estava segurado.
-        untouched = not self._macro_buf
-        self._macro_buf = ""
-        self._macro_stop_capture()
-        if untouched:
-            self._macro_replay_enter()
+        held = self._macro_take_held()
+        if untouched and held is not None:
+            await super().on_event(held)  # era um Enter comum
 
     def _run_termux_macro(self, command: str) -> None:
         """Traduz o comando de shell do botão para uma ação do Varedura."""

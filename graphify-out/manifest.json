@@ -49,9 +49,9 @@
     "semantic_hash": "36a35df2f5610534830644d9cea45d50"
   },
   "cli/textual_app.py": {
-    "mtime": 1795292897.358454,
-    "seen": 1795293096.6370635,
-    "ast_hash": "d94f97dad86fc94716e6efb933e9703d",
+    "mtime": 1795293714.598513,
+    "seen": 1795293910.9690635,
+    "ast_hash": "daa4aea6d30af69f23fc2971a3a088b8",
     "semantic_hash": ""
   },
   "cli/textual_cameras.py": {
@@ -535,9 +535,9 @@
     "semantic_hash": ""
   },
   "tests/test_textual_termux.py": {
-    "mtime": 1795292767.2471492,
-    "seen": 1795293096.637272,
-    "ast_hash": "80544a900c1f425edcc8e24121c0216a",
+    "mtime": 1795293522.7856328,
+    "seen": 1795293910.9691725,
+    "ast_hash": "2f8d0228336e8e74fd17b693a8309726",
     "semantic_hash": ""
   },
   "tests/test_updater.py": {
@@ -631,9 +631,9 @@
     "semantic_hash": ""
   },
   "docs/termux.md": {
-    "mtime": 1795292964.1164298,
-    "seen": 1795293096.6373255,
-    "ast_hash": "3f2bf0d463f18e591e6d47fa0f0e91f9",
+    "mtime": 1795293522.7856328,
+    "seen": 1795293910.9692023,
+    "ast_hash": "04ca66e0083591cb9c591e7803c0384b",
     "semantic_hash": ""
   },
   "tests/test_android_adaptations.py": {
@@ -697,9 +697,9 @@
     "semantic_hash": ""
   },
   "cli/textual_termux_keys.py": {
-    "mtime": 1795292739.3175392,
-    "seen": 1795293096.6370742,
-    "ast_hash": "10659787ef5667809e0fda5d4f1bac45",
+    "mtime": 1795293662.2491992,
+    "seen": 1795293910.9690707,
+    "ast_hash": "d87d4d0f337797714416e5515124cfbc",
     "semantic_hash": ""
   }
 }
