@@ -61,7 +61,7 @@ async def test_textual_dashboard_renders_and_menu_switches_to_cleanup():
 
 
 @pytest.mark.asyncio
-async def test_textual_settings_save_recording_and_language():
+async def test_textual_settings_save_autoupdate_and_language():
     app = VareduraTextualApp()
 
     async with app.run_test(size=(100, 60)) as pilot:
@@ -69,7 +69,7 @@ async def test_textual_settings_save_recording_and_language():
         app.query_one("#main-tabs", TabbedContent).active = "settings"
         await pilot.pause()
 
-        app.query_one("#recording-switch").value = False
+        app.query_one("#git-autoupdate-switch").value = False
         app.query_one("#language-select").value = "pt"
         # The settings form scrolls; bring the save button into view first.
         app.query_one("#save-settings").scroll_visible(animate=False)
@@ -77,7 +77,7 @@ async def test_textual_settings_save_recording_and_language():
         await pilot.click("#save-settings")
         await pilot.pause()
 
-        assert ui_shared.load_recording_pref() is False
+        assert ui_shared.load_git_autoupdate_pref() is False
         assert get_language() == "pt"
 
 
@@ -189,6 +189,7 @@ async def test_textual_scanner_menu_option_opens_network_ports(monkeypatch):
 
 def _patch_network(monkeypatch):
     """Make the network worker deterministic and offline."""
+    import monitor.netinfo as netinfo
     import monitor.stalker as stalker
     import monitor.speed_tester as speed_tester
     import monitor.port_scanner as scanner
@@ -196,6 +197,7 @@ def _patch_network(monkeypatch):
     from monitor.ping_targets import PingProbeResult, PingStatus
     import time
 
+    monkeypatch.setattr(netinfo, "detect_default_gateway", lambda: "192.168.1.1")
     monkeypatch.setattr(stalker, "run_ping", lambda host: 12.0)
 
     def fake_probe(self, target, generation, cancel_event):
@@ -273,7 +275,6 @@ async def test_textual_network_health_card_updates(monkeypatch):
         assert (
             int(app.query_one("#health-digits", Digits).value) >= 80
         )  # 12ms ping -> top tier
-        assert "sub20" in app._game.achievements
 
 
 @pytest.mark.asyncio
@@ -316,8 +317,6 @@ async def test_textual_docker_reward_and_achievement(monkeypatch):
         await wait_until(lambda: not app.cleanup_running, pilot)
 
         assert app.query_one("#cleanup-freed", Digits).value == "6.0"
-        assert "docker_first" in app._game.achievements
-        assert "docker5gb" in app._game.achievements
 
 
 @pytest.mark.asyncio
@@ -440,16 +439,14 @@ def test_speed_worker_is_prepared_before_schedule_and_can_cancel_immediately(
     assert tester.get_stats_snapshot()["last_error"] == "Teste cancelado"
 
 
-def test_additional_targets_do_not_increment_gamification_counters():
+def test_additional_targets_do_not_update_primary_health_sparkline():
     app = VareduraTextualApp()
-    calls = []
-    app._record_and_check = lambda health: calls.append(health)
     health = {"score": 90, "monitor_s": 1.0}
 
     app._render_ping_update(health, {}, record=False)
-    assert calls == []
+    assert list(app._score_hist) == []
     app._render_ping_update(health, {}, record=True)
-    assert calls == [health]
+    assert list(app._score_hist) == [90.0]
 
 
 def test_target_card_statistics_include_jitter_trend_and_live_league_ip():
@@ -634,7 +631,7 @@ async def test_textual_cleanup_summary_is_reactive(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_textual_settings_status_is_reactive(monkeypatch):
-    """Flipping the recording switch updates the settings status live (pre-save)."""
+    """Flipping the git autoupdate switch updates the settings status live (pre-save)."""
     import cli.textual_app as ta
 
     calls = []
@@ -642,7 +639,8 @@ async def test_textual_settings_status_is_reactive(monkeypatch):
     monkeypatch.setattr(
         ta,
         "build_settings_status_table",
-        lambda rec, lang: calls.append((rec, lang)) or original(rec, lang),
+        lambda lang, git_autoupdate=None: calls.append((lang, git_autoupdate))
+        or original(lang, git_autoupdate=git_autoupdate),
     )
 
     app = VareduraTextualApp()
@@ -651,10 +649,10 @@ async def test_textual_settings_status_is_reactive(monkeypatch):
         app.query_one("#main-tabs", TabbedContent).active = "settings"
         await pilot.pause()
         calls.clear()
-        switch = app.query_one("#recording-switch")
+        switch = app.query_one("#git-autoupdate-switch")
         switch.value = not switch.value
         await pilot.pause()
-        assert calls, "toggling the recording switch should refresh the status panel"
+        assert calls, "toggling the git autoupdate switch should refresh the status panel"
 
 
 @pytest.mark.asyncio
@@ -771,3 +769,49 @@ async def test_quit_shows_shutdown_screen_when_busy(monkeypatch):
         await pilot.pause()
         assert app._shutting_down is True
         assert any(isinstance(s, ShutdownScreen) for s in app.screen_stack)
+
+
+@pytest.mark.asyncio
+async def test_capture_screenshot_saves_svg_and_txt(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    app = VareduraTextualApp()
+    app._after_first_refresh = lambda: None
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        await pilot.pause()
+        svg_path = app.action_capture_screenshot()
+        assert svg_path is not None
+        assert svg_path.exists()
+        assert svg_path.suffix == ".svg"
+        assert "<svg" in svg_path.read_text(encoding="utf-8")
+        txt_path = svg_path.with_suffix(".txt")
+        assert txt_path.exists()
+        txt_body = txt_path.read_text(encoding="utf-8")
+        assert "active_tab: dashboard" in txt_body
+        assert app._last_screenshot_path == svg_path
+
+
+@pytest.mark.asyncio
+async def test_network_export_without_pdf_and_share_button(monkeypatch, tmp_path):
+    _patch_network(monkeypatch)
+    csv_path = tmp_path / "ping_targets.csv"
+    csv_path.write_text("timestamp_utc,target_id\n", encoding="utf-8")
+    shared: list[str] = []
+    monkeypatch.setattr(
+        "varedura.termux_env.open_file_or_url",
+        lambda target: shared.append(target) or True,
+    )
+
+    app = VareduraTextualApp()
+    async with app.run_test(size=(120, 45)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "network"
+        await wait_until(lambda: "network" in app._hydrated_tabs, pilot)
+        await pilot.pause()
+
+        app._finish_network_export((csv_path, None), None)
+        assert app._last_export_path == csv_path
+
+        await pilot.click("#network-share")
+        await pilot.pause()
+        assert shared == [str(csv_path)]

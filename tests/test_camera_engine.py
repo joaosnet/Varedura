@@ -1,6 +1,5 @@
 """Unit tests for the Unified Camera Engine."""
 
-import pytest
 from rtsp.camera_engine import (
     CameraFleetManager,
     CameraProtocol,

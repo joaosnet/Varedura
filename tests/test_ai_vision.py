@@ -1,22 +1,17 @@
 """Unit and integration tests for Edge AI Video Analytics Pipeline."""
 
 import time
-import pytest
 
 from varedura.ai_vision.detector import (
     Detection,
-    YOLONanoDetector,
     compute_iou,
     nms,
 )
 from varedura.ai_vision.rules import (
     EventSeverity,
     LineCrossingRule,
-    LoiteringRule,
     MotionHeatmap,
-    SpatialEvent,
     ZoneIntrusionRule,
-    ccw,
     point_in_polygon,
     segments_intersect,
 )

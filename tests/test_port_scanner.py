@@ -113,3 +113,36 @@ def test_run_full_scan_aggregates_state(monkeypatch):
     assert state.total_udp == 1
     assert state.total_established == 1
     assert state.last_scan_time  # HH:MM:SS string is set
+
+
+def test_port_scanner_handles_permission_denied_gracefully(monkeypatch):
+    def deny(*_args, **_kwargs):
+        raise PermissionError("SELinux denied")
+
+    monkeypatch.setattr(ps.psutil, "net_connections", deny)
+
+    tcp, udp, est = ps.get_listening_ports()
+    assert (tcp, udp, est) == ([], [], 0)
+    assert ps.get_process_connections_count() == []
+    assert ps.search_port(80) == []
+
+
+def test_get_system_network_stats_falls_back_to_proc(monkeypatch):
+    def deny():
+        raise psutil.AccessDenied()
+
+    monkeypatch.setattr(ps.psutil, "net_io_counters", deny)
+    monkeypatch.setattr(ps.psutil, "virtual_memory", deny)
+    monkeypatch.setattr(
+        ps, "_read_proc_net_totals", lambda: (2048 * 1024, 20, 1024 * 1024, 10)
+    )
+    monkeypatch.setattr(ps, "_read_proc_meminfo", lambda: (62.5, 5.0, 8.0))
+
+    stats = ps.get_system_network_stats()
+    assert stats["bytes_recebidos_mb"] == 2.0
+    assert stats["bytes_enviados_mb"] == 1.0
+    assert stats["pacotes_recebidos"] == 20
+    assert stats["pacotes_enviados"] == 10
+    assert stats["memoria_percent"] == 62.5
+    assert stats["memoria_usada_gb"] == 5.0
+    assert stats["memoria_total_gb"] == 8.0

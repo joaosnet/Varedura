@@ -4,10 +4,20 @@ Módulo de Escaneamento de Portas para Network Stalker
 Funções para monitorar portas TCP/UDP, conexões e processos de rede.
 """
 
-import psutil
-import socket
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
+from pathlib import Path
+import socket
+from typing import Dict, List, Optional, Tuple
+
+import psutil
+
+
+def _safe_net_connections(kind: str = "inet") -> list:
+    """Return active sockets, returning an empty list when denied (e.g. Android SELinux)."""
+    try:
+        return psutil.net_connections(kind=kind)
+    except (psutil.AccessDenied, PermissionError, OSError):
+        return []
 
 
 @dataclass
@@ -52,7 +62,7 @@ def get_listening_ports() -> Tuple[List[PortInfo], List[PortInfo], int]:
     Returns:
         Tuple com (tcp_ports, udp_ports, total_established)
     """
-    connections = psutil.net_connections(kind="inet")
+    connections = _safe_net_connections(kind="inet")
     tcp_ports = []
     udp_ports = []
     established_count = 0
@@ -117,7 +127,7 @@ def get_process_connections_count(limit: int = 5) -> List[ProcessConnections]:
     Returns:
         Lista de ProcessConnections ordenada por número de conexões
     """
-    connections = psutil.net_connections(kind="inet")
+    connections = _safe_net_connections(kind="inet")
     process_count: Dict[int, Dict] = {}
 
     for conn in connections:
@@ -171,7 +181,7 @@ def search_port(porta_numero: int) -> List[Dict]:
     Returns:
         Lista de dicionários com informações dos processos
     """
-    connections = psutil.net_connections(kind="inet")
+    connections = _safe_net_connections(kind="inet")
     encontrados = []
 
     for conn in connections:
@@ -205,6 +215,61 @@ def search_port(porta_numero: int) -> List[Dict]:
     return encontrados
 
 
+def _read_proc_net_totals() -> tuple[int, int, int, int]:
+    """Fallback counter totals from /proc/net/dev (rx_bytes, rx_pkts, tx_bytes, tx_pkts)."""
+    try:
+        raw = Path("/proc/net/dev").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return 0, 0, 0, 0
+    rx_bytes = rx_pkts = tx_bytes = tx_pkts = 0
+    for line in raw.splitlines():
+        if ":" not in line:
+            continue
+        iface_part, stats_part = line.split(":", 1)
+        if iface_part.strip() == "lo":
+            continue
+        fields = stats_part.split()
+        if len(fields) < 10:
+            continue
+        try:
+            rx_bytes += int(fields[0])
+            rx_pkts += int(fields[1])
+            tx_bytes += int(fields[8])
+            tx_pkts += int(fields[9])
+        except ValueError:
+            continue
+    return rx_bytes, rx_pkts, tx_bytes, tx_pkts
+
+
+def _read_proc_meminfo() -> tuple[float, float, float]:
+    """Fallback RAM stats from /proc/meminfo (percent, used_gb, total_gb)."""
+    try:
+        raw = Path("/proc/meminfo").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return 0.0, 0.0, 0.0
+    values_kb: dict[str, int] = {}
+    for line in raw.splitlines():
+        if ":" not in line:
+            continue
+        key, rest = line.split(":", 1)
+        parts = rest.split()
+        if parts and parts[0].isdigit():
+            values_kb[key.strip()] = int(parts[0])
+    total_kb = values_kb.get("MemTotal", 0)
+    if total_kb <= 0:
+        return 0.0, 0.0, 0.0
+    avail_kb = values_kb.get(
+        "MemAvailable",
+        values_kb.get("MemFree", 0)
+        + values_kb.get("Buffers", 0)
+        + values_kb.get("Cached", 0),
+    )
+    used_kb = max(0, total_kb - avail_kb)
+    percent = round(100.0 * used_kb / total_kb, 1)
+    denom = 1024.0 * 1024.0
+    return percent, used_kb / denom, total_kb / denom
+
+
 def get_system_network_stats() -> Dict:
     """
     Retorna estatísticas gerais de rede do sistema.
@@ -212,17 +277,35 @@ def get_system_network_stats() -> Dict:
     Returns:
         Dicionário com bytes enviados/recebidos e contadores
     """
-    net_stats = psutil.net_io_counters()
-    memory = psutil.virtual_memory()
+    bytes_sent = bytes_recv = packets_sent = packets_recv = 0
+    try:
+        net_stats = psutil.net_io_counters()
+        if net_stats is not None:
+            bytes_sent = net_stats.bytes_sent
+            bytes_recv = net_stats.bytes_recv
+            packets_sent = net_stats.packets_sent
+            packets_recv = net_stats.packets_recv
+        else:
+            bytes_recv, packets_recv, bytes_sent, packets_sent = _read_proc_net_totals()
+    except (psutil.AccessDenied, PermissionError, OSError, RuntimeError):
+        bytes_recv, packets_recv, bytes_sent, packets_sent = _read_proc_net_totals()
+
+    try:
+        memory = psutil.virtual_memory()
+        mem_percent = memory.percent
+        mem_used_gb = memory.used / 1024 / 1024 / 1024
+        mem_total_gb = memory.total / 1024 / 1024 / 1024
+    except (psutil.AccessDenied, PermissionError, OSError, RuntimeError):
+        mem_percent, mem_used_gb, mem_total_gb = _read_proc_meminfo()
 
     return {
-        "bytes_enviados_mb": net_stats.bytes_sent / 1024 / 1024,
-        "bytes_recebidos_mb": net_stats.bytes_recv / 1024 / 1024,
-        "pacotes_enviados": net_stats.packets_sent,
-        "pacotes_recebidos": net_stats.packets_recv,
-        "memoria_percent": memory.percent,
-        "memoria_usada_gb": memory.used / 1024 / 1024 / 1024,
-        "memoria_total_gb": memory.total / 1024 / 1024 / 1024,
+        "bytes_enviados_mb": bytes_sent / 1024 / 1024,
+        "bytes_recebidos_mb": bytes_recv / 1024 / 1024,
+        "pacotes_enviados": packets_sent,
+        "pacotes_recebidos": packets_recv,
+        "memoria_percent": mem_percent,
+        "memoria_usada_gb": mem_used_gb,
+        "memoria_total_gb": mem_total_gb,
     }
 
 

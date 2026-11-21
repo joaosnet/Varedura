@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from rtsp.log import obter_logger
+from varedura.termux_env import is_android, open_file_or_url
 
 _log = obter_logger("video")
 
@@ -18,7 +19,7 @@ _log = obter_logger("video")
 # Detecção de player de vídeo (preferindo MPC-HC, depois ffplay, depois VLC)
 # --------------------------------------------------------------------------
 
-# Locais comuns de instalação no Windows, além do PATH.
+# Locais comuns de instalação no Windows/Android, além do PATH.
 _LOCAIS_PLAYER: dict[str, list[str]] = {
     "mpc-hc": [
         r"C:\Program Files\MPC-HC\mpc-hc64.exe",
@@ -33,14 +34,23 @@ _LOCAIS_PLAYER: dict[str, list[str]] = {
         r"C:\Program Files\VideoLAN\VLC\vlc.exe",
         r"C:\Program Files (x86)\VideoLAN\VLC\vlc.exe",
     ],
+    "vlc-android": ["/system/bin/am"],
 }
 
-# Ordem de preferência. (nome, lista de executáveis a procurar no PATH)
+# Ordem de preferência no Android/Termux.
+_PREFERENCIA_ANDROID: list[tuple[str, list[str]]] = [
+    ("vlc-android", ["am"]),
+    ("termux-open", ["termux-open"]),
+    ("mpv-tct", ["mpv"]),
+]
+
+# Ordem de preferência desktop. (nome, lista de executáveis a procurar no PATH)
 _PREFERENCIA: list[tuple[str, list[str]]] = [
     ("mpc-hc", ["mpc-hc64", "mpc-hc"]),
     ("mpc-be", ["mpc-be64", "mpc-be"]),
     ("ffplay", ["ffplay"]),
     ("vlc", ["vlc"]),
+    ("mpv", ["mpv"]),
 ]
 
 
@@ -58,7 +68,8 @@ def _achar_exe(nome_familia: str, nomes_path: list[str]) -> str | None:
 
 def detectar_player() -> tuple[str, str] | None:
     """Retorna (familia, caminho_exe) do primeiro player disponível, ou None."""
-    for familia, nomes in _PREFERENCIA:
+    ordem = _PREFERENCIA_ANDROID + _PREFERENCIA if is_android() else _PREFERENCIA
+    for familia, nomes in ordem:
         exe = _achar_exe(familia, nomes)
         if exe:
             return (familia, exe)
@@ -69,6 +80,23 @@ def _montar_comando(
     familia: str, exe: str, url: str, titulo: str | None, largura: int, altura: int
 ) -> list[str]:
     """Monta a linha de comando específica para cada player."""
+    if familia == "vlc-android":
+        return [
+            exe,
+            "start",
+            "-a",
+            "android.intent.action.VIEW",
+            "-d",
+            url,
+            "-p",
+            "org.videolan.vlc",
+        ]
+    if familia == "termux-open":
+        return [exe, url]
+    if familia == "mpv-tct":
+        return [exe, "--vo=tct", "--rtsp-transport=tcp", "--profile=low-latency", url]
+    if familia == "mpv":
+        return [exe, "--rtsp-transport=tcp", "--profile=low-latency", url]
     if familia in ("mpc-hc", "mpc-be"):
         # /new força nova instância; /play começa a tocar automaticamente.
         return [exe, url, "/new", "/play"]
@@ -216,12 +244,13 @@ def abrir_stream(
     familia, exe = player
     cmd = _montar_comando(familia, exe, url, titulo, largura, altura)
     _log.info("Abrindo no %s (%s): %s", familia, exe, url)
-    # Players GUI (MPC/VLC) são desacoplados do terminal do Textual; só o
-    # ffplay (SDL) precisa do stderr capturado para diagnóstico.
+    # Players GUI (MPC/VLC) são desacoplados do terminal do Textual;
+    # ffplay e launchers Android capturam stderr para diagnóstico.
+    capture_err = familia in ("ffplay", "vlc-android", "termux-open")
     return subprocess.Popen(
         cmd,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE if familia == "ffplay" else subprocess.DEVNULL,
+        stderr=subprocess.PIPE if capture_err else subprocess.DEVNULL,
         stdin=subprocess.DEVNULL,
         text=True,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
@@ -231,18 +260,42 @@ def abrir_stream(
 def erro_se_morreu(proc: subprocess.Popen, espera: float = 2.5) -> str | None:
     """Se o player morreu logo após abrir, retorna a última linha de erro.
 
-    Retorna None se o player continua vivo (abriu com sucesso) ou se não há
-    stderr capturado (players GUI como MPC-HC/VLC).
+    Retorna None se o player continua vivo (abriu com sucesso), se saiu com
+    código 0 (launchers de Intent como am start / termux-open), ou se não há
+    stderr capturado com falha.
     """
     try:
         proc.wait(timeout=espera)
     except subprocess.TimeoutExpired:
         return None  # ainda rodando = abriu
+    if proc.returncode == 0:
+        return None
     saida = (proc.stderr.read() if proc.stderr else "") or ""
     linhas = [ln for ln in saida.splitlines() if ln.strip()]
     erro = linhas[-1] if linhas else "player fechou imediatamente"
     _log.warning("player morreu: %s", erro)
     return erro
+
+
+def comando_mpv_terminal(url: str) -> list[str] | None:
+    """Retorna comando para reproduzir o stream no terminal via mpv --vo=tct."""
+    exe = shutil.which("mpv")
+    if not exe:
+        return None
+    return [exe, "--vo=tct", "--rtsp-transport=tcp", "--profile=low-latency", url]
+
+
+def capturar_e_abrir_snapshot(
+    url: str, destino: str, timeout: float = 10.0
+) -> tuple[bool, str]:
+    """Captura um frame JPEG/PNG via ffmpeg e tenta abrir no visualizador do sistema."""
+    Path(destino).parent.mkdir(parents=True, exist_ok=True)
+    if shutil.which("ffmpeg") is None:
+        return False, "ffmpeg não encontrado no PATH"
+    if not salvar_snapshot(url, destino, timeout=timeout):
+        return False, "Falha ao capturar snapshot do stream"
+    open_file_or_url(destino)
+    return True, destino
 
 
 def salvar_snapshot(url: str, destino: str, timeout: float = 10.0) -> bool:

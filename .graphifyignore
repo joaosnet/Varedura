@@ -1,10 +1,64 @@
-# Inventário e estado privado das câmeras/rede.
+# Controle de versão, ambientes e caches
+.git/
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.agents/
+.claude/
+.codex/
+build/
+dist/
+*.egg-info/
+graphify-out/
+
+# Inventário e estado privado das câmeras/rede (também validado em tests/test_graphify_privacy.py)
 /credenciais.json
 /ips_conhecidos.json
 /regioes.json
 /camera_bridge_state.json
 /.camera-locations.private.json
 /roteador_creds.txt
+/router_template.html
 /.env
-/logs/
+tests/arp.py
+tests/router_phishing.py
+tests/static/
 
+# Ferramentas ocultas, dados gerados e artefatos pesados (ruído de tokens)
+lmarena/
+todos_ips_belem.txt
+uv.lock
+logs/
+exports/
+recordings/
+reports/
+runtime/
+screenshots/
+data/
+docs/arquivo/
+mascot/images/
+
+# Flutter: builds, tool caches, código nativo gerado e assets (manter apenas mobile/lib/ e mobile/test/)
+mobile/build/
+mobile/.dart_tool/
+mobile/android/
+mobile/ios/
+mobile/linux/
+mobile/macos/
+mobile/windows/
+mobile/web/
+mobile/assets/
+
+# Mídia, relatórios e logs
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+*.pdf
+*.csv
+*.log
+*.html

@@ -2,21 +2,14 @@
 
 import json
 import socket
-import struct
 import threading
-import time
-import pytest
 
 from rtsp.xiongmai import (
-    DEFAULT_NETIP_PORT,
-    NETIP_HEADER_FORMAT,
     NETIP_HEADER_SIZE,
     NETIP_MAGIC,
     NetIPMsgId,
     NetIPPacket,
     PTZCommand,
-    SofiaP2PClient,
-    XiongmaiDiscovery,
     XiongmaiNetIPClient,
     encrypt_xiongmai_digest,
     encrypt_xiongmai_password,

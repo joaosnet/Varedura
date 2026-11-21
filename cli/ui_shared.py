@@ -88,15 +88,32 @@ def save_prefs(data: dict) -> None:
         pass
 
 
-def load_recording_pref() -> bool:
-    """Load recording preference from disk."""
-    return bool(load_prefs().get("recording_enabled", True))
+def load_git_autoupdate_pref(default: bool = True) -> bool:
+    """Load Git auto-update preference from disk."""
+    value = load_prefs().get("git_autoupdate")
+    return default if value is None else bool(value)
 
 
-def save_recording_pref(enabled: bool) -> None:
-    """Save recording preference to disk."""
+def save_git_autoupdate_pref(enabled: bool) -> None:
+    """Save Git auto-update preference to disk."""
     data = load_prefs()
-    data["recording_enabled"] = enabled
+    data["git_autoupdate"] = bool(enabled)
+    save_prefs(data)
+
+
+def load_git_last_check() -> float:
+    """Load timestamp of the last Git update check from disk."""
+    raw = load_prefs().get("git_last_check", 0.0)
+    try:
+        return float(raw or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def save_git_last_check(ts: float) -> None:
+    """Persist timestamp of the last Git update check."""
+    data = load_prefs()
+    data["git_last_check"] = float(ts)
     save_prefs(data)
 
 
@@ -430,18 +447,18 @@ def build_cleanup_status_panel(steps: dict[str, bool] | None = None) -> Panel:
 
 
 def _add_common_status_rows(
-    table: Table, recording_enabled: bool, current_language: str
+    table: Table,
+    current_language: str,
+    *,
+    git_autoupdate: bool | None = None,
 ) -> None:
-    """Add the rows shared by the settings and dashboard status panels.
-
-    Keeps recording / language / cleanup / MCP rows defined in one place so the
-    two panels never drift apart.
-    """
-    table.add_row(
-        t("settings.option_rec"),
-        t("settings.rec_on") if recording_enabled else t("settings.rec_off"),
-    )
+    """Add the rows shared by the settings and dashboard status panels."""
     table.add_row(t("settings.option_lang"), current_language)
+    if git_autoupdate is not None:
+        table.add_row(
+            t("updater.autoupdate_label"),
+            t("termux.status_on") if git_autoupdate else t("termux.status_off"),
+        )
     table.add_row(t("settings.option_cleanup"), cleanup_summary())
     table.add_row(
         t("mcp.option"),
@@ -450,13 +467,19 @@ def _add_common_status_rows(
 
 
 def build_settings_status_table(
-    recording_enabled: bool, current_language: str
+    current_language: str,
+    git_autoupdate: bool | None = None,
 ) -> Table:
     """Build the shared settings status table."""
+    resolved_autoupdate = (
+        load_git_autoupdate_pref() if git_autoupdate is None else bool(git_autoupdate)
+    )
     table = Table(box=box.SIMPLE, show_header=True, expand=True)
     table.add_column(t("settings.current_status"), style="bold cyan")
     table.add_column("", style="white")
-    _add_common_status_rows(table, recording_enabled, current_language)
+    _add_common_status_rows(
+        table, current_language, git_autoupdate=resolved_autoupdate
+    )
     return table
 
 
@@ -491,19 +514,35 @@ def _fmt_traffic(sent_mb: float, recv_mb: float) -> Text:
     return Text(f"↑ {_fmt_data_mb(sent_mb)}   ↓ {_fmt_data_mb(recv_mb)}", style="white")
 
 
+def _fmt_android_battery(android_telemetry) -> Text:
+    """Format Android battery percentage, charging state and temperature."""
+    pct = getattr(android_telemetry, "battery_pct", None)
+    if pct is None:
+        return Text("—", style="dim")
+    status = str(getattr(android_telemetry, "battery_status", "") or "").strip()
+    temp = getattr(android_telemetry, "battery_temp_c", None)
+    parts = [f"{pct}%"]
+    if status:
+        parts.append(status)
+    if temp is not None:
+        parts.append(f"{temp:.1f}°C")
+    style = "green" if pct >= 40 else ("yellow" if pct >= 20 else "bold red")
+    return Text(" · ".join(parts), style=style)
+
+
 def build_dashboard_status(
-    recording_enabled: bool,
     current_language: str,
-    network: dict | None = None,
-    system: dict | None = None,
+    network_snapshot: dict | None = None,
+    dash_stats: dict | None = None,
+    android_telemetry=None,
 ) -> Panel:
     """Build a live at-a-glance status overview for the dashboard.
 
-    ``system`` is an optional dict from ``port_scanner.get_system_network_stats``
+    ``dash_stats`` is an optional dict from ``port_scanner.get_system_network_stats``
     (memory + cumulative traffic) so the dashboard stays live even before the
     full network monitor is started.
     """
-    network = network or {}
+    network = network_snapshot or {}
     threshold = int(network.get("lag_threshold_ms", 100))
     gateway = str(network.get("gateway_ip") or "—")
     running = bool(network.get("running"))
@@ -524,79 +563,45 @@ def build_dashboard_status(
     )
     table.add_row(t("dashboard.external"), _fmt_ping(network.get("ext_ms"), threshold))
 
-    if system:
-        mem_pct = system.get("memoria_percent")
+    if android_telemetry is not None:
+        table.add_row(t("termux.lbl_battery"), _fmt_android_battery(android_telemetry))
+        wifi_ip = str(getattr(android_telemetry, "wifi_ip", "") or "").strip()
+        if wifi_ip:
+            table.add_row(t("termux.lbl_wifi"), wifi_ip)
+        mobile_ip = str(getattr(android_telemetry, "mobile_ip", "") or "").strip()
+        if mobile_ip:
+            table.add_row(t("termux.lbl_mobile"), mobile_ip)
+
+    if dash_stats:
+        mem_pct = dash_stats.get("memoria_percent")
         if mem_pct is not None:
             table.add_row(
                 t("dashboard.memory"),
                 _fmt_memory(
                     float(mem_pct),
-                    float(system.get("memoria_usada_gb", 0.0)),
-                    float(system.get("memoria_total_gb", 0.0)),
+                    float(dash_stats.get("memoria_usada_gb", 0.0)),
+                    float(dash_stats.get("memoria_total_gb", 0.0)),
                 ),
             )
-        sent = system.get("bytes_enviados_mb")
-        recv = system.get("bytes_recebidos_mb")
+        sent = dash_stats.get("bytes_enviados_mb")
+        recv = dash_stats.get("bytes_recebidos_mb")
         if sent is not None and recv is not None:
             table.add_row(
                 t("dashboard.traffic"), _fmt_traffic(float(sent), float(recv))
             )
 
-    _add_common_status_rows(table, recording_enabled, current_language)
+    _add_common_status_rows(table, current_language)
     return Panel(table, title=t("menu.title"), border_style="blue")
 
 
 def format_duration(seconds: float) -> str:
-    """Format a duration in seconds as a compact human string (e.g. 1h05m).
-
-    Shared helper for both the dashboard records panel and the network health
-    card (streak), so the formatting lives in exactly one place.
-    """
+    """Format a duration in seconds as a compact human string (e.g. 1h05m)."""
     seconds = int(seconds)
     if seconds < 60:
         return f"{seconds}s"
     if seconds < 3600:
         return f"{seconds // 60}m{seconds % 60:02d}s"
     return f"{seconds // 3600}h{(seconds % 3600) // 60:02d}m"
-
-
-def build_achievements_row(state) -> Panel:
-    """Build the achievements badge wall from a GameState."""
-    from cli.gamification import ACHIEVEMENTS
-
-    table = Table.grid(padding=(0, 1), expand=True)
-    table.add_column(justify="left", no_wrap=True)
-    table.add_column(ratio=1)
-    for ach in ACHIEVEMENTS:
-        unlocked = ach.id in state.achievements
-        icon = ach.emoji if unlocked else "🔒"
-        name_style = "bold green" if unlocked else "dim"
-        name = Text(t(ach.name_key), style=name_style)
-        if unlocked:
-            name.append(f"  {t(ach.desc_key)}", style="dim")
-        table.add_row(icon, name)
-
-    unlocked_count = sum(1 for a in ACHIEVEMENTS if a.id in state.achievements)
-    return Panel(
-        table,
-        title=t("game.achievements")
-        + f"  [dim]{unlocked_count}/{len(ACHIEVEMENTS)}[/]",
-        border_style="yellow",
-    )
-
-
-def build_records_panel(state) -> Panel:
-    """Build the personal-bests panel from a GameState."""
-    table = Table(box=box.SIMPLE, show_header=False, expand=True)
-    table.add_column(style="bold cyan", no_wrap=True)
-    table.add_column(style="white")
-    best_ping = f"{state.best_ping:.0f} ms" if state.best_ping else "—"
-    best_down = f"{state.best_download:.0f} Mbps" if state.best_download else "—"
-    table.add_row(t("game.rec_best_ping"), best_ping)
-    table.add_row(t("game.rec_best_download"), best_down)
-    table.add_row(t("game.rec_best_streak"), format_duration(state.best_streak_s))
-    table.add_row(t("game.rec_space_freed"), f"{state.total_space_freed_gb:.1f} GB")
-    return Panel(table, title=t("game.records"), border_style="magenta")
 
 
 def build_tool_option(title: str, description: str, accent: str = "cyan") -> Panel:

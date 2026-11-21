@@ -18,7 +18,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 _log = logging.getLogger("varedura.xiongmai")
 

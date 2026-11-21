@@ -7,7 +7,6 @@ bounding boxes, confidence scores, and class labels for persons, vehicles, and p
 from __future__ import annotations
 
 import logging
-import math
 import time
 from dataclasses import dataclass, field
 from pathlib import Path

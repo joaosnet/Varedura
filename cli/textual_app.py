@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import datetime
+from pathlib import Path
 import threading
+import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 
@@ -35,39 +37,29 @@ from textual.widgets import (
 )
 from textual.widgets.option_list import Option
 
-from cli.gamification import (
-    achievement_by_id,
-    check_achievements,
-    compute_health_score,
-    load_game_state,
-    save_game_state,
-    StreakTracker,
-    update_records,
-)
 from cli.richlog import DailyLogWriter
 from cli.textual_cameras import CAMERAS_CSS, CamerasMixin
+from cli.textual_termux import TERMUX_CSS, TermuxMixin
 from cli.ui_shared import (
     CLEANUP_GROUPS,
     CLEANUP_STEPS,
     QUICK_CLEANUP_KEYS,
     anatel_minimums,
-    build_achievements_row,
     build_cleanup_status_panel,
     build_dashboard_status,
     build_ports_summary,
-    build_records_panel,
     build_settings_status_table,
     build_tool_option,
     cleanup_label_key,
     format_duration,
     get_cleanup_steps,
     is_mcp_configured,
+    load_git_autoupdate_pref,
     load_network_config,
-    load_recording_pref,
     run_cleanup_steps,
     save_cleanup_steps,
+    save_git_autoupdate_pref,
     save_network_config,
-    save_recording_pref,
     selected_cleanup_keys,
     toggle_mcp_config,
 )
@@ -77,7 +69,8 @@ from i18n import (
     set_language,
     t,
 )
-from mascot.frames import FRAMES, STATES
+from monitor.network_health import compute_health_score
+from varedura import termux_env, updater
 
 
 def _cleanup_checkbox_id(step_key: str) -> str:
@@ -169,7 +162,7 @@ class ShutdownScreen(ModalScreen):
             pass
 
 
-class VareduraTextualApp(CamerasMixin, App[str | None]):
+class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
     """Main Textual TUI for Varedura."""
 
     CSS = (
@@ -209,15 +202,91 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         width: 1fr;
     }
 
+    #dash-quick-actions {
+        layout: grid;
+        grid-size: 2;
+        grid-gutter: 1;
+        height: auto;
+        margin-bottom: 1;
+    }
+
+    #dash-quick-actions Button {
+        width: 100%;
+        height: auto;
+        min-height: 3;
+    }
+
+    #dashboard-grid.mobile-narrow {
+        layout: vertical;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    #dashboard-grid.mobile-narrow #dashboard-left {
+        width: 100%;
+        min-width: 0;
+        height: auto;
+        padding-right: 0;
+        margin-bottom: 1;
+    }
+
+    #dashboard-grid.mobile-narrow #dashboard-right {
+        width: 100%;
+        height: auto;
+        min-height: 8;
+    }
+
+    #dashboard-grid.mobile-narrow #tool-menu {
+        height: auto;
+        max-height: 18;
+    }
+
+    #dashboard-grid.mobile-narrow #dashboard-log {
+        height: 8;
+        min-height: 6;
+    }
+
+    Screen.mobile-narrow .pane {
+        padding: 0 1;
+    }
+
+    Screen.mobile-narrow .form-row {
+        layout: vertical;
+        height: auto;
+    }
+
+    Screen.mobile-narrow .form-row > Label {
+        width: 100%;
+    }
+
+    Screen.mobile-narrow .form-row > Input,
+    Screen.mobile-narrow .form-row > Select {
+        width: 100%;
+    }
+
+    Screen.mobile-narrow .form-row > Button {
+        margin-left: 0;
+        margin-top: 1;
+        width: 100%;
+    }
+
+    Screen.mobile-narrow .button-row {
+        layout: vertical;
+        height: auto;
+    }
+
+    Screen.mobile-narrow .button-row Button {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 1;
+    }
+
     #tool-menu {
         height: 1fr;
         border: solid $primary;
     }
 
     #dashboard-summary,
-    #mascot-card,
-    #achievements-card,
-    #records-card,
     #cleanup-summary,
     #settings-status,
     #network-ports-summary {
@@ -290,11 +359,6 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
     #cleanup-top {
         height: auto;
         margin-bottom: 1;
-    }
-
-    #cleanup-mascot {
-        width: auto;
-        height: auto;
     }
 
     #cleanup-reward {
@@ -476,6 +540,7 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
     }
     """
         + CAMERAS_CSS
+        + TERMUX_CSS
     )
 
     BINDINGS = [
@@ -483,12 +548,14 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         Binding("d", "toggle_dark", t("textual.bind_dark"), show=True),
         Binding("s", "show_settings", t("textual.bind_settings"), show=True),
         Binding("r", "rescan_ports", t("textual.bind_scan"), show=True),
+        Binding("p", "capture_screenshot", t("screenshot.bind_label"), show=True),
         Binding("escape", "dashboard", t("textual.bind_dashboard"), show=True),
+        Binding("f12", "toggle_keyboard_page", t("termux.bind_kbd_page"), show=False),
         Binding("delete", "cam_del_regiao", t("rtsp.bind_del"), show=False),
         Binding("l", "cam_log", t("rtsp.bind_log"), show=False),
     ]
 
-    TOOL_IDS = ("network", "docker", "settings")
+    TOOL_IDS = ("network", "docker", "termux", "settings")
 
     def __init__(self) -> None:
         super().__init__()
@@ -501,6 +568,10 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self._target_stats: dict[str, object] = {}
         self._target_latest: dict[str, object] = {}
         self._network_config = load_network_config()
+        if termux_env.is_android() and not self._network_config.get(
+            "target_onboarding_completed", False
+        ):
+            self._network_config["league_auto_detect"] = False
         self._network_history = None
         self._ping_scheduler = None
         self._target_map: dict[str, object] = {}
@@ -532,16 +603,16 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self._active_tab = "dashboard"
         # Timers periódicos (criados em on_mount, parados em on_unmount).
         self._dashboard_timer = None
-        self._mascot_timer = None
-        # Gamification state.
-        self._game = load_game_state()
-        self._streak = StreakTracker()
+        self._health_streak_s: float = 0.0
         self._score_hist: deque[float] = deque(maxlen=100)
-        self._mascot = None
-        self._mascot_state = STATES.IDLE
-        self._mascot_msg = ""
-        self._mascot_frame = 0
-        # Estado da aba Câmeras (RTSP), fundida via CamerasMixin.
+        self._last_screenshot_path: Path | None = None
+        self._last_export_path: Path | None = None
+        self._primary_fail_streak: int = 0
+        self._outage_notified: bool = False
+        self._last_outage_notif_ts: float = 0.0
+        self._kbd_macro_buf: str = ""
+        # Estado da aba Termux e aba Câmeras (RTSP), fundidas via mixins.
+        self._init_termux_state()
         self._init_cameras_state()
         self._shutting_down = False
         self._shutdown_screen = None
@@ -555,12 +626,13 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         with TabbedContent(initial="dashboard", id="main-tabs"):
             with TabPane(t("textual.tab_dashboard"), id="dashboard"):
                 yield from self._compose_dashboard()
-            with TabPane(t("textual.tab_cleanup"), id="docker"):
-                yield Vertical(
-                    Label(t("textual.loading")),
-                    id="docker-lazy-host",
-                    classes="lazy-pane",
-                )
+            if termux_env.should_show_docker_tab():
+                with TabPane(t("textual.tab_cleanup"), id="docker"):
+                    yield Vertical(
+                        Label(t("textual.loading")),
+                        id="docker-lazy-host",
+                        classes="lazy-pane",
+                    )
             with TabPane(t("textual.tab_network"), id="network"):
                 yield Vertical(
                     Label(t("textual.loading")),
@@ -573,6 +645,13 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                     id="cameras-lazy-host",
                     classes="lazy-pane",
                 )
+            if termux_env.is_termux():
+                with TabPane(t("termux.tab_title"), id="termux"):
+                    yield Vertical(
+                        Label(t("textual.loading")),
+                        id="termux-lazy-host",
+                        classes="lazy-pane",
+                    )
             with TabPane(t("textual.tab_settings"), id="settings"):
                 yield Vertical(
                     Label(t("textual.loading")),
@@ -582,59 +661,89 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         yield Footer()
 
     def _compose_dashboard(self) -> ComposeResult:
+        is_tmx = termux_env.is_termux()
+        menu_options = [
+            Option(
+                build_tool_option(t("menu.option_1"), t("menu.desc_1"), "green"),
+                id="network",
+            ),
+        ]
+        if termux_env.should_show_docker_tab():
+            menu_options.append(
+                Option(
+                    build_tool_option(t("menu.option_2"), t("menu.desc_2"), "cyan"),
+                    id="docker",
+                )
+            )
+        menu_options.extend(
+            [
+                Option(
+                    build_tool_option(t("menu.option_3"), t("menu.desc_3"), "yellow"),
+                    id="scanner",
+                ),
+                Option(
+                    build_tool_option(
+                        t("rtsp.tab_cameras"), t("rtsp.menu_desc"), "red"
+                    ),
+                    id="cameras",
+                ),
+            ]
+        )
+        if is_tmx:
+            menu_options.append(
+                Option(
+                    build_tool_option(
+                        t("termux.menu_title"), t("termux.menu_desc"), "blue"
+                    ),
+                    id="termux",
+                )
+            )
+        menu_options.extend(
+            [
+                Option(Text(""), disabled=True),
+                Option(
+                    build_tool_option(
+                        t("menu.option_settings"),
+                        t("menu.desc_settings"),
+                        "magenta",
+                    ),
+                    id="settings",
+                ),
+            ]
+        )
+
         with Horizontal(id="dashboard-grid", classes="pane"):
             with Vertical(id="dashboard-left"):
                 yield RichRenderable(
-                    Text(f"🤖 Varedura\n{t('mascot.welcome')}", justify="center"),
-                    id="mascot-card",
-                )
-                yield RichRenderable(
                     build_dashboard_status(
-                        load_recording_pref(),
                         get_language(),
                         self._network_status_snapshot(),
+                        android_telemetry=self._termux_last_telemetry,
                     ),
                     id="dashboard-summary",
                 )
-                yield OptionList(
-                    Option(
-                        build_tool_option(
-                            t("menu.option_1"), t("menu.desc_1"), "green"
-                        ),
-                        id="network",
-                    ),
-                    Option(
-                        build_tool_option(t("menu.option_2"), t("menu.desc_2"), "cyan"),
-                        id="docker",
-                    ),
-                    Option(
-                        build_tool_option(
-                            t("menu.option_3"), t("menu.desc_3"), "yellow"
-                        ),
-                        id="scanner",
-                    ),
-                    Option(
-                        build_tool_option(
-                            t("rtsp.tab_cameras"), t("rtsp.menu_desc"), "red"
-                        ),
-                        id="cameras",
-                    ),
-                    Option(Text(""), disabled=True),
-                    Option(
-                        build_tool_option(
-                            t("menu.option_settings"),
-                            t("menu.desc_settings"),
-                            "magenta",
-                        ),
-                        id="settings",
-                    ),
-                    id="tool-menu",
-                )
+                if is_tmx:
+                    yield Label(t("termux.dash_actions"), classes="section-title")
+                    with Grid(id="dash-quick-actions"):
+                        yield Button(
+                            t("textual.tab_network"),
+                            id="dash-btn-network",
+                            variant="primary",
+                        )
+                        yield Button(t("rtsp.tab_cameras"), id="dash-btn-cameras")
+                        yield Button(t("termux.tab_title"), id="dash-btn-termux")
+                        if termux_env.has_claro_suite():
+                            yield Button(
+                                t("termux.subtab_claro"), id="dash-btn-claro"
+                            )
+                        yield Button(
+                            t("screenshot.btn_capture"), id="dash-btn-screenshot"
+                        )
+                        yield Button(
+                            t("textual.tab_settings"), id="dash-btn-settings"
+                        )
+                yield OptionList(*menu_options, id="tool-menu")
             with Vertical(id="dashboard-right"):
-                yield RichRenderable(
-                    build_achievements_row(self._game), id="achievements-card"
-                )
-                yield RichRenderable(build_records_panel(self._game), id="records-card")
                 yield RichLog(
                     id="dashboard-log", highlight=True, markup=True, wrap=True
                 )
@@ -646,9 +755,6 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             with VerticalScroll(id="cleanup-config"):
                 yield Label(t("cleanup_prefs.title"), classes="section-title")
                 with Horizontal(id="cleanup-top"):
-                    yield RichRenderable(
-                        Text("🤖", justify="center"), id="cleanup-mascot"
-                    )
                     with Vertical(id="cleanup-reward"):
                         yield Label(
                             t("cleanup_prefs.freed_label"), classes="card-title"
@@ -698,6 +804,7 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                 )
                 yield Button(t("textual.network_rescan"), id="network-rescan")
                 yield Button(t("textual.network_export"), id="network-export")
+                yield Button(t("network.btn_share_report"), id="network-share")
                 yield Label(t("textual.network_idle"), id="network-status")
             with Grid(id="network-cards"):
                 with Vertical(classes="ping-card", id="health-card"):
@@ -766,25 +873,40 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         ]
         return ", ".join(names)
 
+    @staticmethod
+    def _format_git_token_status() -> str:
+        _, source = updater.resolve_github_token()
+        if source != "none":
+            return f"{t('updater.token_status_label')}: {t('updater.token_configured', source=source)}"
+        return f"{t('updater.token_status_label')}: {t('updater.token_missing')}"
+
     def _compose_settings(self) -> ComposeResult:
         lang_names = {"pt": t("lang.pt"), "en": t("lang.en")}
         language_options = [
             (lang_names.get(code, code), code) for code in get_supported_languages()
         ]
+        git_auto = load_git_autoupdate_pref()
         with VerticalScroll(classes="pane"):
             yield Label(t("settings.title"), classes="section-title")
             yield RichRenderable(
-                build_settings_status_table(load_recording_pref(), get_language()),
+                build_settings_status_table(get_language(), git_autoupdate=git_auto),
                 id="settings-status",
             )
-            with Horizontal(classes="form-row"):
-                yield Label(t("settings.option_rec"))
-                yield Switch(value=load_recording_pref(), id="recording-switch")
             with Horizontal(classes="form-row"):
                 yield Label(t("settings.option_lang"))
                 yield Select(
                     language_options, value=get_language(), id="language-select"
                 )
+
+            yield Label(t("updater.section_title"), classes="section-title")
+            with Horizontal(classes="form-row"):
+                yield Label(t("updater.autoupdate_label"))
+                yield Switch(value=git_auto, id="git-autoupdate-switch")
+            yield Label(self._format_git_token_status(), id="git-token-status")
+            yield Label(t("updater.token_hint"), classes="card-stats")
+            with Horizontal(classes="button-row"):
+                yield Button(t("updater.btn_update_now"), id="git-update-now")
+                yield Button(t("screenshot.btn_capture"), id="settings-screenshot")
 
             net = self._network_config
             yield Label(t("settings.network_title"), classes="section-title")
@@ -801,7 +923,9 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             with Horizontal(classes="form-row"):
                 yield Label(t("network.league_auto"))
                 yield Switch(
-                    value=bool(net.get("league_auto_detect", True)),
+                    value=False
+                    if termux_env.is_android()
+                    else bool(net.get("league_auto_detect", True)),
                     id="league-auto-switch",
                 )
             with Horizontal(classes="form-row"):
@@ -843,11 +967,28 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                 id="mcp-status",
             )
 
+    def _apply_mobile_layout(self, width: int) -> None:
+        narrow = width < 76
+        try:
+            self.screen.set_class(narrow, "mobile-narrow")
+        except Exception:
+            pass
+        try:
+            self.query_one("#dashboard-grid").set_class(narrow, "mobile-narrow")
+        except Exception:
+            pass
+
     def on_mount(self) -> None:
-        self.query_one("#tool-menu", OptionList).focus()
+        self._apply_mobile_layout(self.size.width)
+        if self.size.width < 76 and termux_env.is_termux():
+            try:
+                self.query_one("#dashboard-grid").scroll_home(animate=False)
+            except Exception:
+                pass
+        else:
+            self.query_one("#tool-menu", OptionList).focus()
         self._write_dashboard_log(t("textual.ready"))
         self._dashboard_timer = self.set_interval(2.0, self._refresh_dashboard_status)
-        self._mascot_timer = self.set_interval(0.5, self._animate_mascot)
         # Startup invariant: the first refresh happens before gateway discovery,
         # subprocesses, network traffic, or construction of hidden tab widgets.
         self.call_after_refresh(self._after_first_refresh)
@@ -856,6 +997,32 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self._initialize_network_after_ready()
         self._run_dashboard_poller()
         self.set_timer(0.15, self._maybe_show_target_onboarding)
+        if termux_env.is_termux() and load_git_autoupdate_pref():
+            self._run_git_autoupdate_bg()
+
+    @work(thread=True, exclusive=False)
+    def _run_git_autoupdate_bg(self) -> None:
+        result = updater.update_repository(force=False)
+        self.call_from_thread(self._on_git_autoupdate_result, result)
+
+    def _on_git_autoupdate_result(self, result) -> None:
+        if result.status == "updated":
+            self.notify(
+                t(
+                    "updater.notif_body",
+                    count=result.commits_pulled,
+                    branch=result.branch,
+                ),
+                title=t("updater.notif_title"),
+            )
+            self._write_dashboard_log(
+                f"[green]{t('updater.status_updated', count=result.commits_pulled)}[/]"
+            )
+        if "termux" in self._hydrated_tabs:
+            try:
+                self._apply_termux_git_status(updater.get_repo_status())
+            except Exception:
+                pass
 
     async def _hydrate_tab(self, tab_id: str) -> None:
         """Compose an expensive tab only on its first activation."""
@@ -869,6 +1036,7 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                 "docker": self._compose_cleanup,
                 "network": self._compose_network,
                 "cameras": self._compose_cameras,
+                "termux": self._compose_termux,
                 "settings": self._compose_settings,
             }
             await host.mount_compose(composers[tab_id]())
@@ -893,6 +1061,8 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         elif tab_id == "cameras":
             self._cameras_on_mount()
             self._maybe_render_cameras()
+        elif tab_id == "termux":
+            self._termux_on_mount()
         elif tab_id == "settings":
             self._refresh_target_selection_labels()
 
@@ -914,18 +1084,15 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         return snapshot
 
     def _refresh_dashboard_status(self) -> None:
-        """Update the dashboard status + records panels with live data."""
+        """Update the dashboard status panel with live data."""
         try:
             self.query_one("#dashboard-summary", RichRenderable).update(
                 build_dashboard_status(
-                    load_recording_pref(),
                     get_language(),
                     self._network_status_snapshot(),
                     self._dash_stats,
+                    android_telemetry=self._termux_last_telemetry,
                 )
-            )
-            self.query_one("#records-card", RichRenderable).update(
-                build_records_panel(self._game)
             )
         except Exception:
             pass
@@ -942,6 +1109,11 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                 self._dash_stats = get_system_network_stats()
             except Exception:
                 self._dash_stats = {}
+            if termux_env.is_termux() and self._active_tab == "dashboard":
+                try:
+                    self._termux_last_telemetry = termux_env.collect_android_telemetry()
+                except Exception:
+                    pass
             # Ping the gateway only when the dashboard is the visible tab and the
             # heavy monitor isn't already collecting samples — no point spawning
             # ping subprocesses for a panel nobody is looking at.
@@ -960,41 +1132,6 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                 except Exception:
                     pass
             self._dash_stop.wait(timeout=3.0)
-
-    def _get_mascot(self):
-        if self._mascot is None:
-            from mascot.renderer import MascotRenderer
-
-            self._mascot = MascotRenderer()
-        return self._mascot
-
-    def _animate_mascot(self) -> None:
-        """Cycle the mascot sprite frames; only while the dashboard is visible."""
-        try:
-            if self.query_one("#main-tabs", TabbedContent).active != "dashboard":
-                return
-            frames = FRAMES.get(self._mascot_state) or FRAMES[STATES.IDLE]
-            path = frames[self._mascot_frame % len(frames)]
-            self._mascot_frame += 1
-            self.query_one("#mascot-card", RichRenderable).update(
-                self._get_mascot().render_static_from_path(
-                    path, self._mascot_msg, self._mascot_state
-                )
-            )
-        except Exception:
-            pass
-
-    def _update_mascot_state(self, score: int, testing: bool) -> None:
-        if not self.network_running:
-            self._mascot_state, self._mascot_msg = STATES.IDLE, t("mascot.welcome")
-        elif testing:
-            self._mascot_state, self._mascot_msg = STATES.SCANNING, t("mascot.scanning")
-        elif score < 35:
-            self._mascot_state, self._mascot_msg = STATES.ERROR, ""
-        elif score < 70:
-            self._mascot_state, self._mascot_msg = STATES.WORKING, ""
-        else:
-            self._mascot_state, self._mascot_msg = STATES.IDLE, ""
 
     @work(thread=True, exclusive=True)
     def _initialize_network_after_ready(self) -> None:
@@ -1121,6 +1258,85 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             except Exception:
                 pass
 
+    def action_capture_screenshot(self) -> Path | None:
+        """Capture native Textual SVG screenshot and companion text summary."""
+        out_dir = Path("exports") / "screenshots"
+        try:
+            out_dir.mkdir(parents=True, exist_ok=True)
+            stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            svg_path = out_dir / f"varedura_{stamp}.svg"
+            txt_path = svg_path.with_suffix(".txt")
+            svg_data = self.export_screenshot()
+            svg_path.write_text(svg_data, encoding="utf-8")
+
+            snap = self._network_status_snapshot()
+            lines = [
+                f"timestamp: {datetime.datetime.now().isoformat(timespec='seconds')}",
+                f"active_tab: {self._active_tab}",
+                f"network_running: {snap.get('running', False)}",
+                f"gateway_ip: {snap.get('gateway_ip') or '—'}",
+                f"gateway_ms: {snap.get('local_ms') if snap.get('local_ms') is not None else '—'}",
+                f"external_ms: {snap.get('ext_ms') if snap.get('ext_ms') is not None else '—'}",
+            ]
+            if self._termux_last_telemetry is not None:
+                tel = self._termux_last_telemetry
+                lines.extend(
+                    [
+                        f"battery_pct: {tel.battery_pct if tel.battery_pct is not None else '—'}",
+                        f"wifi_ip: {tel.wifi_ip or '—'}",
+                        f"mobile_ip: {tel.mobile_ip or '—'}",
+                    ]
+                )
+            txt_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            self._last_screenshot_path = svg_path
+            self.notify(t("screenshot.saved", path=str(svg_path)))
+            self._write_dashboard_log(f"[green]{t('screenshot.saved', path=str(svg_path))}[/]")
+            if termux_env.is_termux():
+                termux_env.open_file_or_url(str(svg_path))
+            return svg_path
+        except Exception as exc:
+            self.notify(t("screenshot.failed", error=str(exc)), severity="error")
+            return None
+
+    def action_toggle_keyboard_page(self) -> None:
+        """Switch Termux extra-keys page via ~/.claro_suite/termux_page_switcher.py."""
+        ok, msg = termux_env.toggle_keyboard_page()
+        if ok:
+            self.notify(t("termux.kbd_switched"))
+        else:
+            self.notify(msg, severity="warning")
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        if termux_env.is_termux():
+            if action == "cam_log" and self._kbd_macro_buf.endswith("toggl"):
+                return False
+            if action == "capture_screenshot" and self._kbd_macro_buf.endswith("toggle-p"):
+                return False
+        return True
+
+    def on_key(self, event) -> None:
+        if not termux_env.is_termux() or isinstance(self.focused, Input):
+            return
+        char = getattr(event, "character", None)
+        if not (isinstance(char, str) and len(char) == 1):
+            return
+        macro = "toggle-page"
+        candidate = self._kbd_macro_buf + char
+        if candidate == macro:
+            self._kbd_macro_buf = ""
+            event.stop()
+            self.action_toggle_keyboard_page()
+            return
+        self._kbd_macro_buf = candidate if macro.startswith(candidate) else (char if macro.startswith(char) else "")
+
+    def _switch_main_tab(self, tab_id: str, subtab_id: str | None = None) -> None:
+        # Clear focus off dashboard buttons before hiding the dashboard TabPane
+        # so Textual does not refocus a sibling button and bounce back.
+        self.set_focus(None)
+        self.query_one("#main-tabs", TabbedContent).active = tab_id
+        if subtab_id:
+            self.set_timer(0.05, lambda: self._activate_termux_subtab(subtab_id))
+
     def action_rescan_ports(self) -> None:
         """Jump to the network ports view and force a fresh scan next tick."""
         tabs = self.query_one("#main-tabs", TabbedContent)
@@ -1141,6 +1357,15 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             if attempt < 10:
                 self.set_timer(0.1, lambda: self._activate_ports_subtab(attempt + 1))
 
+    def _activate_termux_subtab(self, subtab_id: str, attempt: int = 0) -> None:
+        try:
+            self.query_one("#termux-subtabs", TabbedContent).active = subtab_id
+        except Exception:
+            if attempt < 15:
+                self.set_timer(
+                    0.1, lambda: self._activate_termux_subtab(subtab_id, attempt + 1)
+                )
+
     @on(OptionList.OptionSelected, "#tool-menu")
     def on_tool_selected(self, event: OptionList.OptionSelected) -> None:
         option_id = str(event.option_id or "")
@@ -1150,13 +1375,13 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             self.query_one("#main-tabs", TabbedContent).active = "network"
             self.set_timer(0.05, self._activate_ports_subtab)
             return
-        if option_id in {"network", "docker", "cameras", "settings"}:
+        if option_id in {"network", "docker", "cameras", "termux", "settings"}:
             self.query_one("#main-tabs", TabbedContent).active = option_id
 
     @on(TabbedContent.TabActivated, "#main-tabs")
     async def on_main_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         self._active_tab = event.pane.id or self._active_tab
-        if event.pane.id in {"docker", "network", "cameras", "settings"}:
+        if event.pane.id in {"docker", "network", "cameras", "termux", "settings"}:
             await self._hydrate_tab(event.pane.id)
 
     def on_data_table_row_selected(self, event) -> None:
@@ -1170,6 +1395,8 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
 
     def on_resize(self, event) -> None:
         width = event.size.width
+        self._apply_mobile_layout(width)
+        self._termux_on_resize(width)
         self._cameras_on_resize(width)
         self._apply_network_responsive_layout(width)
         # Etapas de limpeza: nº de colunas conforme a largura disponível.
@@ -1222,16 +1449,30 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                 stop_continuous_testing()
             except Exception:
                 pass
+        self._termux_on_unmount()
         self._cameras_on_unmount()
-        for timer in (self._dashboard_timer, self._mascot_timer):
-            if timer is not None:
-                timer.stop()
+        if self._dashboard_timer is not None:
+            self._dashboard_timer.stop()
 
     @on(Button.Pressed)
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
-        if button_id == "save-settings":
+        if button_id == "dash-btn-network":
+            self._switch_main_tab("network")
+        elif button_id == "dash-btn-cameras":
+            self._switch_main_tab("cameras")
+        elif button_id == "dash-btn-termux":
+            self._switch_main_tab("termux")
+        elif button_id == "dash-btn-claro":
+            self._switch_main_tab("termux", subtab_id="termux-claro")
+        elif button_id in {"dash-btn-screenshot", "settings-screenshot"}:
+            self.action_capture_screenshot()
+        elif button_id == "dash-btn-settings":
+            self._switch_main_tab("settings")
+        elif button_id == "save-settings":
             self._save_settings()
+        elif button_id == "git-update-now":
+            self._manual_git_update()
         elif button_id == "toggle-mcp":
             self._toggle_mcp()
         elif button_id == "save-cleanup":
@@ -1256,6 +1497,8 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             self.action_rescan_ports()
         elif button_id == "network-export":
             self._export_network_report()
+        elif button_id == "network-share":
+            self._share_network_report()
         elif button_id == "net-detect-gateway":
             self._detect_gateway()
         elif button_id == "preset-quick":
@@ -1264,9 +1507,35 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             self._apply_cleanup_preset([key for key, _l, _d in CLEANUP_STEPS])
         elif button_id and button_id.startswith("repair-action-"):
             self._confirm_repair_action(button_id)
+        elif self._termux_handle_button(button_id or ""):
+            return
         else:
             # Camera tab buttons (network cards, scans, credentials, etc.).
             self._cameras_handle_button(button_id or "")
+
+    @work(thread=True, exclusive=False)
+    def _manual_git_update(self) -> None:
+        self.call_from_thread(self.notify, t("updater.status_checking"))
+        result = updater.update_repository(force=True)
+        status = updater.get_repo_status()
+        self.call_from_thread(self._finish_manual_git_update, result, status)
+
+    def _finish_manual_git_update(self, result, repo_status: dict) -> None:
+        if "termux" in self._hydrated_tabs:
+            self._apply_termux_git_status(repo_status)
+        if result.status == "updated":
+            self.notify(t("updater.status_updated", count=result.commits_pulled))
+        elif result.status == "up_to_date":
+            self.notify(t("updater.status_up_to_date"))
+        elif result.status == "dirty":
+            self.notify(t("updater.status_dirty"), severity="warning")
+        elif result.status == "cooldown":
+            self.notify(t("updater.status_cooldown"))
+        else:
+            self.notify(
+                t("updater.status_error", error=result.message or "error"),
+                severity="error",
+            )
 
     def _apply_cleanup_preset(self, enabled_keys: list[str]) -> None:
         wanted = set(enabled_keys)
@@ -1290,9 +1559,13 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         if (event.checkbox.id or "").startswith("cleanup-"):
             self._refresh_cleanup_summary()
 
-    @on(Switch.Changed, "#recording-switch")
-    def on_recording_switch_changed(self, event: Switch.Changed) -> None:
-        self._refresh_live_settings_status()
+    @on(Switch.Changed)
+    def on_switch_changed(self, event: Switch.Changed) -> None:
+        switch_id = event.switch.id or ""
+        if switch_id == "git-autoupdate-switch":
+            self._refresh_live_settings_status()
+        elif switch_id.startswith("sw-termux-"):
+            self._termux_handle_switch(switch_id, bool(event.value))
 
     @on(Select.Changed, "#language-select")
     def on_language_select_changed(self, event: Select.Changed) -> None:
@@ -1301,21 +1574,44 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
     def _refresh_live_settings_status(self) -> None:
         """Reflect the current (unsaved) settings form in the status panel."""
         try:
-            recording = bool(self.query_one("#recording-switch", Switch).value)
+            git_auto = bool(self.query_one("#git-autoupdate-switch", Switch).value)
             lang = self.query_one("#language-select", Select).value
             if not isinstance(lang, str):
                 lang = get_language()
             self.query_one("#settings-status", RichRenderable).update(
-                build_settings_status_table(recording, lang)
+                build_settings_status_table(lang, git_autoupdate=git_auto)
             )
         except Exception:
             pass
 
     def _maybe_show_target_onboarding(self) -> None:
-        from monitor.ping_targets import TargetSelection
+        from monitor.ping_targets import TargetSelection, target_by_id
 
         selection = TargetSelection.from_config(self._network_config)
         if not selection.onboarding_completed or not selection.targets:
+            if termux_env.is_termux():
+                defaults = tuple(
+                    t_item
+                    for t_item in (
+                        target_by_id("cloudflare_ipv4"),
+                        target_by_id("google_ipv4"),
+                    )
+                    if t_item is not None
+                )
+                if defaults:
+                    default_selection = TargetSelection(
+                        targets=defaults,
+                        primary_target_id=defaults[0].id,
+                        league_auto_detect=not termux_env.is_android(),
+                        onboarding_completed=True,
+                    )
+                    updated = dict(self._network_config)
+                    updated.update(default_selection.to_config())
+                    save_network_config(updated)
+                    self._network_config = load_network_config()
+                    self._apply_network_config(self._network_config)
+                    self._refresh_target_selection_labels()
+                    return
             self._open_target_picker(onboarding=True)
 
     def _open_target_picker(self, *, onboarding: bool) -> None:
@@ -1540,9 +1836,9 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             self.notify(t("settings.net_gateway_not_found"), severity="warning")
 
     def _save_settings(self) -> None:
-        recording = self.query_one("#recording-switch", Switch).value
+        git_auto = bool(self.query_one("#git-autoupdate-switch", Switch).value)
         selected_language = self.query_one("#language-select", Select).value
-        save_recording_pref(bool(recording))
+        save_git_autoupdate_pref(git_auto)
         if isinstance(selected_language, str):
             set_language(selected_language)
         if not self._save_network_settings():
@@ -1664,10 +1960,6 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self.cleanup_running = running
         self.query_one("#run-cleanup", Button).disabled = running
         self.query_one("#save-cleanup", Button).disabled = running
-        if running:
-            self.query_one("#cleanup-mascot", RichRenderable).update(
-                self._get_mascot().render_static(STATES.WORKING, t("mascot.scanning"))
-            )
 
     def _write_cleanup_log(self, line: str) -> None:
         self.query_one("#cleanup-log", RichLog).write(line)
@@ -1695,22 +1987,8 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self.query_one("#cleanup-status", Label).update(message)
         self._write_cleanup_log(message)
         self.notify(message, severity=severity)
-
-        # Gamified reward: show freed space + celebrate via the mascot.
         self.query_one("#cleanup-freed", Digits).update(f"{freed:.1f}")
-        self.query_one("#cleanup-mascot", RichRenderable).update(
-            self._get_mascot().render_static(
-                STATES.SUCCESS if success else STATES.ERROR,
-                t("cleanup_prefs.freed_msg", gb=f"{freed:.1f}") if success else "",
-            )
-        )
         if success:
-            update_records(self._game, space_freed_gb=freed, cleanups=1)
-            unlocked = check_achievements(self._game)
-            if unlocked:
-                self._unlock_achievements(unlocked)
-            else:
-                save_game_state(self._game)
             self._refresh_dashboard_status()
 
     def _setup_network_tables(self) -> None:
@@ -1978,6 +2256,9 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self._network_tick = 0
         self._force_scan = False
         self._last_top_connections = []
+        self._primary_fail_streak = 0
+        self._outage_notified = False
+        self._health_streak_s = 0.0
         self._network_stop.clear()
         self._network_run_generation += 1
         run_generation = self._network_run_generation
@@ -1987,7 +2268,7 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
                 self._accept_ping_result, result, run_generation
             )
         )
-        if selection.league_auto_detect:
+        if selection.league_auto_detect and not termux_env.is_android():
             from monitor.league_detector import LeagueMatchDetector
 
             self._league_detector_generation += 1
@@ -2056,7 +2337,9 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
     def _sync_league_detector(self) -> None:
         if not self.network_running:
             return
-        enabled = bool(self._network_config.get("league_auto_detect", True))
+        enabled = (not termux_env.is_android()) and bool(
+            self._network_config.get("league_auto_detect", True)
+        )
         if enabled and self._league_detector is None:
             from monitor.league_detector import LeagueMatchDetector
 
@@ -2237,11 +2520,43 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         )
         primary_ms = getattr(primary_result, "latency_ms", None)
         ok = primary_ms is not None and primary_ms <= threshold
-        streak_s = (
-            self._streak.update(ok, 1.0)
-            if result.target_id == self._primary_target_id
-            else self._streak.seconds
-        )
+        if result.target_id == self._primary_target_id:
+            self._health_streak_s = (self._health_streak_s + 1.0) if ok else 0.0
+            if termux_env.is_termux():
+                if (
+                    value is None
+                    and result.status
+                    not in {PingStatus.CANCELLED, PingStatus.ICMP_FILTERED}
+                ):
+                    self._primary_fail_streak += 1
+                    if self._primary_fail_streak >= 5 and not self._outage_notified:
+                        now = time.monotonic()
+                        if (
+                            self._last_outage_notif_ts <= 0.0
+                            or (now - self._last_outage_notif_ts) >= 300.0
+                        ):
+                            self._outage_notified = True
+                            self._last_outage_notif_ts = now
+                            termux_env.send_termux_notification(
+                                t("network.notif_outage_title"),
+                                t("network.notif_outage_body", target=target.label),
+                                notif_id="varedura-net",
+                                vibrate=True,
+                            )
+                elif value is not None:
+                    if self._outage_notified:
+                        self._outage_notified = False
+                        termux_env.send_termux_notification(
+                            t("network.notif_recovered_title"),
+                            t(
+                                "network.notif_recovered_body",
+                                target=target.label,
+                                ms=value,
+                            ),
+                            notif_id="varedura-net",
+                        )
+                    self._primary_fail_streak = 0
+        streak_s = self._health_streak_s
         health = {
             "score": score,
             "tier": tier,
@@ -2267,11 +2582,7 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self, health: dict, speed_snapshot: dict, *, record: bool = True
     ) -> None:
         if record:
-            self._record_and_check(health)
             self._score_hist.append(float(health.get("score", 0)))
-            self._update_mascot_state(
-                int(health.get("score", 0)), bool(speed_snapshot.get("is_testing"))
-            )
         if self._active_tab != "network":
             return
         self._render_health_card(health)
@@ -2369,99 +2680,6 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self._render_procs_table(procs)
         self._render_speed_table(speed_snapshot or {})
 
-    def _build_network_alerts(
-        self, local_ms, ext_ms, threshold: int, procs: list, analyze_lag_source
-    ) -> list[str]:
-        lines: list[str] = []
-        stamp = datetime.datetime.now().strftime("%H:%M:%S")
-        alert_triggered = False
-
-        if local_ms and local_ms > threshold:
-            lines.append(
-                f"[{stamp}] [bold red]{t('stalker.alert_local_lag', ms=local_ms)}[/]"
-            )
-            alert_triggered = True
-        elif ext_ms and ext_ms > threshold:
-            lines.append(
-                f"[{stamp}] [bold orange1]{t('stalker.alert_ext_lag', ms=ext_ms)}[/]"
-            )
-            alert_triggered = True
-        elif local_ms is None or ext_ms is None:
-            lines.append(
-                f"[{stamp}] [bold white on red]{t('stalker.alert_packet_loss')}[/]"
-            )
-            alert_triggered = True
-
-        if alert_triggered:
-            suspeito, explicacao = analyze_lag_source(
-                local_ms, ext_ms, threshold, procs
-            )
-            lines.append(f"   ↳ [bold yellow]{t('stalker.diagnostic')}[/] {suspeito}")
-            lines.append(f"   ↳ [dim]{explicacao}[/]")
-            if procs and not suspeito.startswith("🔌"):
-                top_hog = procs[0]
-                conns = top_hog[2] // (1024 * 1024)
-                hog_name = top_hog[1] if top_hog[1] else t("stalker.unknown_process")
-                lines.append(
-                    f"   ↳ [dim]{t('stalker.top_connections_log', name=hog_name, conns=conns)}[/]"
-                )
-        return lines
-
-    def _render_network_tick(
-        self,
-        local_ms,
-        ext_ms,
-        procs,
-        scan_state,
-        speed_snapshot,
-        log_lines,
-        health=None,
-    ) -> None:
-        # The event log is cheap (append-only, fixed height) -> always flush it.
-        log = self.query_one("#network-log", RichLog)
-        for line in log_lines:
-            log.write(line)
-
-        # Record gamification metrics regardless of the active tab (runs on the
-        # UI thread, so GameState is mutated from a single thread).
-        if health is not None:
-            self._record_and_check(health)
-            self._score_hist.append(float(health.get("score", 0)))
-            self._update_mascot_state(
-                int(health.get("score", 0)),
-                bool((speed_snapshot or {}).get("is_testing")),
-            )
-
-        # Cache the latest top-connections (conn count + RAM) regardless of the
-        # active tab so the processes table can be enriched between scan ticks.
-        if scan_state is not None:
-            self._last_top_connections = list(scan_state.top_connections)
-
-        # Skip the heavier visual updates when the network tab is not in front;
-        # rebuilding tables every tick on a background tab triggers layout passes
-        # that make the whole screen flicker.
-        if self.query_one("#main-tabs", TabbedContent).active != "network":
-            return
-
-        threshold = 100
-        try:
-            from monitor.stalker import config as stalker_config
-
-            threshold = stalker_config.lag_threshold_ms
-        except Exception:
-            pass
-
-        if health is not None:
-            self._render_health_card(health)
-        self._render_ping_card("gateway", local_ms, self._net_local_stats, threshold)
-        self._render_ping_card("external", ext_ms, self._net_external_stats, threshold)
-
-        if scan_state is not None:
-            self._render_ports_table(scan_state)
-
-        self._render_procs_table(procs)
-        self._render_speed_table(speed_snapshot or {})
-
     @staticmethod
     def _apply_status_class(widgets, cls: str) -> None:
         """Swap the ping-status colour class on a set of widgets."""
@@ -2532,49 +2750,6 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self._apply_status_class(
             (digits, self.query_one("#health-spark", Sparkline)), cls
         )
-
-    def _record_and_check(self, health: dict) -> None:
-        """Update persisted records and surface any newly unlocked achievements."""
-        update_records(
-            self._game,
-            ping=health.get("ping"),
-            download=health.get("best_down"),
-            streak_s=health.get("streak_s"),
-            pings=1,
-            monitor_s=health.get("monitor_s", 0.0),
-            anatel=bool(health.get("compliant")),
-        )
-        unlocked = check_achievements(self._game)
-        if unlocked:
-            self._unlock_achievements(unlocked)
-        elif self._network_tick % 30 == 0:
-            save_game_state(self._game)
-
-    def _unlock_achievements(self, ids: list[str]) -> None:
-        for ach_id in ids:
-            ach = achievement_by_id(ach_id)
-            if ach is None:
-                continue
-            self.notify(
-                f"{ach.emoji} {t(ach.name_key)} — {t(ach.desc_key)}",
-                title=t("game.unlocked"),
-            )
-            self._write_dashboard_log(
-                f"[bold yellow]{ach.emoji} {t('game.unlocked')}:[/] {t(ach.name_key)}"
-            )
-        save_game_state(self._game)
-        self._refresh_achievements()
-
-    def _refresh_achievements(self) -> None:
-        """Hook updated in the dashboard phase; safe no-op until then."""
-        try:
-            from cli.ui_shared import build_achievements_row
-
-            self.query_one("#achievements-card", RichRenderable).update(
-                build_achievements_row(self._game)
-            )
-        except Exception:
-            pass
 
     def _render_speed_table(self, snapshot: dict) -> None:
         table = self.query_one("#network-speed-table", DataTable)
@@ -2709,9 +2884,25 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
             self.notify(message, severity="error")
             return
         csv_path, pdf_path = paths
-        message = t("network.export_finished", csv=str(csv_path), pdf=str(pdf_path))
+        self._last_export_path = Path(pdf_path or csv_path)
+        pdf_label = str(pdf_path) if pdf_path is not None else "—"
+        message = t("network.export_finished", csv=str(csv_path), pdf=pdf_label)
         self._network_log(f"[green]{message}[/]")
         self.notify(message)
+
+    def _share_network_report(self) -> None:
+        target = self._last_export_path
+        if target is None or not Path(target).exists():
+            self.notify(t("network.share_empty"), severity="warning")
+            return
+        if termux_env.is_termux():
+            ok = termux_env.share_file(target, title="Varedura")
+        else:
+            ok = termux_env.open_file_or_url(str(target))
+        if ok:
+            self.notify(t("network.shared_ok", path=str(target)))
+        else:
+            self.notify(t("network.export_failed", error="share unavailable"), severity="warning")
 
     def _poll_export_status(self) -> None:
         from monitor.stalker import get_export_status
@@ -2725,12 +2916,12 @@ class VareduraTextualApp(CamerasMixin, App[str | None]):
         self.query_one("#network-log", RichLog).write(message)
 
     def _refresh_status_renderables(self) -> None:
-        recording = load_recording_pref()
+        git_auto = load_git_autoupdate_pref()
         language = get_language()
         self._refresh_dashboard_status()
         if "settings" in self._hydrated_tabs:
             self.query_one("#settings-status", RichRenderable).update(
-                build_settings_status_table(recording, language)
+                build_settings_status_table(language, git_autoupdate=git_auto)
             )
         if "docker" in self._hydrated_tabs:
             self.query_one("#cleanup-summary", RichRenderable).update(

@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+/lib/
 lib64/
 parts/
 sdist/
@@ -191,6 +191,7 @@ credenciais.json
 ips_conhecidos.json
 regioes.json
 camera_bridge_state.json
+.camera-locations.private.json
 logs/rtsp.log*
 logs/camera_bridge.log*
 
@@ -201,3 +202,9 @@ lmarena/
 exports/
 recordings/
 reports/
+
+# Graphify volatile cache and large regenerated HTML
+graphify-out/cache/
+graphify-out/graph.html
+graphify-out/.graphify_analysis.json
+.graphify_python

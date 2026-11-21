@@ -700,14 +700,6 @@ def _generate_combined_pdf_worker(full_history: bool = False):
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         os.makedirs("exports", exist_ok=True)
 
-        # Importar matplotlib e reportlab
-        import matplotlib
-
-        matplotlib.use("Agg")  # Backend não-interativo para threads
-        import matplotlib.pyplot as plt
-        import matplotlib.dates as mdates
-        from matplotlib.backends.backend_pdf import PdfPages
-
         pdf_filename = f"exports/relatorio_formal_{timestamp}.pdf"
         pdf_temp = pdf_filename + ".tmp"
         csv_ping_filename = f"exports/ping_history_{timestamp}.csv"
@@ -807,6 +799,15 @@ def _generate_combined_pdf_worker(full_history: bool = False):
         # ======================================================================
         # GERAR PDF FORMAL COMPLETO - ESTILO OFICIAL ANATEL/GOV.BR
         # ======================================================================
+        # Importar matplotlib somente após exportar os CSVs, garantindo que falhas
+        # de dependência opcional não impeçam os CSVs.
+        import matplotlib
+
+        matplotlib.use("Agg")  # Backend não-interativo para threads
+        import matplotlib.pyplot as plt
+        import matplotlib.dates as mdates
+        from matplotlib.backends.backend_pdf import PdfPages
+
         # Cores oficiais inspiradas no gov.br/ANATEL
         AZUL_GOV = "#071D41"  # Azul escuro gov.br
         AZUL_ANATEL = "#1351B4"  # Azul ANATEL
@@ -1994,14 +1995,19 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             raise RuntimeError("Arquivo PDF gerado inválido/zerado")
 
         # Agora criar página de assinaturas com campos editáveis usando reportlab
+        sig_note = ""
+        form_pdf_path = f"exports/temp_form_{timestamp}.pdf"
+        final_pdf_temp = pdf_temp.replace(".pdf", "_com_assinaturas.pdf.tmp")
         try:
             from reportlab.pdfgen import canvas as rl_canvas
             from reportlab.lib.pagesizes import letter
             from reportlab.lib.colors import black, lightgrey
-            from PyPDF2 import PdfReader, PdfWriter
+            try:
+                from PyPDF2 import PdfReader, PdfWriter
+            except ImportError:
+                from pypdf import PdfReader, PdfWriter
 
             # Criar PDF temporário com formulário
-            form_pdf_path = f"exports/temp_form_{timestamp}.pdf"
             c = rl_canvas.Canvas(form_pdf_path, pagesize=letter)
             width, height = letter  # 612 x 792 points
 
@@ -2204,7 +2210,6 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                 writer.add_page(page)
 
             # Salvar PDF final em arquivo temporário
-            final_pdf_temp = pdf_temp.replace(".pdf", "_com_assinaturas.pdf.tmp")
             with open(final_pdf_temp, "wb") as f:
                 writer.write(f)
 
@@ -2220,27 +2225,35 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             os.replace(final_pdf_temp, pdf_filename)
 
         except ImportError as e:
-            # Se reportlab/PyPDF2 não estiverem disponíveis
-            print(f"[AVISO] Pacotes para assinaturas não disponíveis: {e}")
+            # Se reportlab/PyPDF2 não estiverem disponíveis, preserva o PDF principal
+            if os.path.exists(pdf_temp) and not os.path.exists(pdf_filename):
+                os.replace(pdf_temp, pdf_filename)
+            sig_note = f" (sem página de assinaturas: {e})"
         except Exception as e:
-            # Qualquer outro erro na geração da página de assinaturas
-            print(
-                f"[ERRO] Falha ao criar página de assinaturas: {type(e).__name__}: {e}"
-            )
-            import traceback
-
-            traceback.print_exc()
+            # Qualquer outro erro na criação da página de assinaturas: preserva o PDF principal
+            if os.path.exists(pdf_temp) and not os.path.exists(pdf_filename):
+                os.replace(pdf_temp, pdf_filename)
+            sig_note = f" (página de assinaturas ignorada: {type(e).__name__})"
+        finally:
+            for tmp_path in (form_pdf_path, final_pdf_temp):
+                try:
+                    if os.path.exists(tmp_path):
+                        os.remove(tmp_path)
+                except Exception:
+                    pass
 
         with _export_lock:
             _export_status["message"] = (
-                f"[green]✅ Relatório formal exportado: {pdf_filename}[/]"
+                f"[green]✅ Relatório formal exportado: {pdf_filename}{sig_note}[/]"
             )
             _export_status["completed"] = True
             _export_status["running"] = False
 
     except ImportError as e:
         with _export_lock:
-            _export_status["message"] = f"[red]❌ matplotlib não disponível: {e}[/]"
+            _export_status["message"] = (
+                f"[yellow]⚠ matplotlib não disponível ({e}); CSVs exportados em exports/[/]"
+            )
             _export_status["completed"] = True
             _export_status["running"] = False
     except Exception as e:
@@ -2696,7 +2709,7 @@ def make_help_panel():
     )
 
 
-def main(external_console: Console | None = None, session_recorder=None):
+def main(external_console: Console | None = None):
     global running, show_help, port_scanner_state, scan_counter, console
 
     if external_console is not None:
@@ -2774,10 +2787,6 @@ def main(external_console: Console | None = None, session_recorder=None):
     log_events.append(f"[dim]{t('stalker.port_scan_bg')}[/]")
 
     log_events.append(f"[dim]{t('network.speed_start')} (V)[/]")
-
-    # Register layout with session recorder for GIF capture
-    if session_recorder is not None:
-        session_recorder.set_renderable(layout)
 
     with Live(layout, console=console, refresh_per_second=4, screen=True):
         while running:
@@ -2989,8 +2998,6 @@ def main(external_console: Console | None = None, session_recorder=None):
                 break
 
     # Cleanup
-    if session_recorder is not None:
-        session_recorder.set_renderable(None)
     ping_scheduler.stop(wait=False)
     stop_continuous_testing()
 

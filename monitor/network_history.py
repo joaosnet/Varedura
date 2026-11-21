@@ -154,17 +154,22 @@ class NetworkSessionHistory:
 
     def export_pdf(self, path: Path, *, include_full_ips: bool = False) -> Path:
         """Generate a compact report with one statistics block per target generation."""
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import getSampleStyleSheet
-        from reportlab.lib.units import mm
-        from reportlab.platypus import (
-            Paragraph,
-            SimpleDocTemplate,
-            Spacer,
-            Table,
-            TableStyle,
-        )
-        from reportlab.lib import colors
+        try:
+            from reportlab.lib import colors
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib.styles import getSampleStyleSheet
+            from reportlab.lib.units import mm
+            from reportlab.platypus import (
+                Paragraph,
+                SimpleDocTemplate,
+                Spacer,
+                Table,
+                TableStyle,
+            )
+        except ImportError as exc:
+            raise ImportError(
+                "reportlab is required to export PDF network reports"
+            ) from exc
 
         path.parent.mkdir(parents=True, exist_ok=True)
         styles = getSampleStyleSheet()
@@ -223,12 +228,15 @@ class NetworkSessionHistory:
         directory: Path = Path("exports"),
         *,
         include_full_ips: bool = False,
-    ) -> tuple[Path, Path]:
+    ) -> tuple[Path, Path | None]:
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         csv_path = directory / f"ping_targets_{stamp}.csv"
         pdf_path = directory / f"network_report_{stamp}.pdf"
         self.export_csv(csv_path, include_full_ips=include_full_ips)
-        self.export_pdf(pdf_path, include_full_ips=include_full_ips)
+        try:
+            self.export_pdf(pdf_path, include_full_ips=include_full_ips)
+        except ImportError:
+            return csv_path, None
         return csv_path, pdf_path
 
 

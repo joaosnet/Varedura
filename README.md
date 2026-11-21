@@ -1,39 +1,28 @@
 # Varedura
 
 <p align="center">
-  <img src="screenshots/demo.gif" alt="Varedura Terminal Demo" width="960" />
+  <img src="screenshots/demo.gif" alt="Varedura Terminal Demo" width="900" />
 </p>
 
 <p align="center">
-  <strong>Terminal workspace for Docker maintenance, network diagnostics, camera bridging, and MCP agent tooling.</strong><br />
-  <em>Built with GitHub Copilot CLI for the DEV Challenge.</em>
+  <strong>Cross-platform Textual terminal workspace (Windows, Linux, macOS &amp; Android/Termux) for Docker/WSL2 maintenance, network diagnostics &amp; repairs, IP camera discovery/bridging with Edge AI, Termux hub &amp; self-updater, and MCP tooling.</strong>
 </p>
 
 <p align="center">
-  <a href="https://github.com/joaosnet/Varedura/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
-  <a href="https://github.com/joaosnet/Varedura"><img src="https://img.shields.io/badge/python-%E2%89%A53.14-3776AB.svg?logo=python&logoColor=white" alt="Python 3.14+" /></a>
-  <a href="https://github.com/joaosnet/Varedura"><img src="https://img.shields.io/badge/platform-Windows%20|%20Linux%20|%20macOS-lightgrey.svg" alt="Platform" /></a>
-  <a href="https://dev.to/challenges/github-2026-01-21"><img src="https://img.shields.io/badge/DEV-GitHub%20Copilot%20CLI%20Challenge-black?logo=dev.to" alt="DEV Challenge" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
+  <img src="https://img.shields.io/badge/python-%E2%89%A53.14.2-3776AB.svg?logo=python&logoColor=white" alt="Python 3.14.2+" />
+  <img src="https://img.shields.io/badge/platform-Windows%20|%20Linux%20|%20macOS%20|%20Android%20(Termux)-lightgrey.svg" alt="Platform" />
 </p>
 
 <p align="center">
-  <sub>Available in: <a href="README.md">English</a> · <a href="README.pt-BR.md">Português (pt-BR)</a> · <a href="README.es.md">Español</a></sub>
-</p>
-
-<p align="center">
-  <a href="#quick-install">Install</a> ·
-  <a href="#core-modules">Core Modules</a> ·
-  <a href="#mcp-server">MCP Server</a> ·
-  <a href="#cross-platform-support">Cross-Platform</a> ·
-  <a href="#safety-and-operations">Safety</a> ·
-  <a href="#copilot-cli-case-study">Copilot CLI Case Study</a>
+  <sub>Read in: <a href="README.md">English</a> · <a href="README.pt-BR.md">Português (pt-BR)</a></sub>
 </p>
 
 ---
 
-## Quick Install
+## Quick Start
 
-### One-liner setup
+### One-line install
 
 **Windows (PowerShell)**:
 ```powershell
@@ -45,257 +34,85 @@ irm https://raw.githubusercontent.com/joaosnet/Varedura/main/install.ps1 | iex
 curl -fsSL https://raw.githubusercontent.com/joaosnet/Varedura/main/install.sh | bash
 ```
 
-The installer verifies local dependencies (`uv`, `Docker`, `Git`), installs missing components, detects system locale, and configures the executable in your path.
+**Android / Termux (Bash)**:
+```bash
+bash scripts/termux_install.sh
+```
+Or sync directly from a Windows PC over ADB + SSH:
+```powershell
+.\scripts\sync_termux_adb.ps1 -Install
+```
 
-Launch the interface from any terminal:
+Launch the Textual TUI:
 ```bash
 varedura
 ```
 
-### Alternative installation paths
-
-<details>
-<summary><strong>Install via uv tool</strong></summary>
-
-```bash
-uv tool install git+https://github.com/joaosnet/Varedura.git --python ">=3.14"
-```
-
-Update an existing editable or tool installation:
-```bash
-uv tool upgrade varedura
-```
-
-</details>
-
-<details>
-<summary><strong>Clone and run from source</strong></summary>
+### Run from source (`uv`)
 
 ```bash
 git clone https://github.com/joaosnet/Varedura.git
 cd Varedura
+uv sync --dev
 uv run main.py
 ```
 
-</details>
+### Entrypoints
 
-<details>
-<summary><strong>Headless CLI execution</strong></summary>
+| Command | Purpose | Guide |
+|---|---|---|
+| `varedura` / `uv run main.py` | Unified Textual TUI (Dashboard, conditional Docker, Network, Cameras, Termux, Settings + native SVG screenshots) | [docs/docker-e-cli.md](docs/docker-e-cli.md) |
+| `varedura-update` / `uv run python -m varedura.updater` | Authenticated Git self-updater (`GHG_TOKEN`/`~/.varedura_gh_token`), 6h cooldown & optional cron sync | [docs/termux.md](docs/termux.md) |
+| `varedura-camera-bridge --output-dir <dir>` | Sanitized RTSP snapshot/HLS bridge for local consumers (*Mural dos Sonhos*) | [docs/cameras-e-ia.md](docs/cameras-e-ia.md) |
+| `uv run python -m mcp_server` | Stdio Model Context Protocol (MCP) server for AI agents | [docs/mcp.md](docs/mcp.md) |
+| `uv run python -m cli.quick_cleanup` | Headless Docker prune + WSL shutdown + VHDX compaction | [docs/docker-e-cli.md](docs/docker-e-cli.md) |
 
-Run specific modules directly without initializing the Textual UI:
+---
 
-```bash
-uv run python -m cli.quick_cleanup             # Docker prune without TUI
-uv run python -m cli.main_cleaner              # Full cleanup pipeline
-uv run python -m cli.admin_tasks compact_vhdx  # WSL2 disk compaction (Windows Admin)
-```
+## What's Inside
 
-</details>
+| Subsystem | Packages / Paths | Summary |
+|---|---|---|
+| **Docker & Textual TUI** | `docker_cleaner/`, `cli/`, `i18n/` | Sync/async Docker prune, Windows WSL2 sparse & VHDX compaction, unified Textual TUI (conditional Docker tab on Android/Termux), native SVG screenshot capture (`screenshots/`), PT/EN i18n |
+| **Network Suite** | `monitor/` | Continuous multi-target ICMP stalker, ANATEL-style PDF/CSV export, pure `compute_health_score` (`network_health.py`), root-cause diagnostics, confirmed repairs, port scanner, multi-provider speedtest, LoL match detector |
+| **Termux & Self-Updater** | `varedura/termux_env.py`, `varedura/updater.py`, `scripts/` | Android telemetry, tool/shortcut/Claro suite hub, background service toggles, `Termux:API` notifications/sharing, Android players (`vlc-android`, `termux-open`, `mpv --vo=tct`), `varedura-update` |
+| **Cameras & Edge AI** | `rtsp/`, `varedura/camera_bridge.py`, `varedura/ai_vision/` | Unified RTSP/iCSee/NetIP/Sofia P2P/ONVIF engine, local LAN scanner, sanitized HLS bridge, YOLO ONNX + geometric rules (`LineCrossing`, `ZoneIntrusion`, `Loitering`, heatmap) |
+| **MCP Server** | `mcp_server/` | Stdio FastMCP service (`docker_status`, `docker_quick_cleanup`, `docker_full_cleanup`, `port_scan`, `get_logs`) with confirmation gates |
 
-<details>
-<summary><strong>Uninstallation</strong></summary>
+---
 
-```powershell
-# Windows
-.\install.ps1 -Uninstall
-```
-
-```bash
-# Linux / macOS
-./install.sh --uninstall
-```
-
-Or remove directly through `uv`:
-```bash
-uv tool uninstall varedura
-```
-
-</details>
-
-### System Requirements
+## System Requirements
 
 | Requirement | Scope | Notes |
 |---|---|---|
-| **Python ≥ 3.14** | Core runtime | Provisioned automatically by `uv` |
-| **uv** | Package and tool manager | Bootstrapped by the install script if absent |
-| **Docker Engine / Desktop** | Docker cleaner | Optional; needed for container prune and metrics |
-| **Elevated privileges (Admin / sudo)** | System maintenance | Required for WSL2 VHDX compaction and process termination |
+| **Python ≥ 3.14.2 + `uv`** | Core runtime (desktop) | Managed automatically by `uv` (`pyproject.toml` declares `[build-system]`); on Termux ARM64 use `scripts/termux_install.sh` |
+| **Docker Engine / Desktop** | Docker cleaner | Optional; the `docker` tab is hidden automatically on Android/Termux when `docker` is absent |
+| **Admin / `sudo` / root** | System & repairs | Needed for VHDX compaction, process stop, and OS network repairs |
+| **FFmpeg / MPV / VLC / Chrome** | Optional extras | FFmpeg/MPV/VLC for camera playback & snapshots; Termux:API for Android alerts/share; Chrome/Selenium (`browser-speedtest`) for SIMET/BBL |
 
 ---
 
-## Core Modules
+## Documentation
 
-```
-Varedura
-├── cli/              Textual TUI, keyboard routing, legacy Rich fallback
-├── docker_cleaner/   Docker engine client, WSL2 integration, VHDX optimizer
-├── monitor/          ICMP latency stalker, port scanner, speedtest providers
-├── varedura/         Camera bridge, RTSP sanitizer, HLS packager
-├── mcp_server/       Model Context Protocol stdio service for AI agents
-├── recorder/         Terminal session SVG capture and GIF generator
-└── i18n/             Bilingual schema (pt-BR / en-US) with runtime persistence
-```
+Full guides (in Portuguese) live in `docs/`, designed for fast human onboarding and low-token navigation:
 
-### Docker Maintenance Engine
-
-Source: `docker_cleaner/core.py`, `cli/admin_tasks.py`
-
-- Prunes stopped containers, unused networks, dangling volumes, and build cache in a single run.
-- Supports targeted cleanup through interactive selectors.
-- Reclaims physical disk space on Windows by issuing `wsl --shutdown` and running `Optimize-VHD` against WSL2 virtual drives.
-- Configures sparse WSL disk allocations to prevent unbounded VHDX growth.
-- Streams subprocess output line-by-line into the TUI log panel.
-
-### Network Diagnostics & Stalker
-
-Source: `monitor/stalker.py`, `monitor/port_scanner.py`, `monitor/speed_tester.py`
-
-- Continuous ICMP latency monitor recording min, max, average, and jitter values.
-- Renders rolling terminal sparkline charts for visual degradation detection.
-- Multi-threaded TCP/UDP port scanner matching open ports to running processes and PIDs.
-- Internet bandwidth verification via Speedtest.net and Fast.com providers.
-- Evaluates upload and download metrics against Brazilian ANATEL regulatory targets.
-- Exports diagnostic runs to PDF and CSV formats.
-
-### Local Camera Bridge
-
-Source: `varedura/camera_bridge.py`
-
-- Converts local RTSP camera endpoints into sanitized HTTP snapshots and on-demand HLS streams.
-- Designed for local visualization consumers (such as *Mural dos Sonhos*).
-- Strips credentials, network hosts, and raw URLs from public metadata manifests.
-- Maintains single-client session leases with heartbeat TTL sweeps and orphan FFmpeg process reclamation.
-
-```powershell
-varedura-camera-bridge --output-dir "C:\path\to\mural\runtime\cameras"
-```
-
-### Terminal UI & Session Recording
-
-Source: `cli/textual_app.py`, `recorder/`
-
-- Built on Textual with full keyboard control, vim-style navigation, and dynamic layout resizing.
-- Includes legacy Rich interface mode accessible via `varedura --legacy-rich` or `VAREDURA_UI=rich`.
-- Embedded session recorder captures terminal frames into SVG vectors and compiles them into animated GIF files.
-- Built-in status mascot with discrete state transitions (Idle, Scanning, Working, Error).
-
-### Internationalization
-
-Source: `i18n/`
-
-- Automatically reads system locale on initial start (`pt-BR` / `en-US`).
-- Switch languages on demand from the settings screen without terminal restart.
-- Persists user preferences to `~/.varedura_lang.json`.
+| Document | When to read |
+|---|---|
+| [docs/arquitetura.md](docs/arquitetura.md) | How the subsystems fit together, lazy startup flow, entrypoints, and local state files |
+| [docs/manutencao.md](docs/manutencao.md) | Dev setup (`uv`), running tests & `ruff`, CI checks, logging, safety boundaries, `graphify`, and troubleshooting |
+| [docs/como-adicionar-recursos.md](docs/como-adicionar-recursos.md) | Step-by-step recipes to add Docker steps, TUI tabs/modals, network probes/repairs, Termux tools, MCP tools, or AI rules |
+| [docs/docker-e-cli.md](docs/docker-e-cli.md) | `WSLDockerCleaner` sync/async model, Textual TUI, conditional Docker tab, native SVG screenshots, i18n + line-range index |
+| [docs/rede.md](docs/rede.md) | Ping scheduler, diagnostics engine, safe repairs, port catalog, multi-provider speedtest, ANATEL PDFs + line-range index |
+| [docs/cameras-e-ia.md](docs/cameras-e-ia.md) | `rtsp/` protocols (RTSP, NetIP/P2P, ONVIF), sanitized `camera_bridge`, YOLO ONNX & spatial rules + line-range index |
+| [docs/termux.md](docs/termux.md) | Android/Termux installation, ADB+SSH sync, tool auto-discovery, Android camera playback, `Termux:API`, and `varedura-update` |
+| [docs/mcp.md](docs/mcp.md) | Stdio MCP configuration, the 5 exposed tools, and two-step safety confirmation (`dry_run` → `confirmed`) |
+| [AGENTS.md](AGENTS.md) | Canonical agent map: low-token analysis rules, module table, invariants, and ignore boundaries |
 
 ---
 
-## MCP Server
+## Safety & License
 
-Varedura exposes its core operations through a local [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server. This allows AI assistants such as GitHub Copilot CLI to run maintenance tasks and query system state directly.
+Destructive operations (Docker `system prune --volumes`, `wsl --shutdown`, `Optimize-VHD`, OS network repairs) require explicit user confirmation; MCP cleanup tools enforce `dry_run` / `confirmed=True` guardrails; `varedura-update` never writes GitHub tokens into `.git/config` or logs; and `varedura-camera-bridge` strips RTSP credentials before publishing metadata. All test suites mock external system calls.
 
-### Configuration
-
-Add the server to your VS Code MCP definition (`.vscode/mcp.json`) or agent profile:
-
-```json
-{
-  "servers": {
-    "varedura": {
-      "type": "stdio",
-      "command": "uv",
-      "args": ["run", "python", "-m", "mcp_server"]
-    }
-  }
-}
-```
-
-### Exposed Tools
-
-| Tool | Parameters | Description |
-|---|---|---|
-| `docker_status` | None | Returns Docker disk consumption, container states, and image inventory |
-| `docker_quick_cleanup` | None | Prunes exited containers, dangling images, and dangling build cache |
-| `docker_full_cleanup` | None | Runs complete prune, stops WSL, and compacts Windows VHDX files |
-| `port_scan` | `target_host`, `ports` | Identifies listening TCP/UDP ports and maps them to local processes |
-| `get_logs` | `lines` | Reads the latest entries from the active Varedura log file |
-
-### Natural Language Workflows
-
-When configured in Copilot CLI:
-
-```
-User: "Check Docker disk utilization and list running containers."
-Agent -> calls varedura:docker_status
-
-User: "Find which processes are listening on ports 8000 through 9000."
-Agent -> calls varedura:port_scan
-
-User: "Execute full Docker cleanup and compact WSL virtual disk."
-Agent -> calls varedura:docker_full_cleanup
-```
-
----
-
-## Cross-Platform Support
-
-| Capability | Windows | Linux | macOS |
-|---|---|---|---|
-| Docker prune engine | Full | Full | Full |
-| Process termination | `taskkill /F` | `systemctl` / `killall` | `killall` |
-| WSL2 VHDX compaction | `Optimize-VHD` | N/A | N/A |
-| WSL sparse allocation | PowerShell WMI | N/A | N/A |
-| Temp directory cleanup | `%TEMP%` | `/tmp` | `/tmp` |
-| Recycle bin purge | PowerShell Shell.Application | N/A | N/A |
-| Privilege elevation | UAC (`runas`) | `sudo` | `sudo` |
-| Network Stalker | Full | Full | Full |
-| MCP Service | Stdio | Stdio | Stdio |
-| One-line install | PowerShell script | Shell script | Shell script |
-
-> Operations unsupported on a specific platform exit gracefully with informative log output rather than unhandled exceptions.
-
----
-
-## Safety and Operations
-
-Destructive cleanup routines enforce strict guardrails:
-
-| Operation | Target | Safeguard |
-|---|---|---|
-| `docker system prune -af --volumes` | All unused Docker objects | Explicit modal prompt required before execution |
-| Process termination | Hanging Docker daemons | Confirms PID list prior to dispatch |
-| `wsl --shutdown` | WSL subsystem | Warns user of running terminal sessions |
-| `Optimize-VHD` | WSL2 disk file | Checks for Administrator elevation and read locks |
-
-Run unit tests locally to verify cleanup logic against mock targets:
-
-```bash
-uv run pytest tests/ -v
-```
-
-All test cases isolate destructive operations through mock subprocesses and fake Docker API adapters.
-
----
-
-## Copilot CLI Case Study
-
-Varedura was developed for the [GitHub Copilot CLI Challenge](https://dev.to/challenges/github-2026-01-21) using GitHub Copilot CLI as the primary pair programmer across architecture design, core implementation, and testing.
-
-### Key Implementation Milestones
-
-1. **Subprocess and Elevation Architecture**
-   Copilot CLI generated the abstraction layer coordinating Windows PowerShell UAC prompts with Unix `sudo` workflows, isolating platform-specific syntax into dedicated executors (`cli/admin_tasks.py`).
-
-2. **Dual Synchronous and Asynchronous Pipelines**
-   To keep the Textual TUI responsive while executing multi-gigabyte Docker volume deletions, Copilot CLI structured an async queue that streams stdout lines into Textual message handlers without blocking event loops.
-
-3. **MCP Stdio Server Design**
-   The Model Context Protocol integration was implemented from specification using Copilot CLI to map internal helper functions into JSON-RPC 2.0 stdio tool definitions, enabling zero-configuration tool calls for Copilot CLI agents.
-
-4. **Testing and Mock Strategies**
-   Copilot CLI constructed unit and integration test fixtures (`tests/`) mocking Docker daemon responses, network latency spikes, and file system locks, enabling full test coverage without modifying host machines.
-
----
-
-## License
-
-MIT. See [LICENSE](LICENSE) for details.
+Originally built for the DEV GitHub Copilot CLI Challenge (archived background in [docs/arquivo/POST-SUBMISSION.md](docs/arquivo/POST-SUBMISSION.md)).  
+Licensed under the **MIT License** — see [LICENSE](LICENSE).

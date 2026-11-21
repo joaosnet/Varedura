@@ -46,10 +46,63 @@ def test_detect_unix_falls_back_to_netstat(monkeypatch):
         monkeypatch,
         {
             "ip route show default": "",  # ip not available
+            "ip route get 1.1.1.1": "",
+            "termux-wifi-connectioninfo": "",
+            "su -c ip route show table all": "",
             "netstat -rn": "Destination Gateway Flags\ndefault 10.0.0.1 UG en0\n",
         },
     )
     assert netinfo._detect_unix() == "10.0.0.1"
+
+
+def test_detect_unix_falls_back_through_android_strategies(monkeypatch):
+    _patch_run(
+        monkeypatch,
+        {
+            "ip route show default": "",
+            "ip route get 1.1.1.1": "1.1.1.1 via 192.168.43.1 dev wlan0 src 192.168.43.10\n",
+        },
+    )
+    assert netinfo._detect_unix() == "192.168.43.1"
+
+    _patch_run(
+        monkeypatch,
+        {
+            "ip route show default": "",
+            "ip route get 1.1.1.1": "",
+            "termux-wifi-connectioninfo": '{"ip": "192.168.1.20", "gateway": "192.168.1.254"}',
+        },
+    )
+    assert netinfo._detect_unix() == "192.168.1.254"
+
+    _patch_run(
+        monkeypatch,
+        {
+            "ip route show default": "",
+            "ip route get 1.1.1.1": "",
+            "termux-wifi-connectioninfo": "{}",
+            "su -c ip route show table all": "default via 10.20.30.1 dev rmnet0 table rmnet0\n",
+        },
+    )
+    assert netinfo._detect_unix() == "10.20.30.1"
+
+
+def test_run_uses_errors_replace_for_non_utf8_output(monkeypatch):
+    captured = {}
+
+    def fake_subproc_run(cmd, **kwargs):
+        captured.update(kwargs)
+
+        class Res:
+            stdout = "ok \ufffd"
+
+        return Res()
+
+    monkeypatch.setattr(netinfo.subprocess, "run", fake_subproc_run)
+    out = netinfo._run(["route", "print"])
+    assert out == "ok \ufffd"
+    assert captured["errors"] == "replace"
+    assert captured["text"] is True
 
 
 def test_detect_default_gateway_dispatches_by_platform(monkeypatch):

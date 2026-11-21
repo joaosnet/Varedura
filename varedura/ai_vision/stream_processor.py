@@ -7,16 +7,13 @@ import logging
 import threading
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from varedura.ai_vision.detector import Detection, ObjectDetector, YOLONanoDetector
 from varedura.ai_vision.rules import (
     GeometricRule,
-    LineCrossingRule,
     MotionHeatmap,
     SpatialEvent,
-    ZoneIntrusionRule,
 )
 
 _log = logging.getLogger("varedura.ai_processor")

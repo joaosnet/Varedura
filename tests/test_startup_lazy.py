@@ -59,7 +59,6 @@ async def check():
     urllib.request.urlopen = forbidden
     app = VareduraTextualApp()
     app._after_first_refresh = lambda: None
-    app._animate_mascot = lambda: None
     async with app.run_test(size=(100, 36)):
         names = [
             "monitor.stalker", "monitor.speed_tester", "monitor.port_scanner",

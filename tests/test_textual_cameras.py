@@ -232,3 +232,146 @@ async def test_cameras_open_port_saved_without_credential(monkeypatch):
         )
         assert app._cameras_encontradas == 1
         assert "192.168.1.50" in app._urls_rede
+
+
+@pytest.mark.asyncio
+async def test_cameras_rtsp_snapshot_mpv_and_copy(monkeypatch):
+    monkeypatch.setattr("cli.textual_cameras.detectar_redes", lambda: [])
+    monkeypatch.setattr("cli.textual_cameras.geolocalizar", lambda *a, **k: None)
+
+    snaps: list[tuple[str, str]] = []
+    mpv_cmds: list[list[str]] = []
+    copied: list[str] = []
+
+    app = VareduraTextualApp()
+    async with app.run_test(size=(120, 55)) as pilot:
+        await pilot.pause()
+        await open_cameras(app, pilot)
+        app.query_one("#cameras-subtabs", TabbedContent).active = "tab-rtsp"
+        await pilot.pause()
+
+        monkeypatch.setattr(
+            "cli.textual_cameras.capturar_e_abrir_snapshot",
+            lambda url, destino, timeout=10.0: snaps.append((url, destino))
+            or (True, destino),
+        )
+        monkeypatch.setattr(
+            "cli.textual_cameras.comando_mpv_terminal",
+            lambda url: ["mpv", "--vo=tct", url],
+        )
+        monkeypatch.setattr(
+            "cli.textual_cameras.subprocess.run",
+            lambda cmd, **kwargs: mpv_cmds.append(list(cmd)) or type("P", (), {"returncode": 0})(),
+        )
+        monkeypatch.setattr(
+            "cli.textual_cameras.copy_to_clipboard",
+            lambda text: copied.append(text) or True,
+        )
+
+        app.query_one("#rtsp-url").value = "rtsp://192.168.1.10:554/stream1"
+        app.query_one("#rtsp-user").value = "admin"
+        app.query_one("#rtsp-pass").value = "pass"
+
+        for btn_id in ("#btn-rtsp-snap", "#btn-rtsp-mpv", "#btn-rtsp-copy"):
+            app.query_one(btn_id).scroll_visible(animate=False)
+            await pilot.pause()
+            await pilot.click(btn_id)
+
+        await wait_until(lambda: len(snaps) == 1, pilot)
+        expected_url = "rtsp://admin:pass@192.168.1.10:554/stream1"
+        assert snaps[0][0] == expected_url
+        assert "exports" in snaps[0][1] and snaps[0][1].endswith(".jpg")
+        assert mpv_cmds == [["mpv", "--vo=tct", expected_url]]
+        assert copied == [expected_url]
+
+
+@pytest.mark.asyncio
+async def test_cameras_rede_action_bar_and_empty_selection(monkeypatch):
+    monkeypatch.setattr("cli.textual_cameras.detectar_redes", lambda: [])
+    monkeypatch.setattr("cli.textual_cameras.geolocalizar", lambda *a, **k: None)
+
+    snaps: list[str] = []
+    mpv_cmds: list[list[str]] = []
+    copied: list[str] = []
+    warnings: list[str] = []
+
+    app = VareduraTextualApp()
+    async with app.run_test(size=(120, 55)) as pilot:
+        await pilot.pause()
+        await open_cameras(app, pilot)
+        await pilot.pause()
+
+        monkeypatch.setattr(
+            "cli.textual_cameras.capturar_e_abrir_snapshot",
+            lambda url, destino, timeout=10.0: snaps.append(url) or (True, destino),
+        )
+        monkeypatch.setattr(
+            "cli.textual_cameras.comando_mpv_terminal",
+            lambda url: ["mpv", "--vo=tct", url],
+        )
+        monkeypatch.setattr(
+            "cli.textual_cameras.subprocess.run",
+            lambda cmd, **kwargs: mpv_cmds.append(list(cmd)) or type("P", (), {"returncode": 0})(),
+        )
+        monkeypatch.setattr(
+            "cli.textual_cameras.copy_to_clipboard",
+            lambda text: copied.append(text) or True,
+        )
+        orig_notify = app.notify
+        monkeypatch.setattr(
+            app,
+            "notify",
+            lambda msg, **kw: warnings.append(str(msg))
+            if kw.get("severity") == "warning"
+            else orig_notify(msg, **kw),
+        )
+
+        # Empty table warns instead of crashing
+        app.query_one("#btn-rede-snap").scroll_visible(animate=False)
+        await pilot.pause()
+        await pilot.click("#btn-rede-snap")
+        await pilot.pause()
+        assert warnings and not snaps
+
+        # Select populated row
+        cam_url = "rtsp://admin:123@192.168.1.50:554/ch1"
+        app._urls_rede["192.168.1.50"] = cam_url
+        tabela = app.query_one("#rede-tabela", DataTable)
+        tabela.add_row("192.168.1.50", "ok", "admin", "/ch1", "720p", "h264", key="192.168.1.50")
+        await pilot.pause()
+
+        for btn_id in ("#btn-rede-snap", "#btn-rede-mpv", "#btn-rede-copy"):
+            app.query_one(btn_id).scroll_visible(animate=False)
+            await pilot.pause()
+            await pilot.click(btn_id)
+
+        await wait_until(lambda: len(snaps) == 1, pilot)
+        assert snaps == [cam_url]
+        assert mpv_cmds == [["mpv", "--vo=tct", cam_url]]
+        assert copied == [cam_url]
+
+
+@pytest.mark.asyncio
+async def test_cameras_action_cam_log_non_windows(monkeypatch, tmp_path):
+    monkeypatch.setattr("cli.textual_cameras.detectar_redes", lambda: [])
+    monkeypatch.setattr("cli.textual_cameras.geolocalizar", lambda *a, **k: None)
+
+    opened: list[str] = []
+    app = VareduraTextualApp()
+    async with app.run_test(size=(100, 40)) as pilot:
+        await pilot.pause()
+        await open_cameras(app, pilot)
+        await pilot.pause()
+
+        fake_log = tmp_path / "cameras.log"
+        fake_log.write_text("log\n", encoding="utf-8")
+        monkeypatch.setattr("cli.textual_cameras.ARQUIVO_LOG", fake_log)
+        monkeypatch.setattr("os.name", "posix")
+        monkeypatch.setattr("cli.textual_cameras.shutil.which", lambda name: None)
+        monkeypatch.setattr(
+            "cli.textual_cameras.open_file_or_url",
+            lambda target: opened.append(target) or True,
+        )
+
+        app.action_cam_log()
+        assert opened == [str(fake_log)]

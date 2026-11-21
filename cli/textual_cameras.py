@@ -9,12 +9,17 @@ Originalmente um app Textual standalone (scan_rsp); fundido como uma aba.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
+import datetime
 import logging
+from pathlib import Path
+import re
+import shutil
 import subprocess
 import sys
 from urllib.parse import quote, urlsplit, urlunsplit
 
-from textual.app import ComposeResult
+from textual.app import ComposeResult, SuspendNotSupported
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.coordinate import Coordinate
 from textual.timer import Timer
@@ -75,6 +80,10 @@ descobrir_stream = _UNLOADED
 detectar_player = _UNLOADED
 erro_se_morreu = _UNLOADED
 validar_stream = _UNLOADED
+comando_mpv_terminal = _UNLOADED
+capturar_e_abrir_snapshot = _UNLOADED
+copy_to_clipboard = _UNLOADED
+open_file_or_url = _UNLOADED
 
 
 def _load_camera_backend() -> None:
@@ -83,6 +92,7 @@ def _load_camera_backend() -> None:
     if _BACKEND_LOADED:
         return
     from rtsp import credenciais, geo, log, mapa, paths, rede, regioes, scanner, video
+    from varedura import termux_env
 
     exports = {
         "Par": credenciais.Par,
@@ -120,6 +130,10 @@ def _load_camera_backend() -> None:
         "detectar_player": video.detectar_player,
         "erro_se_morreu": video.erro_se_morreu,
         "validar_stream": video.validar_stream,
+        "comando_mpv_terminal": video.comando_mpv_terminal,
+        "capturar_e_abrir_snapshot": video.capturar_e_abrir_snapshot,
+        "copy_to_clipboard": termux_env.copy_to_clipboard,
+        "open_file_or_url": termux_env.open_file_or_url,
     }
     for name, value in exports.items():
         if globals().get(name, _UNLOADED) is _UNLOADED:
@@ -215,6 +229,8 @@ CAMERAS_CSS = """
 #radar { color: $accent; text-style: bold; height: 1; }
 #rede-progress { margin: 1 0; }
 #rede-contador { color: $success; text-style: bold; }
+Screen.mobile-narrow #cameras .acoes { layout: vertical; height: auto; }
+Screen.mobile-narrow #cameras .acoes Button { width: 100%; margin-right: 0; margin-bottom: 1; }
 """
 
 
@@ -362,6 +378,10 @@ class CamerasMixin:
                     yield ClickOpenDataTable(
                         id="rede-tabela", cursor_type="row", zebra_stripes=True
                     )
+                    with Horizontal(classes="acoes", id="rede-acoes-cam"):
+                        yield Button(t("rtsp.btn_snapshot"), id="btn-rede-snap")
+                        yield Button(t("rtsp.btn_mpv_terminal"), id="btn-rede-mpv")
+                        yield Button(t("rtsp.btn_copy_url"), id="btn-rede-copy")
 
                     with Collapsible(title=t("rtsp.add_regiao"), collapsed=True):
                         with Horizontal(classes="linha"):
@@ -450,6 +470,10 @@ class CamerasMixin:
                                 variant="success",
                                 id="btn-rtsp-abrir",
                             )
+                        with Horizontal(classes="acoes"):
+                            yield Button(t("rtsp.btn_snapshot"), id="btn-rtsp-snap")
+                            yield Button(t("rtsp.btn_mpv_terminal"), id="btn-rtsp-mpv")
+                            yield Button(t("rtsp.btn_copy_url"), id="btn-rtsp-copy")
                     yield Static("", id="rtsp-saida")
 
             # ---------- Aba: portas ----------
@@ -611,6 +635,24 @@ class CamerasMixin:
             self._run_rtsp()
         elif bid == "btn-rtsp-abrir":
             self._abrir_rtsp_unico()
+        elif bid == "btn-rtsp-snap":
+            if url := self._url_rtsp_unica():
+                self._capturar_snapshot(url, "rtsp")
+        elif bid == "btn-rtsp-mpv":
+            if url := self._url_rtsp_unica():
+                self._abrir_mpv_terminal(url)
+        elif bid == "btn-rtsp-copy":
+            if url := self._url_rtsp_unica():
+                self._copiar_url_rtsp(url)
+        elif bid == "btn-rede-snap":
+            if selected := self._url_selecionada_rede():
+                self._capturar_snapshot(selected[1], selected[0])
+        elif bid == "btn-rede-mpv":
+            if selected := self._url_selecionada_rede():
+                self._abrir_mpv_terminal(selected[1])
+        elif bid == "btn-rede-copy":
+            if selected := self._url_selecionada_rede():
+                self._copiar_url_rtsp(selected[1])
         elif bid == "btn-cred-add":
             self._add_credencial()
         elif bid == "btn-cred-del":
@@ -681,11 +723,30 @@ class CamerasMixin:
     def action_cam_log(self) -> None:
         import os
 
+        if ARQUIVO_LOG is _UNLOADED:
+            _load_camera_backend()
         self.notify(t("rtsp.nf_log", caminho=str(ARQUIVO_LOG)))
-        try:
-            os.startfile(ARQUIVO_LOG)  # type: ignore[attr-defined]  # Windows
-        except (AttributeError, OSError) as exc:
-            _log.warning("Não consegui abrir o log no sistema: %s", exc)
+        if os.name == "nt" and hasattr(os, "startfile"):
+            try:
+                os.startfile(ARQUIVO_LOG)  # type: ignore[attr-defined]  # Windows
+                return
+            except OSError as exc:
+                _log.warning("Não consegui abrir o log no sistema: %s", exc)
+                return
+
+        if micro := shutil.which("micro"):
+            cmd = [micro, str(ARQUIVO_LOG)]
+            try:
+                with self.suspend():
+                    subprocess.run(cmd)
+                return
+            except SuspendNotSupported:
+                pass
+            except Exception as exc:
+                _log.warning("Falha ao abrir log no micro: %s", exc)
+
+        if not open_file_or_url(str(ARQUIVO_LOG)):
+            _log.warning("Não consegui abrir o log no sistema: %s", ARQUIVO_LOG)
 
     # ------------------------------------------------------------------ #
     # Helpers                                                            #
@@ -739,6 +800,83 @@ class CamerasMixin:
                 t("rtsp.nf_player_falhou", alvo=ip or t("rtsp.stream"), erro=erro),
                 severity="error",
             )
+
+    def _url_selecionada_rede(self) -> tuple[str, str] | None:
+        tabela = self.query_one("#rede-tabela", DataTable)
+        if not tabela.row_count or tabela.cursor_row < 0:
+            self.notify(t("rtsp.nf_selecione_camera"), severity="warning")
+            return None
+        try:
+            chave = tabela.coordinate_to_cell_key(
+                Coordinate(tabela.cursor_row, 0)
+            ).row_key.value
+        except Exception:
+            self.notify(t("rtsp.nf_selecione_camera"), severity="warning")
+            return None
+        url = self._urls_rede.get(str(chave or ""))
+        if not url:
+            self.notify(t("rtsp.nf_selecione_camera"), severity="warning")
+            return None
+        return str(chave), url
+
+    def _url_rtsp_unica(self) -> str | None:
+        url = self.query_one("#rtsp-url", Input).value.strip()
+        if not url:
+            self.notify(t("rtsp.nf_informe_url"), severity="warning")
+            return None
+        user = self.query_one("#rtsp-user", Input).value.strip() or None
+        pwd = self.query_one("#rtsp-pass", Input).value.strip() or None
+        return self._com_credenciais(url, user, pwd)
+
+    def _abrir_mpv_terminal(self, url: str) -> None:
+        cmd = comando_mpv_terminal(url)
+        if not cmd:
+            self.notify(t("rtsp.nf_mpv_missing"), severity="error")
+            return
+        try:
+            ctx = self.suspend()
+        except Exception:
+            ctx = nullcontext()
+        try:
+            with ctx:
+                subprocess.run(cmd)
+        except SuspendNotSupported:
+            subprocess.run(cmd, stdin=subprocess.DEVNULL)
+        except OSError as exc:
+            self.notify(str(exc), severity="error")
+
+    def _capturar_snapshot(self, url: str, label: str = "cam") -> None:
+        safe_label = re.sub(r"[^a-zA-Z0-9_-]", "_", label).strip("_") or "cam"
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        destino = str(Path("exports") / "snapshots" / f"snap_{safe_label}_{ts}.jpg")
+
+        def _worker() -> None:
+            ok, detail = capturar_e_abrir_snapshot(url, destino)
+            if ok:
+                self.call_from_thread(
+                    self.notify, t("rtsp.nf_snapshot_ok", path=detail)
+                )
+            else:
+                self.call_from_thread(
+                    self.notify,
+                    t("rtsp.nf_snapshot_fail", erro=detail),
+                    severity="error",
+                )
+
+        self.run_worker(_worker, thread=True, group=_GRUPO)
+
+    def _copiar_url_rtsp(self, url: str) -> None:
+        copied = False
+        try:
+            copied = bool(copy_to_clipboard(url))
+        except Exception:
+            copied = False
+        if not copied and hasattr(self, "copy_to_clipboard"):
+            try:
+                self.copy_to_clipboard(url)
+            except Exception:
+                pass
+        self.notify(t("rtsp.nf_url_copied"))
 
     # ---- Aba Rede: cartões de região ----
     def _cam_id_rede(self, base: str) -> str:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import platform
 import re
 import subprocess
@@ -19,9 +20,11 @@ def _run(cmd: list[str]) -> str:
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         result = subprocess.run(
             cmd,
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            errors="replace",
             startupinfo=startupinfo,
             timeout=5,
         )
@@ -52,10 +55,33 @@ def _detect_windows() -> Optional[str]:
 
 
 def _detect_unix() -> Optional[str]:
-    """Parse `ip route` (Linux/Android) or `netstat -rn` (macOS/BSD)."""
+    """Parse `ip route`, Termux Wi-Fi info, rooted route table, or `netstat -rn`."""
     out = _run(["ip", "route", "show", "default"])
     match = re.search(r"default via (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", out)
-    if match:
+    if match and _IPV4.match(match.group(1)):
+        return match.group(1)
+
+    out = _run(["ip", "route", "get", "1.1.1.1"])
+    match = re.search(r"\bvia\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b", out)
+    if match and _IPV4.match(match.group(1)):
+        return match.group(1)
+
+    out = _run(["termux-wifi-connectioninfo"])
+    if out.strip():
+        try:
+            payload = json.loads(out)
+            if isinstance(payload, dict):
+                gw = str(payload.get("gateway") or "").strip()
+                if _IPV4.match(gw):
+                    return gw
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+
+    out = _run(["su", "-c", "ip route show table all"])
+    match = re.search(
+        r"\bdefault\s+via\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b", out
+    )
+    if match and _IPV4.match(match.group(1)):
         return match.group(1)
 
     out = _run(["netstat", "-rn"])

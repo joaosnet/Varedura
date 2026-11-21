@@ -487,22 +487,50 @@ def _valid_ip(value: str) -> bool:
         return False
 
 
-def _read_dns_resolv_conf() -> tuple[str, ...]:
-    try:
-        lines = (
-            Path("/etc/resolv.conf")
-            .read_text(encoding="utf-8", errors="replace")
-            .splitlines()
-        )
-    except OSError:
-        return ()
-    servers: list[str] = []
+def _parse_resolv_lines(lines: list[str], servers: list[str]) -> None:
     for line in lines:
         parts = line.split()
         if len(parts) >= 2 and parts[0].lower() == "nameserver":
             server = parts[1].split("%", 1)[0]
             if _valid_ip(server) and server not in servers:
                 servers.append(server)
+
+
+def _read_dns_resolv_conf() -> tuple[str, ...]:
+    servers: list[str] = []
+    candidates = [Path("/etc/resolv.conf")]
+    if prefix := os.environ.get("PREFIX", "").strip():
+        candidates.append(Path(prefix) / "etc" / "resolv.conf")
+
+    for conf_path in candidates:
+        try:
+            lines = conf_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        _parse_resolv_lines(lines, servers)
+        if servers:
+            break
+
+    if not servers:
+        from varedura.termux_env import is_android
+
+        if is_android():
+            for prop in ("net.dns1", "net.dns2"):
+                try:
+                    proc = subprocess.run(
+                        ["getprop", prop],
+                        stdin=subprocess.DEVNULL,
+                        capture_output=True,
+                        text=True,
+                        errors="replace",
+                        timeout=0.5,
+                    )
+                    if proc.returncode == 0:
+                        value = proc.stdout.strip().split("%", 1)[0]
+                        if _valid_ip(value) and value not in servers:
+                            servers.append(value)
+                except (OSError, subprocess.SubprocessError):
+                    continue
     return tuple(servers)
 
 
@@ -618,6 +646,17 @@ def _parse_route(
             return int(found.group(1)) if found else 0
 
         first = min(defaults, key=metric) if defaults else ""
+        if not first:
+            route_lines = [
+                line.strip()
+                for line in output.splitlines()
+                if line.strip()
+                and (
+                    re.search(r"\bvia\s+\S+", line)
+                    or re.search(r"\bdev\s+\S+", line)
+                )
+            ]
+            first = route_lines[0] if route_lines else ""
         via = re.search(r"\bvia\s+(\S+)", first)
         dev = re.search(r"\bdev\s+(\S+)", first)
         if via and _valid_ip(via.group(1)):
@@ -1059,9 +1098,31 @@ class SnapshotCollector:
         gateway, route_interface, route_present = _parse_route(
             self.platform_name, route_result.stdout, interfaces
         )
+        has_ipv4 = any(
+            item.is_up and not item.is_loopback and item.ipv4 for item in interfaces
+        )
         has_ipv6 = any(
             item.is_up and not item.is_loopback and item.ipv6 for item in interfaces
         )
+
+        def _try_ip_route_get() -> tuple[str | None, str | None, bool]:
+            if (
+                self.platform_name in ("windows", "darwin")
+                or deadline - time.monotonic() <= 0.08
+                or (cancel_event and cancel_event.is_set())
+            ):
+                return gateway, route_interface, route_present
+            fallback_route = self.command_runner.run(
+                ("ip", "route", "get", "1.1.1.1"),
+                timeout=max(0.05, min(0.9, deadline - time.monotonic())),
+                cancel_event=cancel_event,
+            )
+            return _parse_route(
+                self.platform_name, fallback_route.stdout, interfaces
+            )
+
+        if not route_present and has_ipv4:
+            gateway, route_interface, route_present = _try_ip_route_get()
         if not route_present and has_ipv6 and deadline - time.monotonic() > 0.08:
             ipv6_route = self.command_runner.run(
                 _default_route_command(self.platform_name, ipv6=True),
@@ -1073,6 +1134,8 @@ class SnapshotCollector:
             )
             if ipv6_route.returncode not in (0, None) or ipv6_route.timed_out:
                 errors.append("ipv6-default-route-unavailable")
+        if not route_present and not has_ipv4:
+            gateway, route_interface, route_present = _try_ip_route_get()
         if not route_present and (
             route_result.returncode not in (0, None) or route_result.timed_out
         ):

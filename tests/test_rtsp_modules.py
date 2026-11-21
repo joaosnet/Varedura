@@ -93,3 +93,98 @@ def test_combinar_credenciais_apenas_uma_lista():
     assert [(p.usuario, p.senha) for p in combinar_credenciais(["admin"], [])] == [("admin", "")]
     assert [(p.usuario, p.senha) for p in combinar_credenciais([], ["1234"])] == [("", "1234")]
     assert combinar_credenciais([], []) == []
+
+
+def test_video_android_player_priority_and_commands(monkeypatch):
+    from rtsp import video
+
+    monkeypatch.setattr(video, "is_android", lambda: True)
+    monkeypatch.setattr(video.Path, "exists", lambda _self: False)
+
+    bins = {
+        "am": "/system/bin/am",
+        "termux-open": "/data/data/com.termux/files/usr/bin/termux-open",
+        "mpv": "/data/data/com.termux/files/usr/bin/mpv",
+    }
+    monkeypatch.setattr(video.shutil, "which", lambda name: bins.get(name))
+    assert video.detectar_player() == ("vlc-android", "/system/bin/am")
+
+    bins.pop("am")
+    assert video.detectar_player() == (
+        "termux-open",
+        "/data/data/com.termux/files/usr/bin/termux-open",
+    )
+
+    bins.pop("termux-open")
+    assert video.detectar_player() == (
+        "mpv-tct",
+        "/data/data/com.termux/files/usr/bin/mpv",
+    )
+
+    url = "rtsp://cam/stream"
+    assert video._montar_comando("vlc-android", "/system/bin/am", url, None, 960, 540) == [
+        "/system/bin/am",
+        "start",
+        "-a",
+        "android.intent.action.VIEW",
+        "-d",
+        url,
+        "-p",
+        "org.videolan.vlc",
+    ]
+    assert video._montar_comando("termux-open", "/bin/termux-open", url, None, 960, 540) == [
+        "/bin/termux-open",
+        url,
+    ]
+    assert video._montar_comando("mpv-tct", "/bin/mpv", url, None, 960, 540) == [
+        "/bin/mpv",
+        "--vo=tct",
+        "--rtsp-transport=tcp",
+        "--profile=low-latency",
+        url,
+    ]
+    assert video.comando_mpv_terminal(url) == [
+        "/data/data/com.termux/files/usr/bin/mpv",
+        "--vo=tct",
+        "--rtsp-transport=tcp",
+        "--profile=low-latency",
+        url,
+    ]
+
+
+def test_video_erro_se_morreu_and_capturar_e_abrir_snapshot(monkeypatch, tmp_path):
+    import types
+    from rtsp import video
+
+    class OkIntentProc:
+        returncode = 0
+        stderr = None
+
+        def wait(self, timeout=None):
+            return 0
+
+    assert video.erro_se_morreu(OkIntentProc()) is None
+
+    class FailProc:
+        returncode = 1
+        stderr = types.SimpleNamespace(read=lambda: "line 1\nfatal stream error\n")
+
+        def wait(self, timeout=None):
+            return 1
+
+    assert video.erro_se_morreu(FailProc()) == "fatal stream error"
+
+    monkeypatch.setattr(video.shutil, "which", lambda _name: None)
+    ok, msg = video.capturar_e_abrir_snapshot("rtsp://cam/1", str(tmp_path / "s.jpg"))
+    assert ok is False
+    assert "ffmpeg" in msg.lower()
+
+    opened = []
+    monkeypatch.setattr(video.shutil, "which", lambda name: "/usr/bin/ffmpeg" if name == "ffmpeg" else None)
+    monkeypatch.setattr(video, "salvar_snapshot", lambda url, destino, timeout=10.0: True)
+    monkeypatch.setattr(video, "open_file_or_url", lambda target: (opened.append(target), True)[1])
+    dest = str(tmp_path / "sub" / "snap.jpg")
+    ok2, msg2 = video.capturar_e_abrir_snapshot("rtsp://cam/1", dest)
+    assert ok2 is True
+    assert dest in msg2
+    assert opened == [dest]

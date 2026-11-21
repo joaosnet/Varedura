@@ -8,23 +8,18 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import os
-import re
-import socket
 import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
-from urllib.parse import parse_qs, unquote, urlsplit, urlunsplit
+from typing import Any, Dict, List, Optional
+from urllib.parse import parse_qs, unquote, urlsplit
 
-from rtsp.video import InfoStream, validar_stream
+from rtsp.video import validar_stream
 from rtsp.xiongmai import (
     DEFAULT_NETIP_PORT,
     DiscoveredCamera,
-    NetIPPacket,
     PTZCommand,
     SofiaP2PClient,
     XiongmaiDiscovery,
