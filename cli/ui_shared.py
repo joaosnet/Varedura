@@ -120,7 +120,9 @@ def save_git_last_check(ts: float) -> None:
 # Network preferences are intentionally plain data.  Keeping migration here
 # avoids importing the monitor (and its optional network providers) while the
 # first Textual frame is being composed.
-NETWORK_SCHEMA_VERSION = 3
+NETWORK_SCHEMA_VERSION = 4
+# Última versão cujo upgrade ainda precisa migrar ``external_host`` para alvos.
+_TARGETS_SCHEMA_VERSION = 3
 LEGACY_EXTERNAL_DEFAULT = "ec2.sa-east-1.amazonaws.com"
 
 # Known legacy values can be migrated without importing the target catalogue.
@@ -149,6 +151,10 @@ NETWORK_DEFAULTS: dict[str, object] = {
     "league_auto_detect": True,
     "include_full_ip_exports": False,
     "app_ca_file": "",
+    # v4: perfis de plano (fixo/móvel). ``contracted_*`` espelham o perfil fixo
+    # por compatibilidade; ``active_profile_id`` vazio = escolha automática.
+    "plan_profiles": [],
+    "active_profile_id": "",
 }
 
 
@@ -224,7 +230,7 @@ def load_network_config() -> dict:
             schema = int(saved.get("network_schema_version", 0) or 0)
         except (TypeError, ValueError):
             schema = 0
-        if schema < NETWORK_SCHEMA_VERSION:
+        if schema < _TARGETS_SCHEMA_VERSION:
             legacy_host = str(saved.get("external_host", "") or "").strip()
             if (
                 legacy_host
@@ -250,7 +256,7 @@ def load_network_config() -> dict:
                 config["selected_target_ids"] = []
                 config["primary_target_id"] = ""
                 config["target_onboarding_completed"] = False
-            config["network_schema_version"] = NETWORK_SCHEMA_VERSION
+        config["network_schema_version"] = NETWORK_SCHEMA_VERSION
 
     selected = config.get("selected_target_ids")
     if not isinstance(selected, list):
@@ -289,6 +295,30 @@ def load_network_config() -> dict:
             value = fallback
         config[key] = value if value >= 0 else fallback
 
+    from monitor.plan_profiles import (
+        legacy_fixed_profile,
+        profiles_from_prefs,
+        profiles_to_prefs,
+    )
+
+    had_profiles = isinstance(saved, dict) and "plan_profiles" in saved
+    profiles = profiles_from_prefs(config.get("plan_profiles"))
+    if not had_profiles and isinstance(saved, dict) and (
+        "contracted_down" in saved or "contracted_up" in saved
+    ):
+        # Migração v3 -> v4: a velocidade que o usuário já tinha configurado
+        # vira um perfil fixo. Instalação nova começa sem perfil nenhum.
+        profiles = [
+            legacy_fixed_profile(
+                float(config["contracted_down"]), float(config["contracted_up"])
+            )
+        ]
+    config["plan_profiles"] = profiles_to_prefs(profiles)
+    active_id = str(config.get("active_profile_id", "") or "")
+    config["active_profile_id"] = (
+        active_id if any(item.id == active_id for item in profiles) else ""
+    )
+
     # Compatibility for code that still expects the old scalar field.
     if primary:
         preset_host = next(
@@ -314,7 +344,7 @@ def load_network_config() -> dict:
 
 
 def save_network_config(config: dict) -> None:
-    """Persist schema-v3 network configuration atomically with other prefs."""
+    """Persist the network configuration (schema v4) with the other prefs."""
     data = load_prefs()
     current = data.get("network", {})
     if not isinstance(current, dict):
@@ -540,6 +570,7 @@ def build_dashboard_status(
     network_snapshot: dict | None = None,
     dash_stats: dict | None = None,
     android_telemetry=None,
+    plan_text: str | None = None,
 ) -> Panel:
     """Build a live at-a-glance status overview for the dashboard.
 
@@ -567,6 +598,8 @@ def build_dashboard_status(
         _fmt_ping(network.get("local_ms"), threshold),
     )
     table.add_row(t("dashboard.external"), _fmt_ping(network.get("ext_ms"), threshold))
+    if plan_text:
+        table.add_row(t("plans.dashboard_row"), plan_text)
 
     if android_telemetry is not None:
         table.add_row(t("termux.lbl_battery"), _fmt_android_battery(android_telemetry))

@@ -471,6 +471,15 @@ def _collect_battery(telemetry: AndroidTelemetry) -> None:
             pass
 
 
+def read_mobile_data_bytes() -> int | None:
+    """Total RX+TX de dados móveis desde o boot, ou None se indisponível."""
+    if not Path("/proc/net/dev").exists():
+        return None
+    telemetry = AndroidTelemetry()
+    _collect_proc_net_dev(telemetry)
+    return telemetry.mobile_rx_bytes + telemetry.mobile_tx_bytes
+
+
 def _collect_proc_net_dev(telemetry: AndroidTelemetry) -> None:
     raw = _read_text_optional(Path("/proc/net/dev"))
     if not raw:
@@ -500,7 +509,7 @@ def _collect_proc_net_dev(telemetry: AndroidTelemetry) -> None:
         elif iface.startswith("wlan"):
             wlan_rx += rx
             wlan_tx += tx
-        elif iface.startswith("rmnet"):
+        elif iface.startswith(("rmnet", "ccmni")):
             telemetry.mobile_rx_bytes += rx
             telemetry.mobile_tx_bytes += tx
 

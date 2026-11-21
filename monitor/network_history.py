@@ -152,6 +152,30 @@ class NetworkSessionHistory:
                     )
         return path
 
+    def summary_rows(
+        self, *, include_full_ips: bool = False
+    ) -> list[tuple[str, str, str, str, str, str]]:
+        """Uma linha por destino: (rótulo, amostras, mín, média, máx, perda)."""
+        rows: list[tuple[str, str, str, str, str, str]] = []
+        for (_target_id, _generation, _session), records in self.grouped().items():
+            first = records[0]
+            host, _ = self._private_host(first, include_full_ips)
+            successful = [
+                record.latency_ms for record in records if record.latency_ms is not None
+            ]
+            loss = 100.0 * (len(records) - len(successful)) / len(records)
+            rows.append(
+                (
+                    f"{first.label} ({host})",
+                    str(len(records)),
+                    f"{min(successful):.1f}" if successful else "-",
+                    f"{fmean(successful):.1f}" if successful else "-",
+                    f"{max(successful):.1f}" if successful else "-",
+                    f"{loss:.1f}%",
+                )
+            )
+        return rows
+
     def export_pdf(self, path: Path, *, include_full_ips: bool = False) -> Path:
         """Generate a compact report with one statistics block per target generation."""
         try:

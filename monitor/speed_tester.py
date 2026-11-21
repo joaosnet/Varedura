@@ -458,10 +458,13 @@ class ContinuousSpeedTester:
                 return (0.0, 0.0)
 
             result = self.stats.last_result
+            # 0 = plano sem velocidade de referência (ex.: pré-pago).
+            contracted_down = self.config.velocidade_contratada_down
+            contracted_up = self.config.velocidade_contratada_up
             down_pct = (
-                result.download_mbps / self.config.velocidade_contratada_down
-            ) * 100
-            up_pct = (result.upload_mbps / self.config.velocidade_contratada_up) * 100
+                (result.download_mbps / contracted_down) * 100 if contracted_down else 0.0
+            )
+            up_pct = (result.upload_mbps / contracted_up) * 100 if contracted_up else 0.0
 
             return (down_pct, up_pct)
 

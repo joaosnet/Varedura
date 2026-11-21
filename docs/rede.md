@@ -32,12 +32,12 @@ O pacote `monitor/` concentra todo o núcleo de observabilidade e correção de 
 
 ## 3. Índices de faixas de linha (arquivos > 1.300 linhas)
 
-### `monitor/stalker.py` (3.029 linhas)
-- `L52-133`: `StalkerConfig`, `PingStats`, `ContractInfo`
+### `monitor/stalker.py` (3344 linhas)
+- `L52-190`: `StalkerConfig`, `PingStats`, `ContractInfo` (preenchido por `set_contract()` a partir do perfil ativo), `set_report_context()`
 - `L151-253`: histórico de amostras (`record_ping_sample`), preferências (`save_prefs`/`load_prefs` em `exports/stalker_prefs.json`), `get_ping_command`, `parse_ping`, `run_ping`
 - `L256-411`: consumo por processo (`get_top_network_hogs`) e diagnóstico de lag (`analyze_lag_source`)
 - `L420-683`: teclado standalone e prompts interativos (gateway, alvo externo, threshold, exportação)
-- `L691-2314`: **gerador de PDF formal ANATEL** (`_generate_combined_pdf_worker` L691-2270, `export_combined_report` L2273-2301, `get_export_status` L2304-2314)
+- `L744-2639`: **gerador do laudo PDF do consumidor** (páginas extras `_draw_text_page`/`_quota_lines` a partir de L744, `_generate_combined_pdf_worker` L844, `export_combined_report` L2577, `get_last_export_path`, `get_export_status`)
 - `L2318-3022`: painéis Rich standalone (`make_ascii_graph`, `make_*_panel`) e `main()`
 
 ### `monitor/network_diagnostics.py` (2.226 linhas)
@@ -55,3 +55,22 @@ O pacote `monitor/` concentra todo o núcleo de observabilidade e correção de 
 - `L648-1022`: pré-visualizações seguras, `list_repair_actions()` e `list_repair_guidance()`
 - `L1025-1173`: validação DER/PEM e armazenamento de CA em `~/.varedura/certs/` (`_validate_app_ca`, `_store_app_ca`)
 - `L1176-1723`: `RepairExecutor` (`_execute_flush`, `_execute_renew`, `_execute_reconnect`, `_execute_wifi`, `execute()`)
+
+---
+
+## 4. Planos de internet, franquia e laudo PDF
+
+O que foi contratado deixa de ser fixo no código: vem de **perfis de plano** em `~/.varedura_prefs.json` (`network.plan_profiles`, schema v4), editados em **Configurações → Planos de internet**.
+
+| Módulo | Papel |
+|---|---|
+| `monitor/plan_profiles.py` | Dados puros: `PlanProfile` (fixo/móvel, velocidade de referência, franquia, ciclo, rede associada), `select_profile()`, `evaluate_speed()`, `quota_status()`, `apply_profile()` (único ponto que escreve em `speed_config` e `stalker.contract_info`) |
+| `monitor/netinfo.py::detect_active_network()` | Tipo de rede (Wi-Fi, dados móveis, cabo), SSID e gateway. Android: `ip route get` + `termux-wifi-connectioninfo`; Windows: `netsh wlan show interfaces` |
+| `monitor/data_usage.py` | `DataUsageTracker` (consumo por ciclo em `~/.varedura_usage.json`) e histórico de velocidade em `~/.varedura_speed_history.jsonl` |
+| `cli/textual_plans.py` | `PlansMixin`: formulário, plano ativo, linha de status na aba Rede e no Painel |
+
+**Escolha do plano**: manual (Configurações → "Plano em uso") > SSID > gateway > tipo de rede > único plano fixo. Dados móveis nunca são conferidos contra um plano fixo, e um plano móvel nunca é aplicado em Wi-Fi. Sem permissão de localização o Android devolve `<unknown ssid>`; nesse caso a associação cai para o gateway.
+
+**Franquia**: o Android só expõe contadores desde o boot (`rmnet*`/`ccmni*` em `/proc/net/dev`). O rastreador soma deltas e reinicia a base quando o contador regride. O tráfego entre a última leitura e um reboot não é contado — o campo "Já consumido (GB)" serve para acertar com o extrato da operadora. Fora do Android não há medição de franquia.
+
+**Laudo PDF** (botão "Exportar PDF" da aba Rede → `export_combined_report()`): documento **do consumidor**, não da ANATEL. Usa as medições de velocidade do plano ativo no ciclo vigente (ou últimos 30 dias). Os limiares de 80 % (média) e 40 % (instantânea) vêm dos antigos indicadores SCM4/SCM5 da Res. 574/2011, **revogados pelo RQUAL (Res. 717/2019)**: aparecem como "referência", e os vereditos são "dentro/abaixo da referência". Plano sem velocidade informada sai como "velocidade medida (sem referência)". Plano móvel com franquia ganha a seção "Franquia de dados".

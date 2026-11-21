@@ -39,6 +39,7 @@ from textual.widgets.option_list import Option
 
 from cli.richlog import DailyLogWriter
 from cli.textual_cameras import CAMERAS_CSS, CamerasMixin
+from cli.textual_plans import PLANS_CSS, PlansMixin
 from cli.textual_termux import TERMUX_CSS, TermuxMixin
 from cli.ui_shared import (
     CLEANUP_GROUPS,
@@ -162,7 +163,7 @@ class ShutdownScreen(ModalScreen):
             pass
 
 
-class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
+class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None]):
     """Main Textual TUI for Varedura."""
 
     CSS = (
@@ -541,6 +542,7 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
     """
         + CAMERAS_CSS
         + TERMUX_CSS
+        + PLANS_CSS
     )
 
     BINDINGS = [
@@ -607,12 +609,14 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
         self._score_hist: deque[float] = deque(maxlen=100)
         self._last_screenshot_path: Path | None = None
         self._last_export_path: Path | None = None
+        self._export_poll_timer = None
         self._primary_fail_streak: int = 0
         self._outage_notified: bool = False
         self._last_outage_notif_ts: float = 0.0
         self._kbd_macro_buf: str = ""
         # Estado da aba Termux e aba Câmeras (RTSP), fundidas via mixins.
         self._init_termux_state()
+        self._init_plans_state()
         self._init_cameras_state()
         self._shutting_down = False
         self._shutdown_screen = None
@@ -719,6 +723,7 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
                         get_language(),
                         self._network_status_snapshot(),
                         android_telemetry=self._termux_last_telemetry,
+                        plan_text=self._plan_status_text(prefix=False),
                     ),
                     id="dashboard-summary",
                 )
@@ -806,6 +811,7 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
                 yield Button(t("textual.network_export"), id="network-export")
                 yield Button(t("network.btn_share_report"), id="network-share")
                 yield Label(t("textual.network_idle"), id="network-status")
+            yield Label(self._plan_status_text(), id="network-plan-status")
             with Grid(id="network-cards"):
                 with Vertical(classes="ping-card", id="health-card"):
                     yield Label(t("game.health_title"), classes="card-title")
@@ -948,14 +954,7 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
                     id="net-threshold",
                     type="integer",
                 )
-            with Horizontal(classes="form-row"):
-                yield Label(t("settings.net_contracted_down"))
-                yield Input(
-                    value=str(net["contracted_down"]), id="net-down", type="number"
-                )
-            with Horizontal(classes="form-row"):
-                yield Label(t("settings.net_contracted_up"))
-                yield Input(value=str(net["contracted_up"]), id="net-up", type="number")
+            yield from self._compose_plan_settings()
 
             with Horizontal(classes="button-row"):
                 yield Button(
@@ -1092,10 +1091,12 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
                     self._network_status_snapshot(),
                     self._dash_stats,
                     android_telemetry=self._termux_last_telemetry,
+                    plan_text=self._plan_status_text(prefix=False),
                 )
             )
         except Exception:
             pass
+        self._update_plan_status_label()
 
     @work(thread=True, exclusive=False)
     def _run_dashboard_poller(self) -> None:
@@ -1104,11 +1105,23 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
         from monitor.port_scanner import get_system_network_stats
         from monitor.ping_targets import PingStatus, probe_ping
 
+        loops = 0
         while not self._dash_stop.is_set():
             try:
                 self._dash_stats = get_system_network_stats()
             except Exception:
                 self._dash_stats = {}
+            try:
+                self._poll_plan_usage()
+                loops += 1
+                if loops % 10 == 0:  # ~30 s: detecta troca entre Wi-Fi e dados
+                    from monitor.netinfo import detect_active_network
+
+                    self.call_from_thread(
+                        self._on_active_network, detect_active_network()
+                    )
+            except Exception:
+                pass
             if termux_env.is_termux() and self._active_tab == "dashboard":
                 try:
                     self._termux_last_telemetry = termux_env.collect_android_telemetry()
@@ -1144,6 +1157,12 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
             detected = detect_default_gateway()
             if detected:
                 cfg["gateway_ip"] = detected
+        try:
+            from monitor.netinfo import detect_active_network
+
+            self._active_network = detect_active_network()
+        except Exception:
+            pass
         self.call_from_thread(self._finish_network_initialization, cfg, detected)
 
     def _finish_network_initialization(self, cfg: dict, detected: str | None) -> None:
@@ -1164,7 +1183,6 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
         try:
             import monitor.stalker as stalker_mod
             from monitor.ping_targets import TargetSelection
-            from monitor.speed_tester import speed_config
 
             stalker_mod.config.gateway_ip = str(cfg.get("gateway_ip", "") or "").strip()
             selection = TargetSelection.from_config(cfg)
@@ -1172,10 +1190,10 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
                 selection.primary_target.host if selection.primary_target else ""
             )
             stalker_mod.config.lag_threshold_ms = int(cfg["lag_threshold_ms"])
-            speed_config.velocidade_contratada_down = float(cfg["contracted_down"])
-            speed_config.velocidade_contratada_up = float(cfg["contracted_up"])
         except Exception:
             pass
+        # O plano ativo (perfil) é a única fonte da velocidade contratada.
+        self._refresh_active_plan()
 
     def action_show_settings(self) -> None:
         self.query_one("#main-tabs", TabbedContent).active = "settings"
@@ -1233,6 +1251,14 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
         self._network_stop.set()
         self._dash_stop.set()
         self._diagnostic_cancel.set()
+        try:
+            import sys
+
+            usage_mod = sys.modules.get("monitor.data_usage")
+            if usage_mod is not None:
+                usage_mod.get_usage_tracker().flush()
+        except Exception:
+            pass
         if self._ping_scheduler is not None:
             self._ping_scheduler.stop(wait=False)
             self._ping_scheduler = None
@@ -1436,6 +1462,14 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
         self._league_detector_generation += 1
         self._dash_stop.set()
         self._diagnostic_cancel.set()
+        try:
+            import sys
+
+            usage_mod = sys.modules.get("monitor.data_usage")
+            if usage_mod is not None:
+                usage_mod.get_usage_tracker().flush()
+        except Exception:
+            pass
         if self._ping_scheduler is not None:
             self._ping_scheduler.stop(wait=False)
             self._ping_scheduler = None
@@ -1457,6 +1491,8 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
     @on(Button.Pressed)
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
+        if self._plans_handle_button(button_id):
+            return
         if button_id == "dash-btn-network":
             self._switch_main_tab("network")
         elif button_id == "dash-btn-cameras":
@@ -1855,19 +1891,13 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
             cfg["lag_threshold_ms"] = int(
                 self.query_one("#net-threshold", Input).value or 0
             )
-            cfg["contracted_down"] = float(
-                self.query_one("#net-down", Input).value or 0
-            )
-            cfg["contracted_up"] = float(self.query_one("#net-up", Input).value or 0)
         except ValueError:
             self.notify(t("settings.net_invalid"), severity="error")
             return False
-        if (
-            cfg["lag_threshold_ms"] <= 0
-            or cfg["contracted_down"] < 0
-            or cfg["contracted_up"] < 0
-        ):
+        if cfg["lag_threshold_ms"] <= 0:
             self.notify(t("settings.net_invalid"), severity="error")
+            return False
+        if not self._plans_collect_into(cfg):
             return False
         cfg["league_auto_detect"] = bool(
             self.query_one("#league-auto-switch", Switch).value
@@ -1891,6 +1921,7 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
         save_network_config(cfg)
         self._network_config = cfg
         self._apply_network_config(cfg)
+        self._plans_after_save()
         self._sync_league_detector()
         return True
 
@@ -2851,6 +2882,7 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
             pass
         self._render_speed_table(snapshot)
         if result is not None:
+            self._record_speed_result(result)
             self._network_log(
                 f"[green]{t('network.speed_finished', provider=result.provider_name)}[/]"
             )
@@ -2859,21 +2891,45 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
             self._network_log(f"[yellow]{detail}[/]")
 
     def _export_network_report(self) -> None:
-        if self._network_history is None or not self._network_history.snapshot():
-            self.notify(t("stalker.export_no_data"), severity="warning")
+        """Gera o laudo de conformidade (PDF) e o CSV de ping por destino."""
+        import monitor.stalker as stalker_mod
+
+        full_ips = bool(self._network_config.get("include_full_ip_exports", False))
+        has_ping = self._network_history is not None and bool(
+            self._network_history.snapshot()
+        )
+        self._refresh_active_plan()
+        stalker_mod.set_report_context(
+            target_rows=self._network_history.summary_rows(include_full_ips=full_ips)
+            if has_ping
+            else [],
+            usage_bytes=self._mobile_usage_bytes,
+            has_data=has_ping,
+        )
+        message = stalker_mod.export_combined_report()
+        if not stalker_mod.is_export_running():
+            self.notify(message, severity="warning")
             return
+        self._last_export_path = None
         self._network_log(f"[cyan]{t('network.export_started')}[/]")
-        self._run_network_export()
+        if has_ping:
+            self._run_network_export()
+        if self._export_poll_timer is not None:
+            self._export_poll_timer.stop()
+        self._export_poll_timer = self.set_interval(0.5, self._poll_export_status)
 
     @work(thread=True, exclusive=True)
     def _run_network_export(self) -> None:
+        """CSV detalhado por destino; o PDF sai pelo laudo de conformidade."""
         try:
-            paths = self._network_history.export_bundle(
+            stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            csv_path = self._network_history.export_csv(
+                Path("exports") / f"ping_targets_{stamp}.csv",
                 include_full_ips=bool(
                     self._network_config.get("include_full_ip_exports", False)
-                )
+                ),
             )
-            self.call_from_thread(self._finish_network_export, paths, None)
+            self.call_from_thread(self._finish_network_export, (csv_path, None), None)
         except Exception as exc:
             self.call_from_thread(self._finish_network_export, None, str(exc))
 
@@ -2884,9 +2940,14 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
             self.notify(message, severity="error")
             return
         csv_path, pdf_path = paths
-        self._last_export_path = Path(pdf_path or csv_path)
-        pdf_label = str(pdf_path) if pdf_path is not None else "—"
-        message = t("network.export_finished", csv=str(csv_path), pdf=pdf_label)
+        current = self._last_export_path
+        if pdf_path is not None or current is None or current.suffix != ".pdf":
+            # Não troca o PDF do laudo (se já pronto) pelo CSV no "Compartilhar".
+            self._last_export_path = Path(pdf_path or csv_path)
+        if pdf_path is None:
+            self._network_log(f"[green]{t('network.export_csv_finished', csv=str(csv_path))}[/]")
+            return
+        message = t("network.export_finished", csv=str(csv_path), pdf=str(pdf_path))
         self._network_log(f"[green]{message}[/]")
         self.notify(message)
 
@@ -2905,12 +2966,19 @@ class VareduraTextualApp(TermuxMixin, CamerasMixin, App[str | None]):
             self.notify(t("network.export_failed", error="share unavailable"), severity="warning")
 
     def _poll_export_status(self) -> None:
-        from monitor.stalker import get_export_status
+        from monitor.stalker import get_export_status, get_last_export_path
 
         status = get_export_status()
-        if status:
-            self._network_log(status)
-            self.notify(status)
+        if not status:
+            return
+        if self._export_poll_timer is not None:
+            self._export_poll_timer.stop()
+            self._export_poll_timer = None
+        pdf_path = get_last_export_path()
+        if pdf_path:
+            self._last_export_path = Path(pdf_path)
+        self._network_log(status)
+        self.notify(status)
 
     def _network_log(self, message) -> None:
         self.query_one("#network-log", RichLog).write(message)

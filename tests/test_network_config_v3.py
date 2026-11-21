@@ -15,7 +15,7 @@ def _set_prefs(monkeypatch, tmp_path, payload):
 def test_clean_install_requires_target_onboarding(monkeypatch, tmp_path):
     monkeypatch.setattr(ui_shared, "PREFS_FILE", tmp_path / "missing.json")
     config = ui_shared.load_network_config()
-    assert config["network_schema_version"] == 3
+    assert config["network_schema_version"] == ui_shared.NETWORK_SCHEMA_VERSION
     assert config["selected_target_ids"] == []
     assert not config["target_onboarding_completed"]
 

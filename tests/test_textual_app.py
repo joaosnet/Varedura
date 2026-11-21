@@ -815,3 +815,41 @@ async def test_network_export_without_pdf_and_share_button(monkeypatch, tmp_path
         await pilot.click("#network-share")
         await pilot.pause()
         assert shared == [str(csv_path)]
+
+
+@pytest.mark.asyncio
+async def test_settings_creates_mobile_plan_and_shows_quota(monkeypatch):
+    from monitor.plan_profiles import ActiveNetwork, NetworkKind, profiles_from_prefs
+    from textual.widgets import Input, Label, Select
+
+    app = VareduraTextualApp()
+    async with app.run_test(size=(100, 60)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "settings"
+        await wait_until(lambda: "settings" in app._hydrated_tabs, pilot)
+        await pilot.pause()
+
+        app.query_one("#plan-name", Input).value = "Chip pré"
+        app.query_one("#plan-kind", Select).value = "mobile"
+        app.query_one("#plan-quota", Input).value = "10"
+        app.query_one("#plan-cycle-days", Input).value = "15"
+        await pilot.pause()
+        assert app._save_network_settings() is True
+        await pilot.pause()
+
+        (profile,) = profiles_from_prefs(
+            ui_shared.load_network_config()["plan_profiles"]
+        )
+        assert (profile.name, profile.quota_gb, profile.cycle_days) == ("Chip pré", 10, 15)
+        assert profile.match_kind == "mobile" and profile.cycle_start
+
+        # Em Wi-Fi o plano móvel não é aplicado; em dados móveis, sim.
+        app._on_active_network(ActiveNetwork(NetworkKind.WIFI, "Casa", "192.168.0.1"))
+        assert app._active_profile is None
+        app._on_active_network(ActiveNetwork(NetworkKind.MOBILE, interface="rmnet0"))
+        assert app._active_profile == profile
+        assert "10 GB" in app._plan_status_text()
+
+        app.query_one("#plan-cycle-days", Input).value = "0"
+        assert app._save_network_settings() is False
+        assert isinstance(app.query_one("#plan-binding", Label), Label)

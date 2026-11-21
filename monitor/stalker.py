@@ -120,20 +120,73 @@ scan_counter = 0
 class ContractInfo:
     """Informações do contrato de internet para relatório formal."""
 
-    operadora: str = "WLAN SISTEMAS"
-    plano: str = "PACOTE R/C SUMMER 500MB+EXITLAG"
-    velocidade_down_mbps: float = 500.0  # Mbps para cálculos
-    velocidade_up_mbps: float = 250.0  # Mbps para cálculos
-    # ANATEL Resolução 574/2011
-    percentual_medio_anatel: float = 80.0  # Média mensal mínima
-    percentual_instantaneo_anatel: float = 40.0  # Instantâneo mínimo
-    # Informações de contato
-    telefone_operadora: str = "(91) 3182-2990"
-    whatsapp_operadora: str = "(91) 98538-9877"
-    email_operadora: str = "financeiro@wlansistemas.com.br"
+    # Preenchido pelo perfil de plano ativo (monitor/plan_profiles.py). Sem
+    # perfil, o relatório sai como "não informado" e sem veredito de velocidade.
+    operadora: str = "Não informada"
+    plano: str = "Não informado"
+    velocidade_down_mbps: float = 0.0  # 0 = sem velocidade de referência
+    velocidade_up_mbps: float = 0.0
+    # Limiares de referência do laudo. Vêm dos antigos indicadores SCM4/SCM5
+    # (Res. ANATEL 574/2011), revogados pelo RQUAL (Res. 717/2019): servem de
+    # parâmetro técnico, não de obrigação regulatória vigente.
+    percentual_medio_anatel: float = 80.0
+    percentual_instantaneo_anatel: float = 40.0
+    telefone_operadora: str = ""
+    whatsapp_operadora: str = ""
+    email_operadora: str = ""
+    tipo: str = "fixed"  # "fixed" (banda larga) | "mobile" (móvel/pré-pago)
+    rede: str = ""  # descrição da rede em que as medições foram feitas
+    perfil_id: str = ""
+    perfil_nome: str = ""
+    perfil: object | None = None  # PlanProfile ativo, quando houver
 
 
 contract_info = ContractInfo()
+
+
+def set_contract(profile, network=None) -> None:
+    """Aplica o perfil de plano ativo ao relatório (único ponto de escrita)."""
+    blank = ContractInfo()
+    contract_info.perfil = profile
+    contract_info.rede = network.describe() if network is not None else ""
+    if profile is None:
+        for name in (
+            "operadora",
+            "plano",
+            "velocidade_down_mbps",
+            "velocidade_up_mbps",
+            "telefone_operadora",
+            "email_operadora",
+            "tipo",
+            "perfil_id",
+            "perfil_nome",
+        ):
+            setattr(contract_info, name, getattr(blank, name))
+        return
+    contract_info.operadora = profile.operadora or blank.operadora
+    contract_info.plano = profile.plano or profile.name or blank.plano
+    contract_info.velocidade_down_mbps = float(profile.down_mbps)
+    contract_info.velocidade_up_mbps = float(profile.up_mbps)
+    contract_info.telefone_operadora = profile.telefone
+    contract_info.email_operadora = profile.email
+    contract_info.tipo = str(getattr(profile.kind, "value", profile.kind))
+    contract_info.perfil_id = profile.id
+    contract_info.perfil_nome = profile.name
+
+
+def _pct_of(value: float, reference: float) -> float:
+    """Percentual do valor de referência; 0 quando o plano não tem referência."""
+    return (value / reference) * 100 if reference else 0.0
+
+
+# Dados extras do laudo fornecidos por quem dispara a exportação (TUI):
+# ``target_rows`` (latência por destino) e ``usage_bytes`` (franquia medida).
+_report_context: dict = {}
+
+
+def set_report_context(**values) -> None:
+    _report_context.clear()
+    _report_context.update(values)
 
 # Histórico completo para relatório (sem limite de tamanho)
 # Armazena TODAS as medições desde o início do teste
@@ -684,8 +737,108 @@ def prompt_export_report(simulated_choice: str | None = None) -> str:
 
 
 # --- Estado de Exportação em Background ---
-_export_status = {"running": False, "message": None, "completed": False}
+_export_status = {"running": False, "message": None, "completed": False, "path": None}
 _export_lock = threading.Lock()
+
+
+def _draw_text_page(pdf, plt, colors, title: str, sections: list) -> None:
+    """Página de texto no mesmo estilo do laudo: ``[(subtítulo, [linhas])]``."""
+    azul_gov, _azul, _cinza = colors
+    fig = plt.figure(figsize=(8.5, 11), facecolor="white")
+    ax = fig.add_subplot(111)
+    ax.axis("off")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.add_patch(
+        plt.Rectangle((0, 0.92), 1, 0.08, facecolor=azul_gov, transform=ax.transAxes)
+    )
+    ax.text(0.5, 0.96, title, ha="center", va="center", fontsize=14,
+            color="white", fontweight="bold", transform=ax.transAxes)
+    y = 0.87
+    for heading, lines in sections:
+        ax.text(0.08, y, heading, ha="left", va="center", fontsize=11,
+                color=azul_gov, fontweight="bold", transform=ax.transAxes)
+        y -= 0.035
+        for line in lines:
+            if y < 0.07:
+                break
+            ax.text(0.08, y, line, ha="left", va="center", fontsize=9,
+                    color="#333333", family="monospace", transform=ax.transAxes)
+            y -= 0.024
+        y -= 0.02
+    ax.add_patch(
+        plt.Rectangle((0, 0), 1, 0.04, facecolor=azul_gov, transform=ax.transAxes)
+    )
+    ax.text(0.5, 0.02, "Varedura - laudo elaborado pelo consumidor", ha="center",
+            va="center", fontsize=7, color="white", transform=ax.transAxes)
+    pdf.savefig(fig, dpi=150, facecolor="white")
+    plt.close(fig)
+
+
+def _quota_lines() -> list[str]:
+    """Linhas da seção de franquia para o perfil ativo (vazio se não houver)."""
+    profile = contract_info.perfil
+    if profile is None or not getattr(profile, "has_quota", False):
+        return []
+    from monitor.plan_profiles import quota_status
+
+    measured = _report_context.get("usage_bytes")
+    if measured is None:
+        try:
+            from monitor.data_usage import get_usage_tracker
+
+            measured = get_usage_tracker().cycle_bytes(profile)
+        except Exception:
+            measured = 0
+    status = quota_status(profile, int(measured or 0))
+    cycle = status.cycle
+    lines = [
+        f"Franquia do plano:      {status.quota_gb:.2f} GB",
+        f"Consumido no ciclo:     {status.used_gb:.2f} GB ({status.used_pct:.1f}%)",
+        f"Restante:               {status.remaining_gb:.2f} GB",
+        f"Ciclo:                  {cycle.start.strftime('%d/%m/%Y')} a "
+        f"{(cycle.end - datetime.timedelta(days=1)).strftime('%d/%m/%Y')} "
+        f"({status.days_left} dia(s) restante(s))",
+    ]
+    if status.projected_gb is not None:
+        lines.append(
+            f"Projeção ao fim do ciclo: {status.projected_gb:.2f} GB"
+            + (" - ACIMA da franquia" if status.will_exceed else "")
+        )
+    if status.exceeded:
+        lines.append("SITUAÇÃO: franquia esgotada no ciclo.")
+    lines += [
+        "",
+        f"Medido pelo aparelho: {int(measured or 0) / 1024**3:.2f} GB"
+        f" | Ajuste informado: {profile.used_offset_gb:.2f} GB",
+        "Fonte: contadores de dados móveis do Android (rmnet/ccmni).",
+        "O consumo entre um reboot e a leitura anterior não é contado;",
+        "confira com o extrato da operadora.",
+    ]
+    return lines
+
+
+def _draw_extra_pages(pdf, plt, azul_gov, azul, cinza) -> None:
+    sections = []
+    quota = _quota_lines()
+    if quota:
+        sections.append(("FRANQUIA DE DADOS", quota))
+    rows = _report_context.get("target_rows") or []
+    if rows:
+        header = f"{'Destino':<28}{'Amostras':>9}{'Mín':>9}{'Média':>9}{'Máx':>9}{'Perda':>8}"
+        body = [
+            f"{str(label)[:27]:<28}{count:>9}{minimum:>9}{average:>9}{maximum:>9}{loss:>8}"
+            for label, count, minimum, average, maximum, loss in rows[:24]
+        ]
+        sections.append(("LATÊNCIA POR DESTINO (ms)", [header, *body]))
+    if sections:
+        _draw_text_page(
+            pdf,
+            plt,
+            (azul_gov, azul, cinza),
+            " E ".join(heading.split(" (")[0] for heading, _lines in sections),
+            sections,
+        )
 
 
 def _generate_combined_pdf_worker(full_history: bool = False):
@@ -752,8 +905,46 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             pass
 
         # CSV de Velocidade
-        tester = get_speed_tester()
-        stats = tester.stats
+        from types import SimpleNamespace
+
+        from monitor.data_usage import samples_for_report
+        from monitor.plan_profiles import SpeedSample
+
+        _live = get_speed_tester().stats
+        _live_providers = list(getattr(_live, "history_providers", []))
+        _session = [
+            SpeedSample(
+                timestamp=ts,
+                down_mbps=down,
+                up_mbps=up,
+                provider=_live_providers[i] if i < len(_live_providers) else "",
+                profile_id=contract_info.perfil_id,
+            )
+            for i, (ts, down, up) in enumerate(
+                zip(
+                    list(_live.timestamps),
+                    list(_live.history_down),
+                    list(_live.history_up),
+                )
+            )
+        ]
+        # Medições do plano ativo no ciclo/últimos 30 dias + as desta sessão.
+        speed_samples = samples_for_report(contract_info.perfil, _session)
+        if contract_info.perfil is None:
+            speed_samples = [s for s in speed_samples if not s.profile_id]
+        stats = SimpleNamespace(
+            timestamps=[s.timestamp for s in speed_samples],
+            history_down=[s.down_mbps for s in speed_samples],
+            history_up=[s.up_mbps for s in speed_samples],
+            history_providers=[s.provider or "N/A" for s in speed_samples],
+            test_count=len(speed_samples),
+        )
+        has_speed_ref = bool(
+            contract_info.velocidade_down_mbps or contract_info.velocidade_up_mbps
+        )
+        is_mobile = contract_info.tipo == "mobile"
+        pct_medio = contract_info.percentual_medio_anatel
+        pct_inst = contract_info.percentual_instantaneo_anatel
 
         # Copiar históricos para evitar mutações e reduzir se muito grandes
         speed_ts = list(stats.timestamps)
@@ -770,24 +961,29 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                 with open(csv_speed_filename, "w", encoding="utf-8") as f:
                     f.write(
                         "timestamp,download_mbps,upload_mbps,contrato_down,contrato_up,"
-                        "pct_down,pct_up,status_anatel_medio,status_anatel_instantaneo\n"
+                        "pct_down,pct_up,status_ref_media,status_ref_instantanea\n"
                     )
                     for ts, down, up in zip(speed_ts, speed_down, speed_up):
                         ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
-                        pct_down = (down / contract_info.velocidade_down_mbps) * 100
-                        pct_up = (up / contract_info.velocidade_up_mbps) * 100
-                        status_medio = (
-                            "OK"
-                            if pct_down >= contract_info.percentual_medio_anatel
-                            and pct_up >= contract_info.percentual_medio_anatel
-                            else "ABAIXO"
-                        )
-                        status_instant = (
-                            "OK"
-                            if pct_down >= contract_info.percentual_instantaneo_anatel
-                            and pct_up >= contract_info.percentual_instantaneo_anatel
-                            else "VIOLAÇÃO"
-                        )
+                        pct_down = _pct_of(down, contract_info.velocidade_down_mbps)
+                        pct_up = _pct_of(up, contract_info.velocidade_up_mbps)
+                        _checks = [
+                            pct
+                            for pct, ref in (
+                                (pct_down, contract_info.velocidade_down_mbps),
+                                (pct_up, contract_info.velocidade_up_mbps),
+                            )
+                            if ref
+                        ]
+                        if not _checks:
+                            status_medio = status_instant = "SEM_REFERENCIA"
+                        else:
+                            status_medio = (
+                                "OK" if min(_checks) >= pct_medio else "ABAIXO"
+                            )
+                            status_instant = (
+                                "OK" if min(_checks) >= pct_inst else "ABAIXO"
+                            )
                         f.write(
                             f"{ts_str},{down:.2f},{up:.2f},"
                             f"{contract_info.velocidade_down_mbps},{contract_info.velocidade_up_mbps},"
@@ -838,7 +1034,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             ax_capa.text(
                 0.5,
                 0.93,
-                "AGÊNCIA NACIONAL DE TELECOMUNICAÇÕES",
+                "LAUDO ELABORADO PELO CONSUMIDOR",
                 ha="center",
                 va="center",
                 fontsize=12,
@@ -849,7 +1045,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             ax_capa.text(
                 0.5,
                 0.88,
-                "ANATEL",
+                "VAREDURA",
                 ha="center",
                 va="center",
                 fontsize=24,
@@ -876,7 +1072,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             ax_capa.text(
                 0.5,
                 0.72,
-                "RELATÓRIO TÉCNICO DE AUDITORIA",
+                "RELATÓRIO TÉCNICO DE QUALIDADE DE CONEXÃO",
                 ha="center",
                 va="center",
                 fontsize=18,
@@ -887,7 +1083,9 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             ax_capa.text(
                 0.5,
                 0.67,
-                "Qualidade do Serviço de Comunicação Multimídia",
+                "Serviço Móvel Pessoal (dados móveis)"
+                if is_mobile
+                else "Banda larga fixa (Serviço de Comunicação Multimídia)",
                 ha="center",
                 va="center",
                 fontsize=14,
@@ -922,8 +1120,12 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             info_lines = [
                 f"Prestadora: {contract_info.operadora}",
                 f"Plano: {contract_info.plano}",
-                f"Velocidade Contratada: {contract_info.velocidade_down_mbps:.0f} Mbps (download) / {contract_info.velocidade_up_mbps:.0f} Mbps (upload)",
-                "",
+                (
+                    f"Velocidade {'anunciada' if is_mobile else 'contratada'}: {contract_info.velocidade_down_mbps:.0f} Mbps (download) / {contract_info.velocidade_up_mbps:.0f} Mbps (upload)"
+                    if has_speed_ref
+                    else "Velocidade de referência: não informada"
+                ),
+                f"Rede medida: {contract_info.rede or 'não identificada'}",
                 f"Período de Análise: {inicio_str} até {fim_str}",
                 f"Total de Medições: {len(ping_data)} (ping) | {stats.test_count} (velocidade)",
             ]
@@ -954,10 +1156,10 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             )
 
             legal_lines = [
-                "• Resolução nº 574/2011 da ANATEL",
-                "• RQUAL - Regulamento de Qualidade dos Serviços de Telecomunicações",
-                "• Resolução nº 777/2025 - Regulamento Geral de Direitos do Consumidor",
                 "• Lei nº 8.078/1990 - Código de Defesa do Consumidor",
+                "• Resolução ANATEL nº 765/2023 - Regulamento Geral de Direitos do Consumidor (RGC)",
+                "• Resolução ANATEL nº 717/2019 - Regulamento de Qualidade (RQUAL)",
+                "Documento particular: não é emitido nem validado pela ANATEL.",
             ]
 
             for i, line in enumerate(legal_lines):
@@ -981,7 +1183,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             ax_capa.text(
                 0.5,
                 0.03,
-                f"Gerado em: {data_str} às {hora_str} | Conforme metodologia ANATEL Qualidade",
+                f"Gerado em: {data_str} às {hora_str} | Medições feitas pelo consumidor com o Varedura",
                 ha="center",
                 va="center",
                 fontsize=8,
@@ -1020,7 +1222,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             ax_met.text(
                 0.08,
                 0.86,
-                "1. BASE LEGAL",
+                "1. PARÂMETROS DE REFERÊNCIA",
                 ha="left",
                 va="center",
                 fontsize=11,
@@ -1030,11 +1232,11 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             )
 
             base_legal = [
-                "Conforme a Resolução nº 574/2011 da ANATEL e o RQUAL,",
-                "as prestadoras devem garantir:",
-                "",
-                f"• Velocidade MÉDIA mensal: mínimo de {contract_info.percentual_medio_anatel:.0f}% do contratado",
-                f"• Velocidade INSTANTÂNEA: mínimo de {contract_info.percentual_instantaneo_anatel:.0f}% em cada medição",
+                "Este laudo compara as medições com a velocidade do plano usando os limiares",
+                "dos antigos indicadores SCM4/SCM5 (Res. ANATEL 574/2011), revogados pelo RQUAL",
+                "(Res. 717/2019). São parâmetro técnico de referência, não obrigação vigente:",
+                f"• Velocidade MÉDIA do período: referência de {pct_medio:.0f}% do plano",
+                f"• Velocidade INSTANTÂNEA: referência de {pct_inst:.0f}% em cada medição",
             ]
             for i, line in enumerate(base_legal):
                 ax_met.text(
@@ -1062,11 +1264,19 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             )
 
             procedimento = [
-                "Para que a aferição seja válida conforme regulamentação:",
+                f"Rede em que as medições foram feitas: {contract_info.rede or 'não identificada'}",
                 "",
-                "• Equipamento conectado via cabo de rede (LAN)",
-                "• Conexão direta na porta LAN da ONU/Roteador",
-                "• Testes via Wi-Fi NÃO são considerados válidos",
+                (
+                    "• Medições em dados móveis variam com sinal, local e horário"
+                    if is_mobile
+                    else "• Medição por cabo, direto no roteador/ONU, é a mais confiável"
+                ),
+                (
+                    "• A franquia é medida pelos contadores do próprio aparelho"
+                    if is_mobile
+                    else "• Medições via Wi-Fi sofrem influência do ambiente e do aparelho"
+                ),
+                "• Cada teste registra data, hora, servidor e provedor de medição",
             ]
             for i, line in enumerate(procedimento):
                 ax_met.text(
@@ -1106,10 +1316,15 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             ax_met.add_patch(rect_params)
 
             params = [
-                f"Velocidade Contratada: {contract_info.velocidade_down_mbps:.0f} Mbps (↓) / {contract_info.velocidade_up_mbps:.0f} Mbps (↑)",
-                f"Mínimo 80%: {contract_info.velocidade_down_mbps * 0.8:.0f} Mbps (↓) / {contract_info.velocidade_up_mbps * 0.8:.0f} Mbps (↑)",
-                f"Mínimo 40%: {contract_info.velocidade_down_mbps * 0.4:.0f} Mbps (↓) / {contract_info.velocidade_up_mbps * 0.4:.0f} Mbps (↑)",
+                f"Velocidade do plano: {contract_info.velocidade_down_mbps:.0f} Mbps (↓) / {contract_info.velocidade_up_mbps:.0f} Mbps (↑)",
+                f"Referência {pct_medio:.0f}%: {contract_info.velocidade_down_mbps * pct_medio / 100:.0f} Mbps (↓) / {contract_info.velocidade_up_mbps * pct_medio / 100:.0f} Mbps (↑)",
+                f"Referência {pct_inst:.0f}%: {contract_info.velocidade_down_mbps * pct_inst / 100:.0f} Mbps (↓) / {contract_info.velocidade_up_mbps * pct_inst / 100:.0f} Mbps (↑)",
             ]
+            if not has_speed_ref:
+                params = [
+                    "Plano sem velocidade de referência informada.",
+                    "As velocidades medidas são registradas sem veredito.",
+                ]
             for i, line in enumerate(params):
                 ax_met.text(
                     0.5,
@@ -1160,7 +1375,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             ax_met.text(
                 0.5,
                 0.02,
-                "ANATEL - Agência Nacional de Telecomunicações",
+                "Varedura - laudo elaborado pelo consumidor",
                 ha="center",
                 va="center",
                 fontsize=7,
@@ -1367,7 +1582,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                     ax_ping.text(
                         0.5,
                         0.02,
-                        "ANATEL - Agência Nacional de Telecomunicações",
+                        "Varedura - laudo elaborado pelo consumidor",
                         ha="center",
                         va="center",
                         fontsize=7,
@@ -1486,7 +1701,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                 ax_speed.text(
                     0.5,
                     0.96,
-                    f"REGISTRO DE TESTES DE VELOCIDADE - {stats.test_count} testes",
+                    f"REGISTRO DE TESTES DE VELOCIDADE - {min(32, stats.test_count)} mais recentes de {stats.test_count}",
                     ha="center",
                     va="center",
                     fontsize=12,
@@ -1513,7 +1728,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                     "Provedor",
                     "Download",
                     "Upload",
-                    "%Vel",
+                    "% plano",
                     "Status",
                 ]
                 for pos, header in zip(col_positions, headers):
@@ -1538,9 +1753,11 @@ def _generate_combined_pdf_worker(full_history: bool = False):
 
                 # Linhas da tabela
                 row_height = 0.025
-                for row_idx, (ts, down, up) in enumerate(
+                _tbl = list(
                     zip(stats.timestamps, stats.history_down, stats.history_up)
-                ):
+                )[-32:]
+                providers = providers[-32:]
+                for row_idx, (ts, down, up) in enumerate(_tbl):
                     y_pos = 0.84 - row_idx * row_height
 
                     # Zebra striping
@@ -1554,9 +1771,9 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                         )
                         ax_speed.add_patch(rect_row)
 
-                    ts_str = ts.strftime("%H:%M:%S")
-                    pct_down = (down / contract_info.velocidade_down_mbps) * 100
-                    pct_up = (up / contract_info.velocidade_up_mbps) * 100
+                    ts_str = ts.strftime("%d/%m %H:%M")
+                    pct_down = _pct_of(down, contract_info.velocidade_down_mbps)
+                    pct_up = _pct_of(up, contract_info.velocidade_up_mbps)
                     pct_avg = (pct_down + pct_up) / 2
 
                     # Obter provedor
@@ -1567,14 +1784,26 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                     if len(provider_name) > 12:
                         provider_name = provider_name[:11] + "…"
 
-                    if pct_down < 40 or pct_up < 40:
-                        status = "VIOLAÇÃO"
+                    _row = [
+                        pct
+                        for pct, ref in (
+                            (pct_down, contract_info.velocidade_down_mbps),
+                            (pct_up, contract_info.velocidade_up_mbps),
+                        )
+                        if ref
+                    ]
+                    pct_avg = sum(_row) / len(_row) if _row else 0.0
+                    if not _row:
+                        status = "MEDIDO"
+                        status_color = "#1351B4"
+                    elif min(_row) < pct_inst:
+                        status = f"< {pct_inst:.0f}%"
                         status_color = "#DC3545"
-                    elif pct_down < 80 or pct_up < 80:
-                        status = "ABAIXO"
+                    elif min(_row) < pct_medio:
+                        status = f"< {pct_medio:.0f}%"
                         status_color = "#FFC107"
                     else:
-                        status = "CONFORME"
+                        status = "OK"
                         status_color = "#28A745"
 
                     # Dados da linha
@@ -1631,7 +1860,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                     ax_speed.text(
                         col_positions[5],
                         y_pos,
-                        f"{pct_avg:.0f}%",
+                        f"{pct_avg:.0f}%" if _row else "—",
                         ha="left",
                         va="center",
                         fontsize=6,
@@ -1658,7 +1887,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                 ax_speed.text(
                     0.5,
                     0.02,
-                    "ANATEL - Agência Nacional de Telecomunicações",
+                    "Varedura - laudo elaborado pelo consumidor",
                     ha="center",
                     va="center",
                     fontsize=7,
@@ -1695,32 +1924,33 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                     marker="o",
                     markersize=5,
                 )
-                ax2.axhline(
-                    y=contract_info.velocidade_down_mbps,
-                    color="#28A745",
-                    linestyle="--",
-                    linewidth=2,
-                    label=f"Contrato ({contract_info.velocidade_down_mbps:.0f} Mbps)",
-                )
-                ax2.axhline(
-                    y=contract_info.velocidade_down_mbps * 0.8,
-                    color=AMARELO_GOV,
-                    linestyle=":",
-                    linewidth=2,
-                    label="Mínimo 80%",
-                )
-                ax2.axhline(
-                    y=contract_info.velocidade_down_mbps * 0.4,
-                    color="#DC3545",
-                    linestyle=":",
-                    linewidth=2,
-                    label="Mínimo 40%",
-                )
+                if contract_info.velocidade_down_mbps:
+                    ax2.axhline(
+                        y=contract_info.velocidade_down_mbps,
+                        color="#28A745",
+                        linestyle="--",
+                        linewidth=2,
+                        label=f"Plano ({contract_info.velocidade_down_mbps:.0f} Mbps)",
+                    )
+                    ax2.axhline(
+                        y=contract_info.velocidade_down_mbps * pct_medio / 100,
+                        color=AMARELO_GOV,
+                        linestyle=":",
+                        linewidth=2,
+                        label=f"Referência {pct_medio:.0f}%",
+                    )
+                    ax2.axhline(
+                        y=contract_info.velocidade_down_mbps * pct_inst / 100,
+                        color="#DC3545",
+                        linestyle=":",
+                        linewidth=2,
+                        label=f"Referência {pct_inst:.0f}%",
+                    )
                 ax2.set_ylabel("Download (Mbps)", fontweight="bold")
                 ax2.legend(loc="upper right")
                 ax2.grid(True, alpha=0.3)
                 ax2.set_facecolor("#FAFAFA")
-                ax2.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+                ax2.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m %H:%M"))
 
                 # Gráfico de Upload (cores institucionais)
                 ax3.plot(
@@ -1732,33 +1962,39 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                     marker="s",
                     markersize=5,
                 )
-                ax3.axhline(
-                    y=contract_info.velocidade_up_mbps,
-                    color="#28A745",
-                    linestyle="--",
-                    linewidth=2,
-                    label=f"Contrato ({contract_info.velocidade_up_mbps:.0f} Mbps)",
-                )
-                ax3.axhline(
-                    y=contract_info.velocidade_up_mbps * 0.8,
-                    color=AMARELO_GOV,
-                    linestyle=":",
-                    linewidth=2,
-                    label="Mínimo 80%",
-                )
-                ax3.axhline(
-                    y=contract_info.velocidade_up_mbps * 0.4,
-                    color="#DC3545",
-                    linestyle=":",
-                    linewidth=2,
-                    label="Mínimo 40%",
-                )
+                if contract_info.velocidade_up_mbps:
+                    ax3.axhline(
+                        y=contract_info.velocidade_up_mbps,
+                        color="#28A745",
+                        linestyle="--",
+                        linewidth=2,
+                        label=f"Plano ({contract_info.velocidade_up_mbps:.0f} Mbps)",
+                    )
+                    ax3.axhline(
+                        y=contract_info.velocidade_up_mbps * pct_medio / 100,
+                        color=AMARELO_GOV,
+                        linestyle=":",
+                        linewidth=2,
+                        label=f"Referência {pct_medio:.0f}%",
+                    )
+                    ax3.axhline(
+                        y=contract_info.velocidade_up_mbps * pct_inst / 100,
+                        color="#DC3545",
+                        linestyle=":",
+                        linewidth=2,
+                        label=f"Referência {pct_inst:.0f}%",
+                    )
                 ax3.set_xlabel("Tempo", fontweight="bold")
                 ax3.set_ylabel("Upload (Mbps)", fontweight="bold")
                 ax3.legend(loc="upper right")
                 ax3.grid(True, alpha=0.3)
                 ax3.set_facecolor("#FAFAFA")
-                ax3.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+                ax3.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m %H:%M"))
+                if len(set(times_speed)) == 1:
+                    # Uma única medição: sem isso o eixo de tempo fica sem escala.
+                    _pad = datetime.timedelta(minutes=30)
+                    for _axis in (ax2, ax3):
+                        _axis.set_xlim(times_speed[0] - _pad, times_speed[0] + _pad)
 
                 plt.suptitle(
                     f"Gráfico de Velocidade - {stats.test_count} testes\n"
@@ -1772,6 +2008,9 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                 plt.tight_layout()
                 pdf.savefig(fig2, dpi=150, facecolor="white")
                 plt.close(fig2)
+
+            # === PÁGINAS: LATÊNCIA POR DESTINO E FRANQUIA ===
+            _draw_extra_pages(pdf, plt, AZUL_GOV, AZUL_ANATEL, CINZA_CLARO)
 
             # === PÁGINA: ANÁLISE E DIAGNÓSTICO (ESTILO PROFISSIONAL) ===
             fig_analise = plt.figure(figsize=(8.5, 11), facecolor="white")
@@ -1826,13 +2065,45 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             if stats.test_count > 0:
                 avg_down = sum(stats.history_down) / len(stats.history_down)
                 avg_up = sum(stats.history_up) / len(stats.history_up)
-                pct_avg_down = (avg_down / contract_info.velocidade_down_mbps) * 100
-                pct_avg_up = (avg_up / contract_info.velocidade_up_mbps) * 100
-                conclusao_down = "CONFORME" if pct_avg_down >= 80 else "NAO CONFORME"
-                conclusao_up = "CONFORME" if pct_avg_up >= 80 else "NAO CONFORME"
+                pct_avg_down = _pct_of(avg_down, contract_info.velocidade_down_mbps)
+                pct_avg_up = _pct_of(avg_up, contract_info.velocidade_up_mbps)
+
+                def _veredito(pct: float, ref: float) -> str:
+                    if not ref:
+                        return "SEM REFERÊNCIA"
+                    return (
+                        "DENTRO DA REFERÊNCIA"
+                        if pct >= pct_medio
+                        else "ABAIXO DA REFERÊNCIA"
+                    )
+
+                conclusao_down = _veredito(
+                    pct_avg_down, contract_info.velocidade_down_mbps
+                )
+                conclusao_up = _veredito(pct_avg_up, contract_info.velocidade_up_mbps)
             else:
                 avg_down = avg_up = pct_avg_down = pct_avg_up = 0
                 conclusao_down = conclusao_up = "SEM DADOS"
+            _refs = [
+                pct
+                for pct, ref in (
+                    (pct_avg_down, contract_info.velocidade_down_mbps),
+                    (pct_avg_up, contract_info.velocidade_up_mbps),
+                )
+                if ref
+            ]
+            _instant_below = sum(
+                1
+                for down, up in zip(stats.history_down, stats.history_up)
+                if (
+                    contract_info.velocidade_down_mbps
+                    and _pct_of(down, contract_info.velocidade_down_mbps) < pct_inst
+                )
+                or (
+                    contract_info.velocidade_up_mbps
+                    and _pct_of(up, contract_info.velocidade_up_mbps) < pct_inst
+                )
+            )
 
             # Seção 1: Latência
             ax_analise.text(
@@ -1887,8 +2158,9 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             velocidade_lines = [
                 f"Total de Testes: {stats.test_count}",
                 "",
-                f"Download: Média {avg_down:.1f} Mbps ({pct_avg_down:.1f}% do contratado) - {conclusao_down}",
-                f"Upload: Média {avg_up:.1f} Mbps ({pct_avg_up:.1f}% do contratado) - {conclusao_up}",
+                f"Download: Média {avg_down:.1f} Mbps ({pct_avg_down:.1f}% do plano) - {conclusao_down}",
+                f"Upload: Média {avg_up:.1f} Mbps ({pct_avg_up:.1f}% do plano) - {conclusao_up}",
+                f"Medições abaixo de {pct_inst:.0f}% do plano: {_instant_below}",
             ]
             for i, line in enumerate(velocidade_lines):
                 ax_analise.text(
@@ -1915,18 +2187,24 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                 transform=ax_analise.transAxes,
             )
 
-            if stats.test_count > 0 and pct_avg_down >= 80 and pct_avg_up >= 80:
-                conclusao_cor = "#28A745"  # Verde
-                conclusao_texto = "SERVIÇO CONFORME"
+            if stats.test_count > 0 and not _refs:
+                conclusao_cor = "#1351B4"  # Azul: informativo
+                conclusao_texto = "VELOCIDADE MEDIDA (SEM REFERÊNCIA)"
                 conclusao_detalhe = (
-                    "A velocidade média está dentro dos parâmetros ANATEL (mín 80%)."
+                    "O plano não tem velocidade informada; os valores medidos constam acima."
                 )
+            elif stats.test_count > 0 and min(_refs) >= pct_medio and not _instant_below:
+                conclusao_cor = "#28A745"  # Verde
+                conclusao_texto = "DENTRO DA REFERÊNCIA"
+                conclusao_detalhe = f"A velocidade média atingiu ao menos {pct_medio:.0f}% do plano no período."
             elif stats.test_count > 0:
                 conclusao_cor = "#DC3545"  # Vermelho
-                conclusao_texto = "SERVIÇO NÃO CONFORME"
+                conclusao_texto = "ABAIXO DA REFERÊNCIA"
                 conclusao_detalhe = (
-                    "A velocidade média está ABAIXO dos parâmetros ANATEL (mín 80%)."
-                )
+                    f"Média abaixo de {pct_medio:.0f}% do plano"
+                    if min(_refs) < pct_medio
+                    else f"Há {_instant_below} medição(ões) abaixo de {pct_inst:.0f}% do plano"
+                ) + "."
             else:
                 conclusao_cor = "#FFC107"  # Amarelo
                 conclusao_texto = "DADOS INSUFICIENTES"
@@ -1973,7 +2251,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             ax_analise.text(
                 0.5,
                 0.02,
-                "ANATEL - Agencia Nacional de Telecomunicacoes",
+                "Varedura - laudo elaborado pelo consumidor",
                 ha="center",
                 va="center",
                 fontsize=7,
@@ -2030,7 +2308,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             c.drawCentredString(
                 width / 2,
                 height - 115,
-                "descritos neste relatório, realizados conforme procedimento ANATEL.",
+                "descritos neste relatório, realizados pelo consumidor com o Varedura.",
             )
 
             # Seção Cliente
@@ -2188,10 +2466,22 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             c.drawCentredString(
                 width / 2,
                 50,
-                f"Operadora: {contract_info.operadora} | Tel: {contract_info.telefone_operadora} | WhatsApp: {contract_info.whatsapp_operadora}",
+                " | ".join(
+                    part
+                    for part in (
+                        f"Operadora: {contract_info.operadora}",
+                        f"Tel: {contract_info.telefone_operadora}"
+                        if contract_info.telefone_operadora
+                        else "",
+                        f"E-mail: {contract_info.email_operadora}"
+                        if contract_info.email_operadora
+                        else "",
+                    )
+                    if part
+                ),
             )
             c.drawCentredString(
-                width / 2, 38, f"E-mail: {contract_info.email_operadora}"
+                width / 2, 38, "Laudo particular elaborado pelo consumidor com o Varedura"
             )
 
             c.save()
@@ -2244,8 +2534,9 @@ def _generate_combined_pdf_worker(full_history: bool = False):
 
         with _export_lock:
             _export_status["message"] = (
-                f"[green]✅ Relatório formal exportado: {pdf_filename}{sig_note}[/]"
+                f"[green]✅ Relatório exportado: {pdf_filename}{sig_note}[/]"
             )
+            _export_status["path"] = pdf_filename
             _export_status["completed"] = True
             _export_status["running"] = False
 
@@ -2296,12 +2587,18 @@ def export_combined_report(full_history: bool = False) -> str:
             return f"[yellow]{t('stalker.export_already_running')}[/]"
 
         # Verificar se há dados para exportar
-        if not local_stats.history and get_speed_tester().stats.test_count == 0:
+        if (
+            not local_stats.history
+            and not snapshot_ping_history()
+            and get_speed_tester().stats.test_count == 0
+            and not _report_context.get("has_data")
+        ):
             return f"[yellow]{t('stalker.export_no_data')}[/]"
 
         _export_status["running"] = True
         _export_status["completed"] = False
         _export_status["message"] = None
+        _export_status["path"] = None
 
     # Iniciar thread de exportação
     export_thread = threading.Thread(
@@ -2312,6 +2609,17 @@ def export_combined_report(full_history: bool = False) -> str:
     if full_history:
         return f"[cyan]{t('stalker.export_pdf_full_bg')}[/]"
     return f"[cyan]{t('stalker.export_pdf_bg')}[/]"
+
+
+def get_last_export_path() -> Optional[str]:
+    """Caminho do último PDF gerado nesta sessão (None se falhou ou não houve)."""
+    with _export_lock:
+        return _export_status.get("path")
+
+
+def is_export_running() -> bool:
+    with _export_lock:
+        return bool(_export_status["running"])
 
 
 def get_export_status() -> Optional[str]:
@@ -2729,6 +3037,24 @@ def main(external_console: Console | None = None):
     config.gateway_ip = str(network_config.get("gateway_ip", "") or "").strip()
     config.external_ip = selection.primary_target.host
     config.lag_threshold_ms = int(network_config.get("lag_threshold_ms", 100) or 100)
+    try:
+        # Mesmo plano ativo da TUI: nada de contrato fixo no código.
+        from monitor.netinfo import detect_active_network
+        from monitor.plan_profiles import (
+            apply_profile,
+            profiles_from_prefs,
+            select_profile,
+        )
+
+        _network = detect_active_network()
+        _profile, _reason = select_profile(
+            profiles_from_prefs(network_config.get("plan_profiles")),
+            _network,
+            str(network_config.get("active_profile_id", "") or ""),
+        )
+        apply_profile(_profile, _network)
+    except Exception:
+        pass
 
     route_available = False
     try:
