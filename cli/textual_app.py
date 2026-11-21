@@ -43,6 +43,7 @@ from cli.layout import NARROW, columns_for, layout_tier
 from cli.textual_plans import PLANS_CSS, PlansMixin
 from cli.theme import THEMES, theme_name
 from cli.textual_termux import TERMUX_CSS, TermuxMixin
+from cli.textual_termux_keys import TermuxKeysMixin
 from cli.ui_shared import (
     CLEANUP_GROUPS,
     CLEANUP_STEPS,
@@ -170,7 +171,9 @@ class ShutdownScreen(ModalScreen):
             pass
 
 
-class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None]):
+class VareduraTextualApp(
+    PlansMixin, TermuxKeysMixin, TermuxMixin, CamerasMixin, App[str | None]
+):
     """Main Textual TUI for Varedura."""
 
     CSS = (
@@ -306,6 +309,12 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         height: 1fr;
         border: solid $primary;
         padding: 0 1;
+    }
+
+    /* Controles sem função no Android/Termux (League of Legends é só desktop;
+       o MCP configura o VS Code): ficam no DOM, mas ocultos. */
+    Screen.is-android .desktop-only {
+        display: none;
     }
 
     /* Textos de apoio quebram linha em vez de serem cortados. */
@@ -641,6 +650,9 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         Binding("p", "capture_screenshot", t("screenshot.bind_label"), show=True),
         Binding("escape", "dashboard", t("textual.bind_dashboard"), show=True),
         Binding("f12", "toggle_keyboard_page", t("termux.bind_kbd_page"), show=False),
+        # Termux: o Enter inicial de um macro das teclas extras ("\\nmenu\\n")
+        # é segurado por instantes para não acionar o widget em foco.
+        Binding("enter", "termux_macro_enter", show=False, priority=True),
         Binding("delete", "cam_del_regiao", t("rtsp.bind_del"), show=False),
         Binding("l", "cam_log", t("rtsp.bind_log"), show=False),
     ]
@@ -701,7 +713,7 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         self._primary_fail_streak: int = 0
         self._outage_notified: bool = False
         self._last_outage_notif_ts: float = 0.0
-        self._kbd_macro_buf: str = ""
+        self._init_termux_keys_state()
         # Estado da aba Termux e aba Câmeras (RTSP), fundidas via mixins.
         self._init_termux_state()
         self._init_plans_state()
@@ -1030,7 +1042,7 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
                     self._target_selection_summary(net), id="net-target-summary"
                 )
                 yield Button(t("network.targets_button"), id="settings-network-targets")
-            with Horizontal(classes="form-row"):
+            with Horizontal(classes="form-row desktop-only"):
                 yield Label(t("network.league_auto"))
                 yield Switch(
                     value=False
@@ -1038,7 +1050,7 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
                     else bool(net.get("league_auto_detect", True)),
                     id="league-auto-switch",
                 )
-            with Horizontal(classes="form-row"):
+            with Horizontal(classes="form-row desktop-only"):
                 yield Label(t("network.export_full_ip"))
                 yield Switch(
                     value=bool(net.get("include_full_ip_exports", False)),
@@ -1064,15 +1076,20 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
                 yield Button(
                     t("textual.settings_save"), id="save-settings", variant="primary"
                 )
-                yield Button(t("mcp.option"), id="toggle-mcp")
+                yield Button(t("mcp.option"), id="toggle-mcp", classes="desktop-only")
             yield Label(
                 t("mcp.status_on") if is_mcp_configured() else t("mcp.status_off"),
                 id="mcp-status",
+                classes="desktop-only",
             )
 
     def _apply_mobile_layout(self, width: int) -> None:
         tier = layout_tier(width)
         narrow = tier == NARROW
+        try:
+            self.screen.set_class(termux_env.is_android(), "is-android")
+        except Exception:
+            pass
         if self.sub_title in ("", t("menu.subtitle")):
             self.sub_title = "" if narrow else t("menu.subtitle")
         try:
@@ -1114,6 +1131,8 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         self.set_timer(0.15, self._maybe_show_target_onboarding)
         if termux_env.is_termux() and load_git_autoupdate_pref():
             self._run_git_autoupdate_bg()
+        if termux_env.is_termux():
+            self._termux_keys_start()
 
     @work(thread=True, exclusive=False)
     def _run_git_autoupdate_bg(self) -> None:
@@ -1367,6 +1386,7 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         self._network_stop.set()
         self._dash_stop.set()
         self._diagnostic_cancel.set()
+        self._termux_keys_stop()
         try:
             import sys
 
@@ -1444,32 +1464,17 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         """Switch Termux extra-keys page via ~/.claro_suite/termux_page_switcher.py."""
         ok, msg = termux_env.toggle_keyboard_page()
         if ok:
+            # O alternador regrava a barra inteira: recoloca a tecla de teclado.
+            self._termux_keys_reinstall()
             self.notify(t("termux.kbd_switched"))
         else:
             self.notify(msg, severity="warning")
 
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
-        if termux_env.is_termux():
-            if action == "cam_log" and self._kbd_macro_buf.endswith("toggl"):
-                return False
-            if action == "capture_screenshot" and self._kbd_macro_buf.endswith("toggle-p"):
-                return False
-        return True
+        return self._termux_macro_check_action(action)
 
     def on_key(self, event) -> None:
-        if not termux_env.is_termux() or isinstance(self.focused, Input):
-            return
-        char = getattr(event, "character", None)
-        if not (isinstance(char, str) and len(char) == 1):
-            return
-        macro = "toggle-page"
-        candidate = self._kbd_macro_buf + char
-        if candidate == macro:
-            self._kbd_macro_buf = ""
-            event.stop()
-            self.action_toggle_keyboard_page()
-            return
-        self._kbd_macro_buf = candidate if macro.startswith(candidate) else (char if macro.startswith(char) else "")
+        self._termux_macro_on_key(event)
 
     def _switch_main_tab(self, tab_id: str, subtab_id: str | None = None) -> None:
         # Clear focus off dashboard buttons before hiding the dashboard TabPane
@@ -1576,6 +1581,7 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         self._league_detector_generation += 1
         self._dash_stop.set()
         self._diagnostic_cancel.set()
+        self._termux_keys_stop()
         try:
             import sys
 
@@ -2913,7 +2919,8 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
             try:
                 down_mbps = float(result.download_mbps)
                 up_mbps = float(result.upload_mbps)
-                ping = f"{float(result.ping_ms):.0f} ms"
+                ping_value = float(result.ping_ms)
+                ping = f"{ping_value:.0f} ms" if ping_value > 0 else "—"
             except (ValueError, TypeError, AttributeError):
                 continue
             down = Text(

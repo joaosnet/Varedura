@@ -22,4 +22,12 @@ def _isolated_plan_storage(monkeypatch, tmp_path_factory):
     from monitor.plan_profiles import ActiveNetwork
 
     monkeypatch.setattr(netinfo, "detect_active_network", lambda: ActiveNetwork())
+
+    # Nunca altera o ~/.termux/termux.properties real nem abre diálogos nativos.
+    from varedura import termux_env
+
+    monkeypatch.setattr(
+        termux_env, "termux_properties_path", lambda: base / "termux.properties"
+    )
+    monkeypatch.setattr(termux_env, "has_native_dialog", lambda: False)
     yield

@@ -102,6 +102,22 @@ class SpeedTestProvider(ABC):
         return
 
 
+def _sane_ping(*candidates: object) -> float:
+    """Primeiro ping plausível (0 < ms < 10 s); 0.0 se nenhum servir.
+
+    O speedtest-cli às vezes devolve latências absurdas (ex.: 1.200.061 ms no
+    Android/Termux), que iam direto para a tabela e para o laudo.
+    """
+    for candidate in candidates:
+        try:
+            value = float(candidate)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            continue
+        if 0.0 < value < 10_000.0:
+            return value
+    return 0.0
+
+
 class SpeedtestNetProvider(SpeedTestProvider):
     """Provedor Ookla Speedtest.net usando speedtest-cli."""
 
@@ -146,7 +162,7 @@ class SpeedtestNetProvider(SpeedTestProvider):
             return SpeedTestResult(
                 download_mbps=float(payload.get("download", 0.0)) / 1_000_000,
                 upload_mbps=float(payload.get("upload", 0.0)) / 1_000_000,
-                ping_ms=float(payload.get("ping", 0.0)),
+                ping_ms=_sane_ping(payload.get("ping"), server.get("latency")),
                 servidor=servidor,
                 timestamp=datetime.datetime.now(),
                 provider_name=self.name,

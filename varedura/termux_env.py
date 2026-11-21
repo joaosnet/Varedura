@@ -972,6 +972,147 @@ def copy_to_clipboard(text: str) -> bool:
         return False
 
 
+# ---------------------------------------------------------------------------
+# Teclas extras do Termux (extra-keys) e digitação por diálogo nativo
+# ---------------------------------------------------------------------------
+# Tecla acrescentada à barra do usuário só enquanto o Varedura roda: com o
+# mouse do terminal ativo (toda TUI), tocar na tela não abre mais o teclado.
+VAREDURA_KEYBOARD_KEY = {"key": "KEYBOARD", "display": "\u2328"}
+_EXTRA_KEYS_LINE = re.compile(r"^(\s*extra-keys\s*=\s*)(.+?)\s*$")
+_MACRO_COMMAND = re.compile(r"^\n([A-Za-z0-9][\w .:/-]{0,60})\n$")
+
+
+def termux_properties_path() -> Path:
+    return Path.home() / ".termux" / "termux.properties"
+
+
+def _read_extra_keys(path: Path) -> tuple[list[str], int, list] | None:
+    """Devolve (linhas, índice da linha extra-keys, layout) ou None."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    for index, line in enumerate(lines):
+        if line.lstrip().startswith("#"):
+            continue
+        match = _EXTRA_KEYS_LINE.match(line)
+        if not match:
+            continue
+        try:
+            layout = json.loads(match.group(2))
+        except ValueError:
+            return None  # formato multi-linha/estilo Java: não mexemos
+        if isinstance(layout, list) and all(isinstance(row, list) for row in layout):
+            return lines, index, layout
+        return None
+    return None
+
+
+def extra_key_macros(path: Path | None = None) -> tuple[str, ...]:
+    """Comandos de shell digitados pelas teclas extras (macros ``"\\ncmd\\n"``)."""
+    parsed = _read_extra_keys(path or termux_properties_path())
+    if parsed is None:
+        return ()
+    found: list[str] = []
+
+    def visit(node: object) -> None:
+        if isinstance(node, dict):
+            macro = node.get("macro")
+            if isinstance(macro, str):
+                match = _MACRO_COMMAND.match(macro)
+                if match and match.group(1).strip() not in found:
+                    found.append(match.group(1).strip())
+            for value in node.values():
+                visit(value)
+        elif isinstance(node, list):
+            for item in node:
+                visit(item)
+
+    visit(parsed[2])
+    return tuple(found)
+
+
+def set_keyboard_key(
+    enabled: bool, path: Path | None = None, *, reload: bool = True
+) -> bool:
+    """Acrescenta/remove a tecla de teclado na barra extra-keys do usuário.
+
+    Só altera uma linha ``extra-keys = [...]`` já existente em JSON de uma
+    linha; o restante do arquivo é preservado.  Devolve True se gravou.
+    """
+    target = path or termux_properties_path()
+    parsed = _read_extra_keys(target)
+    if parsed is None:
+        return False
+    lines, index, layout = parsed
+    cleaned = [
+        [key for key in row if key != VAREDURA_KEYBOARD_KEY] for row in layout
+    ]
+    if enabled and cleaned:
+        cleaned[-1] = [dict(VAREDURA_KEYBOARD_KEY), *cleaned[-1]]
+    if cleaned == layout:
+        return False
+    prefix = _EXTRA_KEYS_LINE.match(lines[index]).group(1)
+    lines[index] = prefix + json.dumps(cleaned)
+    try:
+        tmp = target.with_name(target.name + ".varedura-tmp")
+        tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        os.replace(tmp, target)
+    except OSError:
+        return False
+    if reload and shutil.which("termux-reload-settings"):
+        try:
+            subprocess.run(
+                ["termux-reload-settings"],
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                timeout=10,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+    return True
+
+
+def has_native_dialog() -> bool:
+    return bool(shutil.which("termux-dialog"))
+
+
+def native_text_dialog(
+    title: str,
+    hint: str = "",
+    *,
+    numeric: bool = False,
+    password: bool = False,
+    timeout: float = 300.0,
+) -> str | None:
+    """Pede um texto pelo diálogo nativo do Android (Termux:API).
+
+    Devolve o texto confirmado ou None se o usuário cancelou/indisponível.
+    """
+    cmd = ["termux-dialog", "text", "-t", title[:80] or "Varedura"]
+    if hint:
+        cmd += ["-i", hint[:120]]
+    if numeric:
+        cmd.append("-n")
+    if password:
+        cmd.append("-p")
+    try:
+        proc = subprocess.run(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=timeout,
+        )
+        payload = json.loads(proc.stdout or "{}")
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return None
+    if not isinstance(payload, dict) or payload.get("code") != -1:
+        return None
+    return str(payload.get("text") or "")
+
+
 def toggle_keyboard_page() -> tuple[bool, str]:
     """Run ~/.claro_suite/termux_page_switcher.py when present."""
     script = Path.home() / ".claro_suite" / "termux_page_switcher.py"
@@ -1011,5 +1152,11 @@ __all__ = [
     "share_file",
     "should_show_docker_tab",
     "toggle_keyboard_page",
+    "extra_key_macros",
+    "set_keyboard_key",
+    "has_native_dialog",
+    "native_text_dialog",
+    "termux_properties_path",
+    "VAREDURA_KEYBOARD_KEY",
     "toggle_termux_service",
 ]

@@ -439,3 +439,51 @@ def test_export_bundle_and_stalker_handle_missing_pdf_deps(monkeypatch, tmp_path
     status = stalker.get_export_status() or ""
     assert "matplotlib" in status.lower()
     assert list((tmp_path / "exports").glob("ping_history_*.csv"))
+
+
+def test_extra_keys_macros_and_temporary_keyboard_key(tmp_path, monkeypatch):
+    import json
+
+    props = tmp_path / "termux.properties"
+    layout = [
+        [{"macro": "\nmenu\n", "display": "M", "popup": {"macro": "CTRL c"}}],
+        [{"key": "ESC"}, "TAB", {"macro": "\nportscan 192.168.18.1\n", "display": "P"}],
+    ]
+    original = "# comentário\nextra-keys = " + json.dumps(layout) + "\nallow-external-apps = true\n"
+    props.write_text(original, encoding="utf-8")
+    monkeypatch.setattr(te.shutil, "which", lambda name: None)  # sem reload real
+
+    assert te.extra_key_macros(props) == ("menu", "portscan 192.168.18.1")
+
+    assert te.set_keyboard_key(True, props) is True
+    assert te.set_keyboard_key(True, props) is False  # idempotente
+    patched = te._read_extra_keys(props)[2]
+    assert patched[-1][0] == te.VAREDURA_KEYBOARD_KEY and patched[0] == layout[0]
+    assert "allow-external-apps = true" in props.read_text(encoding="utf-8")
+
+    assert te.set_keyboard_key(False, props) is True
+    assert props.read_text(encoding="utf-8") == original
+
+    # Formato que não é JSON de uma linha: não mexe no arquivo.
+    props.write_text("extra-keys = [['ESC','TAB']]\n", encoding="utf-8")
+    assert te.set_keyboard_key(True, props) is False
+    assert te.extra_key_macros(props) == ()
+
+
+def test_native_text_dialog_parses_ok_and_cancel(monkeypatch):
+    import types
+
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return types.SimpleNamespace(stdout=fake_run.out, returncode=0)
+
+    monkeypatch.setattr(te.subprocess, "run", fake_run)
+    fake_run.out = '{"code": -1, "text": "Casa 5G"}'
+    assert te.native_text_dialog("Nome", "dica", numeric=True) == "Casa 5G"
+    assert calls[0][:4] == ["termux-dialog", "text", "-t", "Nome"] and "-n" in calls[0]
+    fake_run.out = '{"code": -2, "text": ""}'
+    assert te.native_text_dialog("Nome") is None
+    fake_run.out = "lixo"
+    assert te.native_text_dialog("Nome") is None

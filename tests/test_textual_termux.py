@@ -321,12 +321,20 @@ async def test_termux_onboarding_non_blocking_f12_and_screenshot(monkeypatch, tm
         or UpdateResult(status="updated", branch="main", commits_pulled=2),
     )
 
+    monkeypatch.setattr(
+        "varedura.termux_env.extra_key_macros",
+        lambda path=None: ("menu", "netscan", "toggle-page"),
+    )
+    suspended: list[list[str]] = []
+
     app = VareduraTextualApp()
+    app._run_suspended_command = lambda cmd, pause=False: suspended.append(cmd) or 0
     async with app.run_test(size=(45, 32)) as pilot:
         await wait_until(
             lambda: ui_shared.load_network_config().get("target_onboarding_completed") is True,
             pilot,
         )
+        await wait_until(lambda: bool(app._macro_commands), pilot)
         # Non-blocking onboarding: no modal pushed!
         assert len(app.screen_stack) == 1
         assert bg_update_calls and bg_update_calls[0].get("force") is False
@@ -336,11 +344,31 @@ async def test_termux_onboarding_non_blocking_f12_and_screenshot(monkeypatch, tm
         await pilot.pause()
         assert kbd_calls == ["toggled"]
 
-        # toggle-page macro sequence also triggers switcher
-        for ch in "toggle-page":
-            await pilot.press(ch)
+        # Macro das teclas extras ("\ntoggle-page\n") também aciona o alternador
+        await pilot.press("enter", *"toggle-page", "enter")
         await pilot.pause()
         assert kbd_calls == ["toggled", "toggled"]
+
+        # "\nnetscan\n": abre a ferramenta em vez de disparar os atalhos
+        # das letras (o "s" abriria Configurações).
+        await pilot.press("enter", *"netscan", "enter")
+        await pilot.pause()
+        assert suspended == [["netscan"]]
+        assert app.query_one("#main-tabs").active == "dashboard"
+
+        # "\nmenu\n" volta ao Painel a partir de outra aba.
+        app.query_one("#main-tabs").active = "settings"
+        await pilot.pause()
+        await pilot.press("enter", *"menu", "enter")
+        await pilot.pause()
+        assert app.query_one("#main-tabs").active == "dashboard"
+
+        # Um Enter comum continua chegando ao widget em foco (após a janela).
+        pressed: list[str] = []
+        app._switch_main_tab = lambda tab, **kw: pressed.append(tab)
+        app.query_one("#dash-btn-network").focus()
+        await pilot.press("enter")
+        await wait_until(lambda: pressed == ["network"], pilot)
 
         # Screenshot opens SVG via termux-open / open_file_or_url
         svg_path = app.action_capture_screenshot()

@@ -273,3 +273,12 @@ def test_rich_speed_key_can_cancel_before_its_thread_starts(monkeypatch):
 
     assert not provider_called
     assert tester.get_stats_snapshot()["last_error"] == "Teste cancelado"
+
+
+def test_sane_ping_discards_absurd_latency():
+    from monitor.speed_providers import _sane_ping
+
+    assert _sane_ping(1200061.0, 18.4) == 18.4
+    assert _sane_ping(23.5, 18.4) == 23.5
+    assert _sane_ping(1200061.0, None) == 0.0
+    assert _sane_ping("lixo", -3) == 0.0

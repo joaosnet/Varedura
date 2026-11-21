@@ -49,9 +49,9 @@
     "semantic_hash": "36a35df2f5610534830644d9cea45d50"
   },
   "cli/textual_app.py": {
-    "mtime": 1795291071.6977813,
-    "seen": 1795291411.3337107,
-    "ast_hash": "c0e01b14656558818b52bb4ae1d72943",
+    "mtime": 1795292897.358454,
+    "seen": 1795293096.6370635,
+    "ast_hash": "d94f97dad86fc94716e6efb933e9703d",
     "semantic_hash": ""
   },
   "cli/textual_cameras.py": {
@@ -193,10 +193,10 @@
     "semantic_hash": ""
   },
   "monitor/speed_providers.py": {
-    "mtime": 1783814942.7798924,
-    "seen": 1795224026.8256598,
-    "ast_hash": "a2f17e89b59260e024d14fe373f60dde",
-    "semantic_hash": "a2f17e89b59260e024d14fe373f60dde"
+    "mtime": 1795292885.543218,
+    "seen": 1795293096.6371448,
+    "ast_hash": "7e33c605c9227609f3584facced28e56",
+    "semantic_hash": ""
   },
   "monitor/speed_tester.py": {
     "mtime": 1795288892.0887206,
@@ -427,10 +427,10 @@
     "semantic_hash": ""
   },
   "tests/test_speed_cleanup.py": {
-    "mtime": 1783818681.0883715,
-    "seen": 1795224026.8418927,
-    "ast_hash": "626531e1a666f75efb26ffbf7daebc05",
-    "semantic_hash": "626531e1a666f75efb26ffbf7daebc05"
+    "mtime": 1795292885.59095,
+    "seen": 1795293096.6372597,
+    "ast_hash": "98516736ba2f799ec3a02343d30e9754",
+    "semantic_hash": ""
   },
   "tests/test_startup_lazy.py": {
     "mtime": 1795230144.3521895,
@@ -529,15 +529,15 @@
     "semantic_hash": ""
   },
   "tests/test_termux_env.py": {
-    "mtime": 1795229343.6559181,
-    "seen": 1795231223.5049233,
-    "ast_hash": "01ae583a360db8067618d5c21da10ca1",
+    "mtime": 1795292767.2874453,
+    "seen": 1795293096.637265,
+    "ast_hash": "c8bacb3cf7459c949516278ff7ed894f",
     "semantic_hash": ""
   },
   "tests/test_textual_termux.py": {
-    "mtime": 1795230256.348023,
-    "seen": 1795231223.5049303,
-    "ast_hash": "12ed19154be6dfd3a58aeeb710e34d67",
+    "mtime": 1795292767.2471492,
+    "seen": 1795293096.637272,
+    "ast_hash": "80544a900c1f425edcc8e24121c0216a",
     "semantic_hash": ""
   },
   "tests/test_updater.py": {
@@ -547,9 +547,9 @@
     "semantic_hash": ""
   },
   "varedura/termux_env.py": {
-    "mtime": 1795288966.248894,
-    "seen": 1795290148.6645694,
-    "ast_hash": "72a2998b6c2786195a3c6a6702e1c266",
+    "mtime": 1795292740.0116138,
+    "seen": 1795293096.637293,
+    "ast_hash": "01d0fc0383887daf8085a177b5589d08",
     "semantic_hash": ""
   },
   "varedura/updater.py": {
@@ -565,9 +565,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1795291230.3994064,
-    "seen": 1795291411.3339198,
-    "ast_hash": "f0bdfcfbb786744db05e8297c4ae061a",
+    "mtime": 1795292964.1164298,
+    "seen": 1795293096.6373,
+    "ast_hash": "76be34e6126f999f5cb38675492328c2",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -631,9 +631,9 @@
     "semantic_hash": ""
   },
   "docs/termux.md": {
-    "mtime": 1795229263.2422225,
-    "seen": 1795231223.5049806,
-    "ast_hash": "92ae9d1bc52531c0315168c0bad960cb",
+    "mtime": 1795292964.1164298,
+    "seen": 1795293096.6373255,
+    "ast_hash": "3f2bf0d463f18e591e6d47fa0f0e91f9",
     "semantic_hash": ""
   },
   "tests/test_android_adaptations.py": {
@@ -661,9 +661,9 @@
     "semantic_hash": ""
   },
   "tests/conftest.py": {
-    "mtime": 1795289537.138219,
-    "seen": 1795290148.6644914,
-    "ast_hash": "3671f00b1aab12c37749ca0aa8510d77",
+    "mtime": 1795292767.2371368,
+    "seen": 1795293096.6371934,
+    "ast_hash": "53974e394fc71ce1ca63c2011fdf0615",
     "semantic_hash": ""
   },
   "tests/test_data_usage.py": {
@@ -694,6 +694,12 @@
     "mtime": 1795291070.682865,
     "seen": 1795291411.3337235,
     "ast_hash": "0e6c1cda156340c9e3ade4c4cae3b55c",
+    "semantic_hash": ""
+  },
+  "cli/textual_termux_keys.py": {
+    "mtime": 1795292739.3175392,
+    "seen": 1795293096.6370742,
+    "ast_hash": "10659787ef5667809e0fda5d4f1bac45",
     "semantic_hash": ""
   }
 }
