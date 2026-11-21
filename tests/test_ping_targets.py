@@ -150,6 +150,25 @@ def test_build_ping_command_uses_argument_list_and_address_family():
     assert "-4" not in hostname_command and "-6" not in hostname_command
 
 
+def test_build_ping_command_android_omits_family_flags():
+    # ping do Termux (iputils s20121221) falha com "invalid option -- 4".
+    assert targets.build_ping_command("1.1.1.1", system="Android") == [
+        "ping",
+        "-c",
+        "1",
+        "-W",
+        "1",
+        "1.1.1.1",
+    ]
+    ipv6 = targets.build_ping_command("2606:4700:4700::1111", system="Android")
+    assert ipv6[0] == "ping6" and "-6" not in ipv6
+
+
+def test_failure_status_flags_incompatible_ping_binary_as_error():
+    output = "ping: invalid option -- 4\nUsage: ping [-aAbBdDfhLnOqrRUvV]"
+    assert targets._failure_status(output, 2) is targets.PingStatus.ERROR
+
+
 class _CompletedPopen:
     def __init__(self, _command, **kwargs):
         assert kwargs["shell"] is False

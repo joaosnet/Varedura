@@ -25,7 +25,7 @@ import time
 import urllib.parse
 import webbrowser
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
@@ -986,6 +986,20 @@ def list_repair_actions(
                 ca_file=app_ca_file,
             )
         )
+    if system == "android":
+        # Sem nmcli/dhclient nem acesso às configurações de rede no Android:
+        # reparos que executam comandos de sistema ficam visíveis, mas bloqueados.
+        actions = [
+            replace(
+                action,
+                eligible=False,
+                blocked_reason=action.blocked_reason
+                or "not supported on Android; use the system network settings",
+            )
+            if action.command_preview
+            else action
+            for action in actions
+        ]
     return tuple(actions)
 
 

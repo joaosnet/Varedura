@@ -618,8 +618,15 @@ def build_ping_command(
             str(max(1, int(timeout_seconds * 1000))),
             validated.host,
         ]
+    executable = "ping"
+    if system_name == "android" or (system is None and _is_android_env()):
+        # O ping do Termux (termux-tools, iputils s20121221) rejeita -4/-6 com
+        # "invalid option" e sai com rc=2; IPv6 usa o binário ping6 dedicado.
+        family_args = []
+        if validated.kind is HostKind.IPV6:
+            executable = "ping6"
     return [
-        "ping",
+        executable,
         *family_args,
         "-c",
         "1",
@@ -627,6 +634,10 @@ def build_ping_command(
         str(max(1, int(timeout_seconds + 0.999))),
         validated.host,
     ]
+
+
+def _is_android_env() -> bool:
+    return "ANDROID_ROOT" in os.environ or "TERMUX_VERSION" in os.environ
 
 
 def _terminate_process(process: subprocess.Popen[str], *, grace: float = 0.2) -> None:
@@ -681,6 +692,9 @@ def _failure_status(output: str, returncode: int | None) -> PingStatus:
         )
     ):
         return PingStatus.UNREACHABLE
+    if any(marker in lowered for marker in ("invalid option", "usage: ping")):
+        # Binário de ping incompatível com os argumentos: não é perda de pacote.
+        return PingStatus.ERROR
     return PingStatus.TIMEOUT if returncode else PingStatus.ERROR
 
 

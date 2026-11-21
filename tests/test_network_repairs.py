@@ -670,3 +670,15 @@ def test_guidance_forbids_fortinet_untrusted_and_global_resets():
     assert "Fortinet_CA_Untrusted" in text
     assert "Winsock" in text
     assert "firewall" in text
+
+
+def test_android_blocks_system_command_repairs():
+    # No Termux não há nmcli: o reparo aparece, mas não pode ser executado.
+    wifi = NetworkInterface("wlan0", False, ipv4=("192.168.18.242",))
+    report = _report(platform="android", interface=wifi)
+    actions = list_repair_actions(report)
+    with_commands = [action for action in actions if action.command_preview]
+    assert all(not action.eligible for action in with_commands)
+    assert with_commands and all(action.blocked_reason for action in with_commands)
+    refresh = next(a for a in actions if a.kind is RepairKind.REFRESH_STATUS)
+    assert refresh.eligible

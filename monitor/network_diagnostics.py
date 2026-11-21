@@ -534,6 +534,16 @@ def _read_dns_resolv_conf() -> tuple[str, ...]:
     return tuple(servers)
 
 
+def _sysfs_interface_is_up(name: str) -> bool | None:
+    """Estado do link via sysfs; usado quando psutil.net_if_stats() é negado (Android)."""
+    try:
+        state = Path("/sys/class/net", name, "operstate").read_text().strip().lower()
+    except (OSError, ValueError):
+        return None
+    # "unknown" é o estado normal de lo/túneis ativos.
+    return state in {"up", "unknown"}
+
+
 def _interface_addresses() -> tuple[NetworkInterface, ...]:
     try:
         address_map = psutil.net_if_addrs()
@@ -566,7 +576,9 @@ def _interface_addresses() -> tuple[NetworkInterface, ...]:
         interfaces.append(
             NetworkInterface(
                 name=name,
-                is_up=bool(stats.isup) if stats is not None else False,
+                is_up=bool(stats.isup)
+                if stats is not None
+                else bool(_sysfs_interface_is_up(name)),
                 ipv4=tuple(ipv4),
                 ipv6=tuple(ipv6),
                 mac=mac,
@@ -1123,6 +1135,11 @@ class SnapshotCollector:
 
         if not route_present and has_ipv4:
             gateway, route_interface, route_present = _try_ip_route_get()
+        elif gateway is None and has_ipv4 and self.platform_name == "android":
+            # A tabela main do Android não tem rota default (policy routing).
+            fallback = _try_ip_route_get()
+            if fallback[0]:
+                gateway, route_interface, route_present = fallback
         if not route_present and has_ipv6 and deadline - time.monotonic() > 0.08:
             ipv6_route = self.command_runner.run(
                 _default_route_command(self.platform_name, ipv6=True),

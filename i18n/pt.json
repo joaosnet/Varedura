@@ -785,7 +785,7 @@
     "termux.arg_required": "Informe um argumento para {label}.",
     "termux.dash_actions": "📱 Ações Termux",
     "updater.section_title": "🔄 Atualização do Varedura (Git)",
-    "updater.autoupdate_label": "Verificar atualização automática (6h / cron)",
+    "updater.autoupdate_label": "Verificar atualização ao abrir (a cada 6h)",
     "updater.btn_update_now": "⬇ Atualizar agora",
     "updater.btn_check_now": "🔍 Verificar agora",
     "updater.token_status_label": "Token GitHub (ghg_token)",

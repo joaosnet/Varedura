@@ -459,6 +459,11 @@ def _add_common_status_rows(
             t("updater.autoupdate_label"),
             t("termux.status_on") if git_autoupdate else t("termux.status_off"),
         )
+    from varedura import termux_env
+
+    if not termux_env.should_show_docker_tab():
+        # Android/Termux sem Docker: limpeza Docker e MCP (VS Code) não se aplicam.
+        return
     table.add_row(t("settings.option_cleanup"), cleanup_summary())
     table.add_row(
         t("mcp.option"),
@@ -585,6 +590,12 @@ def build_dashboard_status(
             )
         sent = dash_stats.get("bytes_enviados_mb")
         recv = dash_stats.get("bytes_recebidos_mb")
+        wifi_rx = int(getattr(android_telemetry, "rx_bytes", 0) or 0)
+        wifi_tx = int(getattr(android_telemetry, "tx_bytes", 0) or 0)
+        if wifi_rx or wifi_tx:
+            # No Android o total do psutil soma lo/dummy/rmnet; usa o mesmo
+            # contador Wi-Fi da aba Termux para os dois números baterem.
+            sent, recv = wifi_tx / 1048576, wifi_rx / 1048576
         if sent is not None and recv is not None:
             table.add_row(
                 t("dashboard.traffic"), _fmt_traffic(float(sent), float(recv))

@@ -785,7 +785,7 @@
     "termux.arg_required": "Enter an argument for {label}.",
     "termux.dash_actions": "📱 Termux Actions",
     "updater.section_title": "🔄 Varedura Updates (Git)",
-    "updater.autoupdate_label": "Automatic update check (6h / cron)",
+    "updater.autoupdate_label": "Check for updates on launch (every 6h)",
     "updater.btn_update_now": "⬇ Update now",
     "updater.btn_check_now": "🔍 Check now",
     "updater.token_status_label": "GitHub Token (ghg_token)",

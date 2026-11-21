@@ -412,7 +412,7 @@ class TermuxMixin:
             mem_txt = f"{mem_txt} · up {telemetry.uptime_str}"
         root_txt = t("termux.status_on") if telemetry.has_root else t("termux.status_off")
         traffic_txt = (
-            f"↓ {_format_bytes(telemetry.rx_bytes)}   ↑ {_format_bytes(telemetry.tx_bytes)}"
+            f"↑ {_format_bytes(telemetry.tx_bytes)}   ↓ {_format_bytes(telemetry.rx_bytes)}"
         )
 
         if self._termux_prev_bytes is None:

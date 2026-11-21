@@ -61,9 +61,9 @@
     "semantic_hash": ""
   },
   "cli/ui_shared.py": {
-    "mtime": 1795229747.626715,
-    "seen": 1795231223.5047593,
-    "ast_hash": "eae75f996a963545accfb9ec9b7f2d85",
+    "mtime": 1795287153.8034732,
+    "seen": 1795287321.7145288,
+    "ast_hash": "a810222ef2418fbac4b8f9c5bf7eac7f",
     "semantic_hash": ""
   },
   "docker_cleaner/__init__.py": {
@@ -85,15 +85,15 @@
     "semantic_hash": "25b054c22dfe1bc046b5ef9ce3a7f5ae"
   },
   "i18n/en.json": {
-    "mtime": 1795229155.8308375,
-    "seen": 1795231223.5047693,
-    "ast_hash": "068d682c6f87e0c12448a20728dfc5cf",
+    "mtime": 1795287153.7810395,
+    "seen": 1795287321.7145402,
+    "ast_hash": "b75d806afa41ffc17c48963716e67713",
     "semantic_hash": ""
   },
   "i18n/pt.json": {
-    "mtime": 1795229155.8308375,
-    "seen": 1795231223.504772,
-    "ast_hash": "dba4a7549d8846cb7e1b291957664fdb",
+    "mtime": 1795287153.7790413,
+    "seen": 1795287321.7145426,
+    "ast_hash": "a399088b4005b475ed2d3bda758ba77b",
     "semantic_hash": ""
   },
   "install.ps1": {
@@ -151,9 +151,9 @@
     "semantic_hash": ""
   },
   "monitor/network_diagnostics.py": {
-    "mtime": 1795229276.9719565,
-    "seen": 1795231223.5047946,
-    "ast_hash": "cb1ea2582cb60f51530144f68ea2467d",
+    "mtime": 1795287153.8498268,
+    "seen": 1795287321.7145696,
+    "ast_hash": "ef8fd693dabf5fd91f739d39d1c33bad",
     "semantic_hash": ""
   },
   "monitor/network_history.py": {
@@ -163,10 +163,10 @@
     "semantic_hash": ""
   },
   "monitor/network_repairs.py": {
-    "mtime": 1783819537.8159063,
-    "seen": 1795224026.82455,
-    "ast_hash": "8713e480134a44f7d7ba114bcbcf1663",
-    "semantic_hash": "8713e480134a44f7d7ba114bcbcf1663"
+    "mtime": 1795287153.8770802,
+    "seen": 1795287321.7145765,
+    "ast_hash": "4bcecbeba46c83c8a96ab4707b1b6548",
+    "semantic_hash": ""
   },
   "monitor/ping_scheduler.py": {
     "mtime": 1783818016.8631458,
@@ -175,10 +175,10 @@
     "semantic_hash": "f77005149ec138d66350c6536cbb7a1a"
   },
   "monitor/ping_targets.py": {
-    "mtime": 1783816091.6441078,
-    "seen": 1795224026.824968,
-    "ast_hash": "680b4888cf3024f9ac0303d5a7c83f9e",
-    "semantic_hash": "680b4888cf3024f9ac0303d5a7c83f9e"
+    "mtime": 1795286924.9623382,
+    "seen": 1795287321.714581,
+    "ast_hash": "5b125add1a2460953dc7160d57205314",
+    "semantic_hash": ""
   },
   "monitor/port_catalog.py": {
     "mtime": 1782327485.2168782,
@@ -385,10 +385,10 @@
     "semantic_hash": "2d40434a19a37a751fe900147aa8ecd8"
   },
   "tests/test_network_repairs.py": {
-    "mtime": 1783819507.7765582,
-    "seen": 1795224026.840271,
-    "ast_hash": "fcd1e01198896a0261b354c5d3c76af6",
-    "semantic_hash": "fcd1e01198896a0261b354c5d3c76af6"
+    "mtime": 1795287180.72821,
+    "seen": 1795287321.714691,
+    "ast_hash": "8a27eae2ab1770aca5b7f92cfa94e586",
+    "semantic_hash": ""
   },
   "tests/test_network_ui.py": {
     "mtime": 1783816158.4501898,
@@ -403,10 +403,10 @@
     "semantic_hash": "5173550626f4467300e9bf570f319d4d"
   },
   "tests/test_ping_targets.py": {
-    "mtime": 1783816136.069612,
-    "seen": 1795224026.8409026,
-    "ast_hash": "c043b4ea96b9967a19be0324278dc08d",
-    "semantic_hash": "c043b4ea96b9967a19be0324278dc08d"
+    "mtime": 1795286924.9632123,
+    "seen": 1795287321.7146983,
+    "ast_hash": "148417f83e789e48ca30eae1a643070f",
+    "semantic_hash": ""
   },
   "tests/test_port_catalog.py": {
     "mtime": 1782328575.4597216,
@@ -493,9 +493,9 @@
     "semantic_hash": "05dfe5e5a78bfed41aa83334f0e3f9dc"
   },
   "cli/textual_termux.py": {
-    "mtime": 1795229794.0511813,
-    "seen": 1795231223.5047565,
-    "ast_hash": "0f29c3b77cf43fbb43a8aaebb4da10b7",
+    "mtime": 1795287153.8045328,
+    "seen": 1795287321.7145245,
+    "ast_hash": "74194e2062ba7cb0025d7cf173c79830",
     "semantic_hash": ""
   },
   "monitor/network_health.py": {
@@ -634,6 +634,12 @@
     "mtime": 1795229263.2422225,
     "seen": 1795231223.5049806,
     "ast_hash": "92ae9d1bc52531c0315168c0bad960cb",
+    "semantic_hash": ""
+  },
+  "tests/test_android_adaptations.py": {
+    "mtime": 1795287170.8969822,
+    "seen": 1795287321.714647,
+    "ast_hash": "c87cca3abf2d67358101de9df4e59be6",
     "semantic_hash": ""
   }
 }
