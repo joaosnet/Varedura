@@ -52,7 +52,7 @@ varedura/updater.py (git auth + cooldown 6h + cron) ────────┘
 | `monitor/network_history.py` / `monitor/league_detector.py` | Histórico thread-safe por alvo (CSV/PDF, mascaramento `/24`/`/64`) e detecção LoL | `NetworkSessionHistory`, `mask_ip`, `LeagueMatchDetector`, `LeagueEndpoint` |
 | `monitor/port_scanner.py` / `monitor/port_catalog.py` | Portas TCP/UDP em listening, conexões por processo, rótulos i18n amigáveis | `run_full_scan`, `get_listening_ports`, `describe_port`, `classify_exposure` |
 | `monitor/plan_profiles.py` / `monitor/data_usage.py` / `cli/textual_plans.py` | Perfis de plano (fixo/móvel) escolhidos pela rede ativa, franquia por ciclo, histórico de velocidade persistente e formulário de planos na TUI (detalhes em `docs/rede.md` §4) | `PlanProfile`, `select_profile`, `apply_profile`, `DataUsageTracker`, `samples_for_report`, `PlansMixin` |
-| `monitor/speed_tester.py` / `monitor/speed_providers.py` / `monitor/speed_worker.py` | Speedtest contínuo + fallback multi-provedor (Speedtest.net, Fast.com, BBL, SIMET) | `ContinuousSpeedTester`, `MultiProviderSpeedTester`, `SpeedTestProvider`, `run_provider` |
+| `monitor/speed_tester.py` / `monitor/speed_providers.py` / `monitor/speed_providers_http.py` / `monitor/speed_worker.py` / `monitor/auto_speed.py` | Speedtest contínuo + multi-provedor (Speedtest.net, Fast.com, Cloudflare, M-Lab NDT7, BBL, SIMET) e teste automático agendado (`varedura-speedtest`, detalhes em `docs/rede.md` §5) | `ContinuousSpeedTester`, `MultiProviderSpeedTester`, `SpeedTestProvider`, `run_provider` |
 | `varedura/termux_env.py` | Ambiente Termux/Android, visibilidade condicional da aba Docker, descoberta de ferramentas/Claro, telemetria, serviços e Termux:API | `is_termux`, `is_android`, `should_show_docker_tab`, `discover_termux_tools`, `collect_android_telemetry`, `list_termux_services`, `toggle_termux_service`, `send_termux_notification`, `share_file` |
 | `varedura/updater.py` | Auto-atualização GitHub autenticada (`GHG_TOKEN`/`~/.varedura_gh_token`), cooldown 6h, cron e CLI `varedura-update` | `UpdateResult`, `resolve_github_token`, `save_token_file`, `get_repo_status`, `update_repository`, `is_cron_update_enabled`, `set_cron_update_enabled`, `main` |
 | `varedura/camera_bridge.py` *(1.862L — índice em `docs/cameras-e-ia.md`)* | Ponte local sanitizada de câmeras para o Mural (snapshots, HLS, inbox atômico, leases) | `CameraBridge`, `FFmpegRunner`, `LocationStore`, `IdentityStore`, `build_parser` |
@@ -71,7 +71,7 @@ varedura/updater.py (git auth + cooldown 6h + cron) ────────┘
 | Nova aba, modal ou atalho na TUI | `cli/textual_app.py` (`compose`, `BINDINGS`, `@work`), `cli/layout.py` (nunca crie limites de largura avulsos; use `columns_for`/`layout_tier`), `cli/network_ui.py`, `i18n/{pt,en}.json`, `tests/test_textual_app.py` |
 | Novo alvo de ping, diagnóstico ou reparo | `monitor/ping_targets.py`, `monitor/network_diagnostics.py`, `monitor/network_repairs.py` (`RepairAction` + `RepairExecutor`), `tests/` |
 | Plano contratado, franquia ou laudo PDF | `monitor/plan_profiles.py`, `monitor/data_usage.py`, `cli/textual_plans.py`, `monitor/stalker.py` (`set_contract`, `_generate_combined_pdf_worker`), `i18n/{pt,en}.json`, `tests/test_plan_profiles.py`, `tests/test_data_usage.py` |
-| Novo provedor de speedtest | `monitor/speed_providers.py` (`SpeedTestProvider`), `monitor/speed_worker.py`, `tests/test_speed_cleanup.py` |
+| Novo provedor de speedtest | `monitor/speed_providers.py` ou `monitor/speed_providers_http.py` (`SpeedTestProvider`), `monitor/speed_worker.py` (`PROVIDER_IDS`), `monitor/speed_tester.py` (`_available_provider_ids`), `tests/test_speed_cleanup.py` |
 | Integração Termux / auto-updater | `varedura/termux_env.py`, `varedura/updater.py`, `scripts/termux_install.sh`, `scripts/sync_termux_adb.ps1`, `docs/termux.md`, `tests/test_termux_env.py`, `tests/test_updater.py` |
 | Nova ferramenta MCP | `mcp_server/server.py` (`@mcp.tool()`, exigir `confirmed`/`dry_run` se destrutiva), `docs/mcp.md` |
 | Protocolo/descoberta de câmera ou ponte do Mural | `rtsp/camera_engine.py`, `rtsp/xiongmai.py`, `rtsp/scanner.py`, `varedura/camera_bridge.py`, `tests/` |
@@ -95,6 +95,7 @@ varedura/updater.py (git auth + cooldown 6h + cron) ────────┘
 uv run main.py                                    # TUI Textual (padrão)
 varedura                                          # Binário global (editable)
 varedura-update --status                          # Status do repositório e auto-updater
+varedura-speedtest --status                       # Teste de velocidade automático (--once, --cron-on, --windows-task)
 uv run python -m mcp_server                       # Servidor MCP stdio
 varedura-camera-bridge --output-dir <dir>         # Ponte sanitizada para o Mural
 .\scripts\sync_termux_adb.ps1 -Install            # Sincroniza e instala no Termux via ADB+SSH
@@ -105,7 +106,7 @@ graphify update .                                 # Atualiza grafo AST após edi
 
 ## 6. Armadilhas conhecidas
 
-- `pyproject.toml` declara `[build-system]` (`setuptools>=68.0`), portanto `uv sync` gera os scripts `[project.scripts]` (`varedura`, `varedura-camera-bridge`, `varedura-update`) dentro do `.venv`; após mudar `pyproject.toml`, execute `uv tool upgrade varedura` para atualizar os binários globais.
+- `pyproject.toml` declara `[build-system]` (`setuptools>=68.0`), portanto `uv sync` gera os scripts `[project.scripts]` (`varedura`, `varedura-camera-bridge`, `varedura-update`, `varedura-speedtest`) dentro do `.venv`; após mudar `pyproject.toml`, execute `uv tool upgrade varedura` para atualizar os binários globais.
 - No CI, `ruff check .` é bloqueante e `ruff format --check .` é informativo (`continue-on-error: true`).
 - `selenium` (`browser-speedtest`) é opcional: sem ele, `BrasilBandaLargaProvider` e `SimetProvider` retornam `is_available() == False` e fazem fallback HTTP; no Termux ARM64 o Selenium não é instalado.
 - `should_show_docker_tab()` oculta a aba `docker` no Android/Termux quando o binário `docker` não está disponível (salvo se `VAREDURA_SHOW_DOCKER=1`).

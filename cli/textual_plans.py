@@ -12,7 +12,7 @@ import datetime
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Horizontal
-from textual.widgets import Button, Input, Label, Select
+from textual.widgets import Button, Input, Label, Select, Switch
 
 from i18n import t
 from monitor.plan_profiles import (
@@ -58,6 +58,7 @@ class PlansMixin:
         self._plan_form_id = ""
         self._plan_form_binding: PlanProfile | None = None
         self._mobile_usage_bytes: int | None = None
+        self._auto_speed_running = False
 
     # -- dados ---------------------------------------------------------------
     def _plan_profiles(self) -> list[PlanProfile]:
@@ -293,6 +294,23 @@ class PlansMixin:
             yield Button(t("plans.btn_unbind"), id="plan-unbind")
             yield Button(t("plans.btn_delete"), id="plan-delete", variant="error")
 
+        yield Label(t("autospeed.section_title"), classes="section-title")
+        with Horizontal(classes="form-row"):
+            yield Label(t("autospeed.interval"))
+            yield Input(
+                value=str(int(self._network_config.get("auto_speed_minutes", 0) or 0)),
+                placeholder="0",
+                id="auto-speed-minutes",
+                type="integer",
+            )
+        if termux_env.is_termux():
+            from monitor.auto_speed import is_cron_enabled
+
+            with Horizontal(classes="form-row"):
+                yield Label(t("autospeed.background"))
+                yield Switch(value=is_cron_enabled(), id="auto-speed-cron")
+        yield Label(t("autospeed.hint"), classes="hint-text")
+
     def _plan_binding_text(self, profile: PlanProfile | None) -> str:
         binding = describe_binding(profile) if profile else ""
         return t("plans.binding_label", binding=binding or t("plans.binding_none"))
@@ -403,6 +421,13 @@ class PlansMixin:
         except ValueError:
             self.notify(t("plans.invalid"), severity="error")
             return False
+        from monitor.auto_speed import normalize_minutes
+
+        try:
+            raw_minutes = self.query_one("#auto-speed-minutes", Input).value.strip()
+            cfg["auto_speed_minutes"] = normalize_minutes(raw_minutes or 0)
+        except Exception:
+            pass
         profiles = profiles_from_prefs(cfg.get("plan_profiles"))
         if profile is not None:
             previous = find_profile(profiles, profile.id)
@@ -434,9 +459,88 @@ class PlansMixin:
         return True
 
     def _plans_after_save(self) -> None:
+        self._auto_speed_after_save()
         self._plan_reload_selects()
         self._plan_fill_form(find_profile(self._plan_profiles(), self._plan_form_id))
         self._refresh_active_plan()
+
+    # -- teste de velocidade automático -------------------------------------
+    def _auto_speed_after_save(self) -> None:
+        minutes = int(self._network_config.get("auto_speed_minutes", 0) or 0)
+        try:
+            # O valor pode ter sido ajustado (mínimo de 15 min).
+            self.query_one("#auto-speed-minutes", Input).value = str(minutes)
+        except Exception:
+            pass
+        try:
+            wanted = bool(self.query_one("#auto-speed-cron", Switch).value)
+        except Exception:
+            return  # sem o interruptor (desktop): nada de cron
+        self._apply_auto_speed_cron(wanted and minutes > 0)
+
+    @work(thread=True, exclusive=True, group="auto-speed-cron")
+    def _apply_auto_speed_cron(self, enabled: bool) -> None:
+        from monitor.auto_speed import is_cron_enabled, set_cron_enabled
+
+        if is_cron_enabled() == enabled:
+            return
+        ok, message = set_cron_enabled(enabled)
+        if not ok:
+            self.call_from_thread(
+                self.notify, t("autospeed.cron_failed", error=message), severity="warning"
+            )
+        elif enabled:
+            self.call_from_thread(self.notify, t("autospeed.cron_on"))
+
+    def _auto_speed_tick(self) -> None:
+        """A cada minuto: dispara um teste se o intervalo configurado venceu."""
+        minutes = int(self._network_config.get("auto_speed_minutes", 0) or 0)
+        if minutes <= 0 or self._auto_speed_running:
+            return
+        if getattr(self, "_speed_test_active", False):
+            return
+        from monitor.auto_speed import is_due, network_block_reason
+
+        if network_block_reason(self._active_network) or not is_due(minutes):
+            return
+        self._auto_speed_running = True
+        self._run_auto_speed(minutes)
+
+    @work(thread=True, exclusive=True, group="auto-speed")
+    def _run_auto_speed(self, minutes: int) -> None:
+        from monitor.auto_speed import run_scheduled
+
+        try:
+            outcome = run_scheduled(
+                network=self._active_network,
+                profile=self._active_profile,
+                minutes=minutes,
+            )
+        except Exception as exc:
+            outcome = {"status": "failed", "error": str(exc)[:120]}
+        self.call_from_thread(self._finish_auto_speed, outcome)
+
+    def _finish_auto_speed(self, outcome: dict) -> None:
+        self._auto_speed_running = False
+        status = outcome.get("status")
+        if status == "ok":
+            message = t(
+                "autospeed.done",
+                provider=outcome.get("provider", ""),
+                down=outcome.get("download_mbps", 0),
+                up=outcome.get("upload_mbps", 0),
+            )
+        elif status == "failed":
+            message = t("autospeed.failed", error=outcome.get("error", ""))
+        else:
+            return
+        try:
+            self._network_log(message)
+            from monitor.speed_tester import get_speed_tester
+
+            self._render_speed_table(get_speed_tester().get_stats_snapshot())
+        except Exception:
+            pass  # aba Rede ainda não montada
 
     # -- eventos -------------------------------------------------------------
     # Mixins comuns não registram ``@on``: usamos o handler por nome (despachado

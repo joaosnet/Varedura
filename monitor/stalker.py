@@ -971,7 +971,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                             pct
                             for pct, ref in (
                                 (pct_down, contract_info.velocidade_down_mbps),
-                                (pct_up, contract_info.velocidade_up_mbps),
+                                (pct_up, contract_info.velocidade_up_mbps if up > 0 else 0),
                             )
                             if ref
                         ]
@@ -1788,7 +1788,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                         pct
                         for pct, ref in (
                             (pct_down, contract_info.velocidade_down_mbps),
-                            (pct_up, contract_info.velocidade_up_mbps),
+                            (pct_up, contract_info.velocidade_up_mbps if up > 0 else 0),
                         )
                         if ref
                     ]
@@ -2064,7 +2064,8 @@ def _generate_combined_pdf_worker(full_history: bool = False):
             # Estatísticas de velocidade
             if stats.test_count > 0:
                 avg_down = sum(stats.history_down) / len(stats.history_down)
-                avg_up = sum(stats.history_up) / len(stats.history_up)
+                _ups = [value for value in stats.history_up if value > 0]
+                avg_up = sum(_ups) / len(_ups) if _ups else 0.0
                 pct_avg_down = _pct_of(avg_down, contract_info.velocidade_down_mbps)
                 pct_avg_up = _pct_of(avg_up, contract_info.velocidade_up_mbps)
 
@@ -2101,6 +2102,7 @@ def _generate_combined_pdf_worker(full_history: bool = False):
                 )
                 or (
                     contract_info.velocidade_up_mbps
+                    and up > 0
                     and _pct_of(up, contract_info.velocidade_up_mbps) < pct_inst
                 )
             )

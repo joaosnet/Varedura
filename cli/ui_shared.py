@@ -167,6 +167,8 @@ NETWORK_DEFAULTS: dict[str, object] = {
     # por compatibilidade; ``active_profile_id`` vazio = escolha automática.
     "plan_profiles": [],
     "active_profile_id": "",
+    # Teste de velocidade automático: intervalo em minutos (0 = desligado).
+    "auto_speed_minutes": 0,
 }
 
 
@@ -326,6 +328,9 @@ def load_network_config() -> dict:
             )
         ]
     config["plan_profiles"] = profiles_to_prefs(profiles)
+    from monitor.auto_speed import normalize_minutes
+
+    config["auto_speed_minutes"] = normalize_minutes(config.get("auto_speed_minutes", 0))
     active_id = str(config.get("active_profile_id", "") or "")
     config["active_profile_id"] = (
         active_id if any(item.id == active_id for item in profiles) else ""

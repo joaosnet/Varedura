@@ -12,7 +12,7 @@ import json
 from typing import Any
 
 
-PROVIDER_IDS = ("speedtest", "fast", "brasil_banda_larga", "simet")
+PROVIDER_IDS = ("speedtest", "fast", "cloudflare", "mlab", "brasil_banda_larga", "simet")
 
 
 def run_provider(provider_id: str) -> dict[str, Any]:
@@ -22,10 +22,13 @@ def run_provider(provider_id: str) -> dict[str, Any]:
         SimetProvider,
         SpeedtestNetProvider,
     )
+    from monitor.speed_providers_http import CloudflareProvider, MLabNdt7Provider
 
     factories = {
         "speedtest": SpeedtestNetProvider,
         "fast": FastComProvider,
+        "cloudflare": CloudflareProvider,
+        "mlab": MLabNdt7Provider,
         "brasil_banda_larga": BrasilBandaLargaProvider,
         "simet": SimetProvider,
     }

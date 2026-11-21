@@ -330,7 +330,8 @@ def evaluate_speed(
     if not samples:
         return SpeedVerdict(has_reference=has_reference)
     downs = [max(0.0, sample.down_mbps) for sample in samples]
-    ups = [max(0.0, sample.up_mbps) for sample in samples]
+    # Upload 0 = não medido pelo provedor: fica fora de média e veredito.
+    ups = [sample.up_mbps for sample in samples if sample.up_mbps > 0] or [0.0]
     base = dict(
         samples=len(samples),
         has_reference=has_reference,
@@ -348,9 +349,12 @@ def evaluate_speed(
     pct_up = base["avg_up"] / profile.up_mbps * 100 if profile.up_mbps else None
     checks = [pct for pct in (pct_down, pct_up) if pct is not None]
     violations = 0
-    for down, up in zip(downs, ups):
+    for sample in samples:
+        down, up = max(0.0, sample.down_mbps), sample.up_mbps
         below_down = profile.down_mbps and down / profile.down_mbps * 100 < instant_min_pct
-        below_up = profile.up_mbps and up / profile.up_mbps * 100 < instant_min_pct
+        below_up = (
+            profile.up_mbps and up > 0 and up / profile.up_mbps * 100 < instant_min_pct
+        )
         if below_down or below_up:
             violations += 1
     return SpeedVerdict(

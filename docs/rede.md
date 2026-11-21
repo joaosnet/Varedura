@@ -74,3 +74,25 @@ O que foi contratado deixa de ser fixo no código: vem de **perfis de plano** em
 **Franquia**: o Android só expõe contadores desde o boot (`rmnet*`/`ccmni*` em `/proc/net/dev`). O rastreador soma deltas e reinicia a base quando o contador regride. O tráfego entre a última leitura e um reboot não é contado — o campo "Já consumido (GB)" serve para acertar com o extrato da operadora. Fora do Android não há medição de franquia.
 
 **Laudo PDF** (botão "Exportar PDF" da aba Rede → `export_combined_report()`): documento **do consumidor**, não da ANATEL. Usa as medições de velocidade do plano ativo no ciclo vigente (ou últimos 30 dias). Os limiares de 80 % (média) e 40 % (instantânea) vêm dos antigos indicadores SCM4/SCM5 da Res. 574/2011, **revogados pelo RQUAL (Res. 717/2019)**: aparecem como "referência", e os vereditos são "dentro/abaixo da referência". Plano sem velocidade informada sai como "velocidade medida (sem referência)". Plano móvel com franquia ganha a seção "Franquia de dados".
+
+---
+
+## 5. Provedores de velocidade e teste automático
+
+| Provedor | Id do worker | Como mede | Onde roda |
+|---|---|---|---|
+| Speedtest.net | `speedtest` | `speedtest-cli` | Todas as plataformas |
+| Fast.com | `fast` | HTTP; download e **upload reais** (o upload já foi estimado em 40 % do download — removido) | Todas |
+| Cloudflare | `cloudflare` | HTTP em `speed.cloudflare.com`, 4 fluxos de download e 3 de upload | Todas |
+| M-Lab NDT7 | `mlab` | WebSocket (cliente mínimo em stdlib), 1 fluxo TCP por sentido, servidores da RNP | Todas |
+| Brasil Banda Larga / SIMET | `brasil_banda_larga` / `simet` | Selenium | Só desktop com o extra `browser-speedtest` |
+
+Cloudflare e M-Lab ficam em `monitor/speed_providers_http.py`. O LibreSpeed foi avaliado e descartado: a lista pública não tem servidor no Brasil, então mediria a rota internacional. Upload `0` significa "não medido" e fica fora de médias e vereditos.
+
+**Teste automático** (`monitor/auto_speed.py`, comando `varedura-speedtest`): com `auto_speed_minutes > 0` (Configurações → "Teste de velocidade automático", mínimo 15 min), um teste roda a cada intervalo, em rodízio de provedores, e a medição entra no histórico do plano ativo — a fonte do laudo PDF.
+
+- **App aberto**: `PlansMixin._auto_speed_tick` confere a cada minuto.
+- **Segundo plano**: no Termux o interruptor "Também com o app fechado" instala no cron `*/15 * * * * varedura-speedtest --scheduled` (o comando só executa se o intervalo venceu; requer o serviço `crond` ligado). No Windows, `varedura-speedtest --windows-task` imprime o `schtasks` para o Agendador de Tarefas; o Varedura não cria a tarefa sozinho.
+- O estado em `~/.varedura_auto_speed.json` é compartilhado, então app e cron não rodam em dobro. Falha tenta de novo em 15 min.
+- **Nunca** roda em dados móveis nem sem rede identificada, mesmo com `--once`.
+

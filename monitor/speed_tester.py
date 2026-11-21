@@ -116,6 +116,8 @@ class ContinuousSpeedTester:
         candidates = (
             ("speedtest", "Speedtest.net", "speedtest"),
             ("fast", "Fast.com", "requests"),
+            ("cloudflare", "Cloudflare", "requests"),
+            ("mlab", "M-Lab NDT7", "ssl"),
             ("brasil_banda_larga", "BrasilBandaLarga", "selenium"),
             ("simet", "SIMET/NIC.br", "selenium"),
         )

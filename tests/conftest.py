@@ -16,6 +16,10 @@ def _isolated_plan_storage(monkeypatch, tmp_path_factory):
     monkeypatch.setattr(data_usage, "SPEED_HISTORY_FILE", base / "speed.jsonl")
     monkeypatch.setattr(data_usage, "_tracker", None)
 
+    from monitor import auto_speed
+
+    monkeypatch.setattr(auto_speed, "STATE_FILE", base / "auto_speed.json")
+
     # Nenhum teste sonda a rede real da máquina (netsh/ip/termux-*). Quem testa
     # a detecção usa ``REAL_DETECT_ACTIVE_NETWORK`` com ``_run`` mockado.
     from monitor import netinfo

@@ -4,6 +4,7 @@ V's Speed Test Providers - Múltiplos provedores de teste de velocidade
 Provedores implementados:
     - SpeedtestNetProvider: Ookla Speedtest.net (speedtest-cli)
     - FastComProvider: Netflix Fast.com
+    - CloudflareProvider / MLabNdt7Provider: em monitor/speed_providers_http.py
 """
 
 import atexit
@@ -307,8 +308,24 @@ class FastComProvider(SpeedTestProvider):
             if self._progress:
                 self._progress.phase = "upload"
 
-            # Fast.com não testa upload facilmente, estimar baseado em download
-            upload_mbps = download_mbps * 0.4
+            # Upload real: POSTs contínuos para o mesmo servidor Netflix.
+            # (Antes era estimado como 40% do download — inaceitável num laudo.)
+            upload_mbps = 0.0
+            try:
+                from monitor.speed_providers_http import (
+                    http_upload_worker,
+                    measure_parallel,
+                )
+
+                upload_mbps = measure_parallel(
+                    http_upload_worker(
+                        self._requests, data["targets"][0]["url"], body_bytes=20_000_000
+                    ),
+                    streams=3,
+                    duration=6.0,
+                )
+            except Exception:
+                upload_mbps = 0.0  # 0 = upload não medido
 
             # Ping
             ping_start = time.time()

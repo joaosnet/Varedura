@@ -1131,6 +1131,7 @@ class VareduraTextualApp(
             self._run_git_autoupdate_bg()
         if termux_env.is_termux():
             self._termux_keys_start()
+        self.set_interval(60.0, self._auto_speed_tick)
 
     @work(thread=True, exclusive=False)
     def _run_git_autoupdate_bg(self) -> None:
