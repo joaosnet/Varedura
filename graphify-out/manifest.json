@@ -49,21 +49,21 @@
     "semantic_hash": "36a35df2f5610534830644d9cea45d50"
   },
   "cli/textual_app.py": {
-    "mtime": 1795290033.9006488,
-    "seen": 1795290148.664395,
-    "ast_hash": "1a33ab8d279b519498836ab073db977d",
+    "mtime": 1795290381.9108357,
+    "seen": 1795290869.9036407,
+    "ast_hash": "ed93e7074c291bfa8407cb0aec5827d8",
     "semantic_hash": ""
   },
   "cli/textual_cameras.py": {
-    "mtime": 1795230495.0606174,
-    "seen": 1795231223.5047529,
-    "ast_hash": "f5c2618610fb485210c173242f495c1b",
+    "mtime": 1795290381.9342198,
+    "seen": 1795290869.9036434,
+    "ast_hash": "4016c282e39f06db30634d5c14a909a1",
     "semantic_hash": ""
   },
   "cli/ui_shared.py": {
-    "mtime": 1795289103.2002292,
-    "seen": 1795290148.6644058,
-    "ast_hash": "77be1c393c8450ce486ee91bf96e6dad",
+    "mtime": 1795290476.3372555,
+    "seen": 1795290869.9036515,
+    "ast_hash": "5bb37dfe793c65bee7bfc74eb8bf517d",
     "semantic_hash": ""
   },
   "docker_cleaner/__init__.py": {
@@ -439,9 +439,9 @@
     "semantic_hash": ""
   },
   "tests/test_textual_app.py": {
-    "mtime": 1795289706.0483594,
-    "seen": 1795290148.6645484,
-    "ast_hash": "8ddff9f8cf2490efc3f045257c96c0db",
+    "mtime": 1795290381.9342198,
+    "seen": 1795290869.9038162,
+    "ast_hash": "ba4fc587198977af8c89baaa55424fc1",
     "semantic_hash": ""
   },
   "tests/test_textual_cameras.py": {
@@ -493,9 +493,9 @@
     "semantic_hash": "05dfe5e5a78bfed41aa83334f0e3f9dc"
   },
   "cli/textual_termux.py": {
-    "mtime": 1795287153.8045328,
-    "seen": 1795287321.7145245,
-    "ast_hash": "74194e2062ba7cb0025d7cf173c79830",
+    "mtime": 1795290381.9321103,
+    "seen": 1795290869.9036493,
+    "ast_hash": "ee518a5239e6dd298e3a79cff8f47c7f",
     "semantic_hash": ""
   },
   "monitor/network_health.py": {
@@ -565,9 +565,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1795289918.9691827,
-    "seen": 1795290148.6645749,
-    "ast_hash": "0adc0b4e79695de66f441ae12e3962da",
+    "mtime": 1795290757.0669763,
+    "seen": 1795290869.9038417,
+    "ast_hash": "5ca91163de5608d36412eacfd2f7cd83",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -643,9 +643,9 @@
     "semantic_hash": ""
   },
   "cli/textual_plans.py": {
-    "mtime": 1795290033.8978083,
-    "seen": 1795290148.6644003,
-    "ast_hash": "b751e0b18db99829523653ebd1488d80",
+    "mtime": 1795290409.8647754,
+    "seen": 1795290869.9036462,
+    "ast_hash": "585fda3a32dd227328be8c9dd04ef4ff",
     "semantic_hash": ""
   },
   "monitor/data_usage.py": {
@@ -676,6 +676,18 @@
     "mtime": 1795289788.65546,
     "seen": 1795290148.6645353,
     "ast_hash": "48953d1692c3a0ad3178e5d17ceb850a",
+    "semantic_hash": ""
+  },
+  "cli/layout.py": {
+    "mtime": 1795290342.9630628,
+    "seen": 1795290869.9036252,
+    "ast_hash": "fe1a6e663307722aca1deff8656d44b5",
+    "semantic_hash": ""
+  },
+  "tests/test_layout.py": {
+    "mtime": 1795290632.476506,
+    "seen": 1795290869.9037771,
+    "ast_hash": "71069b0ec3732a8684f1222c0a5c201c",
     "semantic_hash": ""
   }
 }

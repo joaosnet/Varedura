@@ -688,7 +688,11 @@ class CamerasMixin:
         """Reflow responsivo da aba credenciais: 2 colunas (largo) ou
         empilhado em coluna única (estreito)."""
         try:
-            self.query_one("#cred-layout").set_class(width < 90, "cred-narrow")
+            from cli.layout import NARROW, layout_tier
+
+            self.query_one("#cred-layout").set_class(
+                layout_tier(width) == NARROW, "cred-narrow"
+            )
         except Exception:
             pass
 

@@ -583,9 +583,11 @@ def build_dashboard_status(
     gateway = str(network.get("gateway_ip") or "—")
     running = bool(network.get("running"))
 
-    table = Table(box=box.SIMPLE, show_header=False, expand=True)
-    table.add_column(style="bold cyan", no_wrap=True)
-    table.add_column(style="white")
+    # Proporção fixa: em telas estreitas o rótulo quebra em vez de espremer o
+    # valor numa coluna de poucas letras.
+    table = Table(box=box.SIMPLE, show_header=False, expand=True, padding=(0, 1))
+    table.add_column(style="bold cyan", ratio=2)
+    table.add_column(style="white", ratio=3)
 
     table.add_row(
         t("dashboard.network"),

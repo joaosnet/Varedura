@@ -38,6 +38,7 @@ varedura/updater.py (git auth + cooldown 6h + cron) ────────┘
 | `docker_cleaner/core.py` *(1.946L — índice em `docs/docker-e-cli.md`)* | Motor Docker/WSL2 sync + async, UAC/elevação, VHDX sparse/`Optimize-VHD` | `WSLDockerCleaner`, `CleanupStepResult`, `DOCKER_CLEANUP_COMMANDS`, `get_docker_vhdx_paths` |
 | `cli/textual_app.py` *(índice em `docs/docker-e-cli.md`)* | App Textual principal (abas: `dashboard`, `docker` condicional, `network`, `cameras`, `termux`, `settings` + captura SVG nativa) | `VareduraTextualApp`, `TargetPingCard`, `ShutdownScreen`, `run_textual_app` |
 | `cli/textual_cameras.py` *(índice em `docs/docker-e-cli.md`)* | Aba Câmeras (4 sub-abas), workers, radar, snapshot JPEG e `mpv --vo=tct` | `CamerasMixin`, `ClickOpenDataTable` |
+| `cli/layout.py` | Régua única de breakpoints da TUI (estreito < 76, médio, largo ≥ 112 colunas) e colunas de cada grade; a faixa estreita liga o modo compacto (`Screen.mobile-narrow`: botões de 1 linha, cards de ping em 2 linhas) | `layout_tier`, `columns_for`, `GRID_COLUMNS` |
 | `cli/network_ui.py` | Modais lazy de seleção de alvos e confirmação de reparos | `TargetPickerScreen`, `RepairConfirmationScreen`, `merge_visible_selection` |
 | `cli/ui_shared.py` / `cli/richlog.py` | Prefs (`~/.varedura_prefs.json`), presets de limpeza, logs diários e painéis Rich | `CLEANUP_STEPS`, `load_network_config`, `DailyLogWriter`, `format_duration` |
 | `cli/quick_cleanup.py` / `cli/main_cleaner.py` / `cli/admin_tasks.py` | CLIs headless e executor elevado (`compact_vhdx`, `configure_sparse`) | `quick_cleanup`, `parse_args`, `main` |
@@ -65,7 +66,7 @@ varedura/updater.py (git auth + cooldown 6h + cron) ────────┘
 | Quero… | Arquivos |
 |---|---|
 | Nova etapa de limpeza Docker/WSL | `docker_cleaner/core.py` (sync + async + `DOCKER_CLEANUP_COMMANDS`), `cli/ui_shared.py`, `cli/textual_app.py`, `i18n/{pt,en}.json`, `tests/test_docker_cleanup.py` |
-| Nova aba, modal ou atalho na TUI | `cli/textual_app.py` (`compose`, `BINDINGS`, `@work`), `cli/network_ui.py`, `i18n/{pt,en}.json`, `tests/test_textual_app.py` |
+| Nova aba, modal ou atalho na TUI | `cli/textual_app.py` (`compose`, `BINDINGS`, `@work`), `cli/layout.py` (nunca crie limites de largura avulsos; use `columns_for`/`layout_tier`), `cli/network_ui.py`, `i18n/{pt,en}.json`, `tests/test_textual_app.py` |
 | Novo alvo de ping, diagnóstico ou reparo | `monitor/ping_targets.py`, `monitor/network_diagnostics.py`, `monitor/network_repairs.py` (`RepairAction` + `RepairExecutor`), `tests/` |
 | Plano contratado, franquia ou laudo PDF | `monitor/plan_profiles.py`, `monitor/data_usage.py`, `cli/textual_plans.py`, `monitor/stalker.py` (`set_contract`, `_generate_combined_pdf_worker`), `i18n/{pt,en}.json`, `tests/test_plan_profiles.py`, `tests/test_data_usage.py` |
 | Novo provedor de speedtest | `monitor/speed_providers.py` (`SpeedTestProvider`), `monitor/speed_worker.py`, `tests/test_speed_cleanup.py` |

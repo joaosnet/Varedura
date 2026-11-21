@@ -79,6 +79,10 @@ TERMUX_CSS = """
     min-height: 3;
 }
 
+Screen.mobile-narrow .termux-tool-btn {
+    min-height: 1;
+}
+
 .termux-svc-row {
     height: auto;
     margin-bottom: 1;
@@ -331,8 +335,11 @@ class TermuxMixin:
             grid = self.query_one("#termux-tools-grid", Grid)
         except Exception:
             return
-        grid.set_class(width < 68, "cols-1")
-        grid.set_class(width >= 112, "cols-3")
+        from cli.layout import columns_for
+
+        columns = columns_for("termux-tools", width)
+        grid.set_class(columns == 1, "cols-1")
+        grid.set_class(columns == 3, "cols-3")
 
     def _refresh_termux_tools(self) -> None:
         tools = termux_env.discover_termux_tools()

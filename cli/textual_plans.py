@@ -36,7 +36,7 @@ _AUTO = "__auto__"
 
 PLANS_CSS = """
 #plan-binding { color: $text-muted; height: auto; padding: 0 1; }
-#network-plan-status { color: $text-muted; height: auto; padding: 0 1; }
+#network-plan-status { color: $text-muted; width: 100%; height: auto; padding: 0 1; margin-bottom: 1; }
 """
 
 

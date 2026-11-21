@@ -39,6 +39,7 @@ from textual.widgets.option_list import Option
 
 from cli.richlog import DailyLogWriter
 from cli.textual_cameras import CAMERAS_CSS, CamerasMixin
+from cli.layout import NARROW, columns_for, layout_tier
 from cli.textual_plans import PLANS_CSS, PlansMixin
 from cli.textual_termux import TERMUX_CSS, TermuxMixin
 from cli.ui_shared import (
@@ -92,6 +93,7 @@ class TargetPingCard(Vertical):
 
     def compose(self) -> ComposeResult:
         yield Label("", classes="card-title target-card-title")
+        yield Label("--", classes="card-value target-card-value")
         yield Digits("--", classes="ping-digits target-card-digits")
         yield Label("", classes="card-unit target-card-unit")
         yield Sparkline([], classes="target-card-spark", summary_function=max)
@@ -116,12 +118,14 @@ class TargetPingCard(Vertical):
             unit = self.query_one(".target-card-unit", Label)
             spark = self.query_one(".target-card-spark", Sparkline)
             stats = self.query_one(".target-card-stats", Label)
+            value = self.query_one(".target-card-value", Label)
             title_widget.update(title)
             digits.update("--" if latency is None else f"{latency:.0f}")
+            value.update("--" if latency is None else f"{latency:.0f} ms")
             unit.update(method_status)
             spark.data = history or [0.0]
             stats.update(statistics)
-            for widget in (digits, spark):
+            for widget in (digits, spark, value):
                 widget.remove_class("ping-ok", "ping-warn", "ping-bad", "ping-timeout")
                 widget.add_class(color_class)
         except Exception:
@@ -511,6 +515,77 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         text-style: bold;
     }
 
+    /* ---- Modo compacto (faixa estreita) ----------------------------------
+       Botões de 1 linha e cards de ping em 2 linhas, para os dados caberem na
+       primeira tela de um celular em retrato. */
+    .card-value {
+        display: none;
+    }
+
+    Screen.mobile-narrow Button {
+        border: none;
+        height: 1;
+        min-height: 1;
+    }
+
+    Screen.mobile-narrow #dash-quick-actions Button {
+        min-height: 1;
+    }
+
+    Screen.mobile-narrow #network-controls,
+    Screen.mobile-narrow #repair-actions {
+        grid-rows: 1;
+        grid-gutter: 1 1;
+    }
+
+    Screen.mobile-narrow #network-controls #network-status {
+        height: 1;
+    }
+
+    Screen.mobile-narrow #network-cards {
+        grid-rows: 2;
+        grid-gutter: 1;
+    }
+
+    Screen.mobile-narrow .ping-card {
+        layout: grid;
+        grid-size: 3 2;
+        grid-columns: 1fr 9 16;
+        grid-rows: 1 1;
+        grid-gutter: 0 1;
+        height: 2;
+        border: none;
+        padding: 0;
+    }
+
+    Screen.mobile-narrow .ping-card .ping-digits,
+    Screen.mobile-narrow .ping-card .card-unit {
+        display: none;
+    }
+
+    Screen.mobile-narrow .ping-card .card-value {
+        display: block;
+        width: 100%;
+        height: 1;
+        text-align: right;
+        text-style: bold;
+    }
+
+    Screen.mobile-narrow .ping-card .card-title {
+        height: 1;
+        max-height: 1;
+    }
+
+    Screen.mobile-narrow .ping-card Sparkline {
+        height: 1;
+    }
+
+    Screen.mobile-narrow .ping-card .card-stats {
+        column-span: 3;
+        height: 1;
+        max-height: 1;
+    }
+
     ShutdownScreen {
         align: center middle;
     }
@@ -815,12 +890,14 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
             with Grid(id="network-cards"):
                 with Vertical(classes="ping-card", id="health-card"):
                     yield Label(t("game.health_title"), classes="card-title")
+                    yield Label("--", id="health-value", classes="card-value")
                     yield Digits("--", id="health-digits", classes="ping-digits")
                     yield Label("", id="health-tier", classes="card-unit")
                     yield Sparkline([], id="health-spark", summary_function=max)
                     yield Label("", id="health-streak", classes="card-stats")
                 with Vertical(classes="ping-card", id="gateway-card"):
                     yield Label(t("stalker.graph_gateway"), classes="card-title")
+                    yield Label("--", id="gateway-value", classes="card-value")
                     yield Digits("--", id="gateway-digits", classes="ping-digits")
                     yield Label("ms", classes="card-unit")
                     yield Sparkline([], id="gateway-spark", summary_function=max)
@@ -831,6 +908,7 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
                         id="external-title",
                         classes="card-title",
                     )
+                    yield Label("--", id="external-value", classes="card-value")
                     yield Digits("--", id="external-digits", classes="ping-digits")
                     yield Label("ms", classes="card-unit")
                     yield Sparkline([], id="external-spark", summary_function=max)
@@ -967,9 +1045,13 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
             )
 
     def _apply_mobile_layout(self, width: int) -> None:
-        narrow = width < 76
+        tier = layout_tier(width)
+        narrow = tier == NARROW
         try:
+            # ``mobile-narrow`` liga o modo compacto; ``bp-*`` expõe a faixa ao CSS.
             self.screen.set_class(narrow, "mobile-narrow")
+            for name in ("narrow", "medium", "wide"):
+                self.screen.set_class(tier == name, f"bp-{name}")
         except Exception:
             pass
         try:
@@ -979,7 +1061,7 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
 
     def on_mount(self) -> None:
         self._apply_mobile_layout(self.size.width)
-        if self.size.width < 76 and termux_env.is_termux():
+        if layout_tier(self.size.width) == NARROW and termux_env.is_termux():
             try:
                 self.query_one("#dashboard-grid").scroll_home(animate=False)
             except Exception:
@@ -1426,7 +1508,7 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         self._cameras_on_resize(width)
         self._apply_network_responsive_layout(width)
         # Etapas de limpeza: nº de colunas conforme a largura disponível.
-        cols = 3 if width >= 110 else (2 if width >= 70 else 1)
+        cols = columns_for("step-grid", width)
         for grid in self.query(".step-grid"):
             grid.set_class(cols == 2, "cols-2")
             grid.set_class(cols == 3, "cols-3")
@@ -1436,11 +1518,9 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
 
         if "network" not in self._hydrated_tabs:
             return
-        card_columns = 3 if width >= 132 else (2 if width >= 82 else 1)
-        control_columns = (
-            4 if width >= 140 else (3 if width >= 104 else (2 if width >= 48 else 1))
-        )
-        repair_columns = 3 if width >= 108 else (2 if width >= 54 else 1)
+        card_columns = columns_for("network-cards", width)
+        control_columns = columns_for("network-controls", width)
+        repair_columns = columns_for("repair-actions", width)
         for selector, columns, maximum in (
             ("#network-cards", card_columns, 3),
             ("#network-controls", control_columns, 4),
@@ -2721,7 +2801,9 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
     def _render_ping_card(self, prefix: str, ms, stats, threshold: int) -> None:
         digits = self.query_one(f"#{prefix}-digits", Digits)
         spark = self.query_one(f"#{prefix}-spark", Sparkline)
+        value = self.query_one(f"#{prefix}-value", Label)
         digits.update("--" if ms is None else f"{ms:.0f}")
+        value.update("--" if ms is None else f"{ms:.0f} ms")
         spark.data = [v if v is not None else 0.0 for v in stats.history]
 
         has_data = stats.min_ms is not None
@@ -2736,7 +2818,7 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         )
 
         self._apply_status_class(
-            (digits, spark), self._ping_status_class(ms, threshold)
+            (digits, spark, value), self._ping_status_class(ms, threshold)
         )
 
     @staticmethod
@@ -2765,6 +2847,8 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         tier = str(health.get("tier", "—"))
         color = str(health.get("color", "dim"))
         digits.update(str(score))
+        health_value = self.query_one("#health-value", Label)
+        health_value.update(f"{score} · {tier}")
         self.query_one("#health-spark", Sparkline).data = list(self._score_hist) or [
             0.0
         ]
@@ -2779,7 +2863,7 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
 
         cls = "ping-ok" if score >= 75 else "ping-warn" if score >= 45 else "ping-bad"
         self._apply_status_class(
-            (digits, self.query_one("#health-spark", Sparkline)), cls
+            (digits, self.query_one("#health-spark", Sparkline), health_value), cls
         )
 
     def _render_speed_table(self, snapshot: dict) -> None:

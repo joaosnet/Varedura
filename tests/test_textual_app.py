@@ -467,7 +467,7 @@ def test_target_card_statistics_include_jitter_trend_and_live_league_ip():
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("size", "card_columns", "control_columns"),
-    [((55, 18), 1, 2), ((90, 26), 2, 2), ((145, 42), 3, 4)],
+    [((55, 18), 1, 2), ((90, 26), 2, 3), ((145, 42), 3, 4)],
 )
 async def test_network_cards_reflow_for_any_terminal_size(
     size, card_columns, control_columns
