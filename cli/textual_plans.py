@@ -59,6 +59,8 @@ class PlansMixin:
         self._plan_form_binding: PlanProfile | None = None
         self._mobile_usage_bytes: int | None = None
         self._auto_speed_running = False
+        self._speed_history_key: tuple | None = None
+        self._speed_history_cache: list = []
 
     # -- dados ---------------------------------------------------------------
     def _plan_profiles(self) -> list[PlanProfile]:
@@ -137,6 +139,57 @@ class PlansMixin:
             )
         except Exception:
             pass
+
+    def _speed_history_samples(self) -> list:
+        """Medições do plano ativo no ciclo, mais recentes primeiro (com cache)."""
+        from monitor import data_usage
+
+        profile = self._active_profile
+        try:
+            stat = data_usage.SPEED_HISTORY_FILE.stat()
+            stamp = (stat.st_mtime_ns, stat.st_size)
+        except OSError:
+            stamp = (0, 0)
+        key = (stamp, profile.id if profile else "", str(data_usage.SPEED_HISTORY_FILE))
+        if key != self._speed_history_key:
+            samples = data_usage.samples_for_report(profile)
+            if profile is None:
+                samples = [sample for sample in samples if not sample.profile_id]
+            self._speed_history_cache = list(reversed(samples))
+            self._speed_history_key = key
+        return self._speed_history_cache
+
+    def _speed_summary_text(self, samples: list) -> str:
+        """Linha de resumo acima da tabela: quantas medições e a média vs. plano."""
+        from monitor.plan_profiles import evaluate_speed
+
+        profile = self._active_profile
+        name = profile.name if profile else t("plans.status_none")
+        if not samples:
+            return t("network.speed_summary_empty", plan=name)
+        verdict = evaluate_speed(profile, samples)
+        if verdict.status == "no_reference":
+            return t(
+                "network.speed_summary_noref",
+                plan=name,
+                count=verdict.samples,
+                down=f"{verdict.avg_down:.0f}",
+                up=f"{verdict.avg_up:.0f}",
+            )
+        return t(
+            "network.speed_summary",
+            plan=name,
+            count=verdict.samples,
+            down=f"{verdict.avg_down:.0f}",
+            up=f"{verdict.avg_up:.0f}",
+            pct_down=f"{verdict.pct_down:.0f}" if verdict.pct_down is not None else "—",
+            pct_up=f"{verdict.pct_up:.0f}" if verdict.pct_up is not None else "—",
+            verdict=t(
+                "network.speed_verdict_ok"
+                if verdict.status == "ok"
+                else "network.speed_verdict_below"
+            ),
+        )
 
     def _plan_status_text(self, *, prefix: bool = True) -> str:
         profile = self._active_profile
@@ -303,12 +356,13 @@ class PlansMixin:
                 id="auto-speed-minutes",
                 type="integer",
             )
-        if termux_env.is_termux():
-            from monitor.auto_speed import is_cron_enabled
+        from monitor.auto_speed import describe_status
 
-            with Horizontal(classes="form-row"):
-                yield Label(t("autospeed.background"))
-                yield Switch(value=is_cron_enabled(), id="auto-speed-cron")
+        status = describe_status()
+        with Horizontal(classes="form-row"):
+            yield Label(t("autospeed.background"))
+            yield Switch(value=bool(status["background"]), id="auto-speed-cron")
+        yield Label(self._auto_speed_status_text(status), id="auto-speed-status")
         yield Label(t("autospeed.hint"), classes="hint-text")
 
     def _plan_binding_text(self, profile: PlanProfile | None) -> str:
@@ -475,22 +529,70 @@ class PlansMixin:
         try:
             wanted = bool(self.query_one("#auto-speed-cron", Switch).value)
         except Exception:
-            return  # sem o interruptor (desktop): nada de cron
-        self._apply_auto_speed_cron(wanted and minutes > 0)
+            return
+        self._apply_auto_speed_background(wanted and minutes > 0)
+
+    def _auto_speed_switch_changed(self, wanted: bool) -> None:
+        """O interruptor age na hora: desligar remove a tarefa/cron sem salvar."""
+        minutes = int(self._network_config.get("auto_speed_minutes", 0) or 0)
+        if wanted and minutes <= 0:
+            # Sem intervalo salvo não há o que agendar; o Salvar liga os dois.
+            self.notify(t("autospeed.needs_interval"), severity="warning")
+            return
+        self._apply_auto_speed_background(wanted)
+
+    def _auto_speed_status_text(self, status: dict) -> str:
+        minutes = int(self._network_config.get("auto_speed_minutes", 0) or 0)
+        last = status.get("last_run")
+        return t(
+            "autospeed.status",
+            state=t("autospeed.state_on", minutes=minutes)
+            if minutes > 0
+            else t("autospeed.state_off"),
+            background=t("termux.status_on")
+            if status.get("background")
+            else t("termux.status_off"),
+            last=last.strftime("%d/%m %H:%M") if last else "—",
+        )
+
+    def _refresh_auto_speed_status(self, status: dict | None = None) -> None:
+        if status is None:
+            from monitor.auto_speed import describe_status
+
+            status = describe_status()
+        try:
+            self.query_one("#auto-speed-status", Label).update(
+                self._auto_speed_status_text(status)
+            )
+            switch = self.query_one("#auto-speed-cron", Switch)
+            with switch.prevent(Switch.Changed):
+                switch.value = bool(status.get("background"))
+        except Exception:
+            pass
 
     @work(thread=True, exclusive=True, group="auto-speed-cron")
-    def _apply_auto_speed_cron(self, enabled: bool) -> None:
-        from monitor.auto_speed import is_cron_enabled, set_cron_enabled
+    def _apply_auto_speed_background(self, enabled: bool) -> None:
+        """Liga/desliga o agendamento do sistema (tarefa no Windows, cron nos demais)."""
+        from monitor.auto_speed import (
+            describe_status,
+            is_background_enabled,
+            set_background_enabled,
+        )
 
-        if is_cron_enabled() == enabled:
-            return
-        ok, message = set_cron_enabled(enabled)
-        if not ok:
-            self.call_from_thread(
-                self.notify, t("autospeed.cron_failed", error=message), severity="warning"
-            )
-        elif enabled:
-            self.call_from_thread(self.notify, t("autospeed.cron_on"))
+        if is_background_enabled() != enabled:
+            ok, message = set_background_enabled(enabled)
+            if not ok:
+                self.call_from_thread(
+                    self.notify,
+                    t("autospeed.cron_failed", error=message),
+                    severity="warning",
+                )
+            else:
+                self.call_from_thread(
+                    self.notify,
+                    t("autospeed.cron_on") if enabled else t("autospeed.cron_off"),
+                )
+        self.call_from_thread(self._refresh_auto_speed_status, describe_status())
 
     def _auto_speed_tick(self) -> None:
         """A cada minuto: dispara um teste se o intervalo configurado venceu."""
@@ -534,6 +636,7 @@ class PlansMixin:
             message = t("autospeed.failed", error=outcome.get("error", ""))
         else:
             return
+        self._refresh_auto_speed_status()
         try:
             self._network_log(message)
             from monitor.speed_tester import get_speed_tester

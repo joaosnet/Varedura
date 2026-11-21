@@ -965,6 +965,7 @@ class VareduraTextualApp(
                                 id="network-speed-cancel",
                                 disabled=True,
                             )
+                        yield Label("", id="network-speed-summary", classes="hint-text")
                         yield DataTable(id="network-speed-table")
                 with TabPane(t("textual.network_ports"), id="net-ports-tab"):
                     with Vertical():
@@ -1718,6 +1719,8 @@ class VareduraTextualApp(
             self._refresh_live_settings_status()
         elif switch_id.startswith("sw-termux-"):
             self._termux_handle_switch(switch_id, bool(event.value))
+        elif switch_id == "auto-speed-cron":
+            self._auto_speed_switch_changed(bool(event.value))
 
     @on(Select.Changed, "#language-select")
     def on_language_select_changed(self, event: Select.Changed) -> None:
@@ -2142,6 +2145,7 @@ class VareduraTextualApp(
         speed_table = self.query_one("#network-speed-table", DataTable)
         speed_table.cursor_type = "row"
         speed_table.add_columns(
+            t("network.speed_when"),
             t("stalker.speed_provider"),
             t("stalker.speed_download"),
             t("stalker.speed_upload"),
@@ -2903,53 +2907,71 @@ class VareduraTextualApp(
         )
 
     def _render_speed_table(self, snapshot: dict) -> None:
+        """Histórico de medições do plano ativo (manuais, automáticas e do cron)."""
         table = self.query_one("#network-speed-table", DataTable)
         table.clear()
 
-        # ANATEL compliance reference: at least `percentual_minimo`% of the
-        # contracted speed (Resolução 574/2011 mensal mínimo de 80%).
+        # Referência: `percentual_minimo`% da velocidade do plano (0 = sem referência).
         min_down, min_up = anatel_minimums()
-
-        results = snapshot.get("results_by_provider", {})
-        for provider, result in results.items():
-            try:
-                down_mbps = float(result.download_mbps)
-                up_mbps = float(result.upload_mbps)
-                ping_value = float(result.ping_ms)
-                ping = f"{ping_value:.0f} ms" if ping_value > 0 else "—"
-            except (ValueError, TypeError, AttributeError):
-                continue
-            down = Text(
-                f"{down_mbps:.0f} Mbps",
-                style="green" if down_mbps >= min_down else "bold red",
-            )
-            up = Text(
-                f"{up_mbps:.0f} Mbps",
-                style="green" if up_mbps >= min_up else "bold red",
-            )
-            table.add_row(str(provider)[:14], down, up, ping)
 
         if snapshot.get("is_testing"):
             current = str(snapshot.get("current_provider", "") or "...")[:14]
             phase = snapshot.get("progress_phase", "")
             progress = snapshot.get("progress_mbps", 0.0) or 0.0
+            now_label = t("network.speed_now")
             if phase == "download" and progress > 0:
                 table.add_row(
+                    now_label,
                     current,
                     f"{progress:.0f} Mbps",
                     t("stalker.speed_downloading"),
                     "...",
                 )
             elif phase == "upload":
-                table.add_row(current, "ok", t("stalker.speed_uploading"), "...")
+                table.add_row(now_label, current, "ok", t("stalker.speed_uploading"), "...")
             else:
-                table.add_row(current, t("stalker.speed_connecting"), "...", "...")
-        elif not results:
+                table.add_row(
+                    now_label, current, t("stalker.speed_connecting"), "...", "..."
+                )
+
+        samples = self._speed_history_samples()
+        for sample in samples[:40]:
+            down = Text(
+                f"{sample.down_mbps:.0f} Mbps",
+                style=""
+                if min_down <= 0
+                else ("green" if sample.down_mbps >= min_down else "bold red"),
+            )
+            if sample.up_mbps > 0:
+                up = Text(
+                    f"{sample.up_mbps:.0f} Mbps",
+                    style=""
+                    if min_up <= 0
+                    else ("green" if sample.up_mbps >= min_up else "bold red"),
+                )
+            else:
+                up = Text("—", style="dim")  # upload não medido pelo provedor
+            ping = f"{sample.ping_ms:.0f} ms" if sample.ping_ms > 0 else "—"
+            table.add_row(
+                sample.timestamp.strftime("%d/%m %H:%M"),
+                (sample.provider or "—")[:14],
+                down,
+                up,
+                ping,
+            )
+
+        if not samples and not snapshot.get("is_testing"):
             error = snapshot.get("last_error")
             if error:
-                table.add_row("-", Text(str(error)[:24], style="red"), "-", "-")
+                table.add_row("-", "-", Text(str(error)[:24], style="red"), "-", "-")
             else:
-                table.add_row("...", t("stalker.speed_waiting"), "...", "...")
+                table.add_row("...", "...", t("stalker.speed_waiting"), "...", "...")
+        try:
+            self.query_one("#network-speed-summary", Label).update(
+                self._speed_summary_text(samples)
+            )
+        except Exception:
+            pass
 
     def _start_speed_test(self) -> None:
         button = self.query_one("#network-speed-start", Button)
@@ -3001,9 +3023,10 @@ class VareduraTextualApp(
             self.query_one("#network-speed-cancel", Button).disabled = True
         except Exception:
             pass
+        if result is not None:
+            self._record_speed_result(result)  # antes de redesenhar o histórico
         self._render_speed_table(snapshot)
         if result is not None:
-            self._record_speed_result(result)
             self._network_log(
                 f"[green]{t('network.speed_finished', provider=result.provider_name)}[/]"
             )

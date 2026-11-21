@@ -92,7 +92,7 @@ Cloudflare e M-Lab ficam em `monitor/speed_providers_http.py`. O LibreSpeed foi 
 **Teste automático** (`monitor/auto_speed.py`, comando `varedura-speedtest`): com `auto_speed_minutes > 0` (Configurações → "Teste de velocidade automático", mínimo 15 min), um teste roda a cada intervalo, em rodízio de provedores, e a medição entra no histórico do plano ativo — a fonte do laudo PDF.
 
 - **App aberto**: `PlansMixin._auto_speed_tick` confere a cada minuto.
-- **Segundo plano**: no Termux o interruptor "Também com o app fechado" instala no cron `*/15 * * * * varedura-speedtest --scheduled` (o comando só executa se o intervalo venceu; requer o serviço `crond` ligado). No Windows, `varedura-speedtest --windows-task` imprime o `schtasks` para o Agendador de Tarefas; o Varedura não cria a tarefa sozinho.
+- **Segundo plano**: o interruptor "Também com o app fechado" (mesma seção de Configurações) chama `set_background_enabled()`. No Windows ele cria/remove a tarefa "Varedura Speedtest" do usuário atual no Agendador (`schtasks`, sem elevação, via `pythonw` para não abrir janela); no Termux/Linux instala `*/15 * * * * varedura-speedtest --scheduled` no cron (requer o serviço `crond` ligado). Em ambos o comando só mede se o intervalo venceu. A linha de situação logo abaixo mostra intervalo, segundo plano e último teste — não é preciso usar o CLI.
 - O estado em `~/.varedura_auto_speed.json` é compartilhado, então app e cron não rodam em dobro. Falha tenta de novo em 15 min.
 - **Nunca** roda em dados móveis nem sem rede identificada, mesmo com `--once`.
 

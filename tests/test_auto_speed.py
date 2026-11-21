@@ -231,3 +231,166 @@ async def test_settings_saves_auto_speed_interval(monkeypatch, tmp_path):
         app._active_network = WIFI
         app._auto_speed_tick()
         assert started == [15]
+
+
+def test_windows_background_uses_scheduled_task_without_console(monkeypatch):
+    import importlib
+
+    module = importlib.reload(auto_speed)  # desfaz os stubs do conftest
+    calls: list[tuple[str, ...]] = []
+    exists = {"task": False}
+
+    def fake_schtasks(*args):
+        calls.append(args)
+        if args[0] == "/Query":
+            return exists["task"], ""
+        exists["task"] = args[0] == "/Create"
+        return True, ""
+
+    monkeypatch.setattr(module.os, "name", "nt")
+    monkeypatch.setattr(module, "_schtasks", fake_schtasks)
+
+    assert module.is_background_enabled() is False
+    assert module.set_background_enabled(True)[0] and module.is_background_enabled()
+    create = next(call for call in calls if call[0] == "/Create")
+    assert create[1:7] == ("/F", "/SC", "MINUTE", "/MO", "15", "/TN")
+    assert create[-1].endswith("-m monitor.auto_speed --scheduled")
+    assert module.set_background_enabled(False)[0] and not module.is_background_enabled()
+    # Desligar de novo não tenta apagar uma tarefa que não existe.
+    before = len(calls)
+    assert module.set_background_enabled(False) == (True, "already disabled")
+    assert [call[0] for call in calls[before:]] == ["/Query"]
+
+
+@pytest.mark.asyncio
+async def test_background_switch_in_settings_drives_the_scheduler(monkeypatch, tmp_path):
+    from cli import ui_shared
+    from cli.textual_app import VareduraTextualApp
+    from textual.widgets import Input, Label, Switch, TabbedContent
+
+    state = {"on": False}
+    monkeypatch.setattr(auto_speed, "is_background_enabled", lambda: state["on"])
+    monkeypatch.setattr(
+        auto_speed,
+        "set_background_enabled",
+        lambda enabled: (state.update(on=enabled) or True, "ok"),
+    )
+    monkeypatch.setattr(ui_shared, "PREFS_FILE", tmp_path / "prefs.json")
+    ui_shared.save_network_config(
+        {
+            "target_onboarding_completed": True,
+            "selected_target_ids": ["cloudflare_ipv4"],
+            "primary_target_id": "cloudflare_ipv4",
+            "custom_targets": [],
+            "league_auto_detect": False,
+        }
+    )
+    app = VareduraTextualApp()
+    app._after_first_refresh = lambda: None
+    async with app.run_test(size=(100, 60)) as pilot:
+        await pilot.pause()
+        app.query_one("#main-tabs", TabbedContent).active = "settings"
+        for _ in range(30):
+            await pilot.pause()
+            if "settings" in app._hydrated_tabs:
+                break
+        await pilot.pause()
+        status = app.query_one("#auto-speed-status", Label)
+        assert "desligado" in str(status.content) or "off" in str(status.content)
+
+        app.query_one("#auto-speed-minutes", Input).value = "60"
+        app.query_one("#auto-speed-cron", Switch).value = True
+        assert app._save_network_settings() is True
+        for _ in range(40):
+            await pilot.pause()
+            if state["on"]:
+                break
+        assert state["on"] is True
+        await pilot.pause()
+        assert "60" in str(app.query_one("#auto-speed-status", Label).content)
+
+        # Desligar o interruptor age na hora, sem precisar salvar.
+        app.query_one("#auto-speed-cron", Switch).value = False
+        for _ in range(40):
+            await pilot.pause()
+            if not state["on"]:
+                break
+        assert state["on"] is False
+        app.query_one("#auto-speed-cron", Switch).value = True
+        for _ in range(40):
+            await pilot.pause()
+            if state["on"]:
+                break
+        assert state["on"] is True
+
+        # Intervalo 0 desliga também o agendamento do sistema.
+        app.query_one("#auto-speed-minutes", Input).value = "0"
+        assert app._save_network_settings() is True
+        for _ in range(40):
+            await pilot.pause()
+            if not state["on"]:
+                break
+        assert state["on"] is False
+
+
+@pytest.mark.asyncio
+async def test_speed_tab_shows_plan_history_including_background_runs(monkeypatch, tmp_path):
+    from cli import ui_shared
+    from cli.textual_app import VareduraTextualApp
+    from monitor.plan_profiles import SpeedSample
+    from textual.widgets import DataTable, Label, TabbedContent
+
+    monkeypatch.setattr(ui_shared, "PREFS_FILE", tmp_path / "prefs.json")
+    ui_shared.save_network_config(
+        {
+            "target_onboarding_completed": True,
+            "selected_target_ids": ["cloudflare_ipv4"],
+            "primary_target_id": "cloudflare_ipv4",
+            "custom_targets": [],
+            "league_auto_detect": False,
+            "plan_profiles": [HOME.to_dict()],
+        }
+    )
+    now = datetime.datetime.now().replace(microsecond=0)
+    # Gravadas por outro processo (cron / Agendador), não por esta sessão.
+    data_usage.record_speed_sample(
+        SpeedSample(now - datetime.timedelta(hours=2), 590, 290, 11, "Cloudflare", "", "home", "wifi")
+    )
+    data_usage.record_speed_sample(
+        SpeedSample(now - datetime.timedelta(hours=1), 300, 0, 0, "Fast.com", "", "home", "wifi")
+    )
+    data_usage.record_speed_sample(
+        SpeedSample(now, 999, 999, 5, "Outro plano", "", "sim", "mobile")
+    )
+
+    app = VareduraTextualApp()
+    app._after_first_refresh = lambda: None
+    app._start_network = lambda: None
+    async with app.run_test(size=(120, 50)) as pilot:
+        await pilot.pause()
+        app._refresh_active_plan()
+        app.query_one("#main-tabs", TabbedContent).active = "network"
+        for _ in range(30):
+            await pilot.pause()
+            if "network" in app._hydrated_tabs:
+                break
+        await pilot.pause()
+        app._render_speed_table({})
+
+        table = app.query_one("#network-speed-table", DataTable)
+        rows = [[str(cell) for cell in table.get_row_at(i)] for i in range(table.row_count)]
+        # Só o plano ativo, mais recente primeiro; upload não medido vira "—".
+        assert [row[1] for row in rows] == ["Fast.com", "Cloudflare"]
+        assert rows[0][2:5] == ["300 Mbps", "—", "—"]
+        assert rows[1][2:5] == ["590 Mbps", "290 Mbps", "11 ms"]
+
+        summary = str(app.query_one("#network-speed-summary", Label).content)
+        # Média de download (590+300)/2 = 445 -> 74% de 600: abaixo de 80%.
+        assert "2 " in summary and "445" in summary and "74%" in summary
+
+        # Um teste novo gravado em segundo plano aparece no próximo redesenho.
+        data_usage.record_speed_sample(
+            SpeedSample(now + datetime.timedelta(seconds=5), 610, 305, 9, "M-Lab NDT7", "", "home", "wifi")
+        )
+        app._render_speed_table({})
+        assert str(table.get_row_at(0)[1]) == "M-Lab NDT7"

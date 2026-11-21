@@ -19,6 +19,11 @@ def _isolated_plan_storage(monkeypatch, tmp_path_factory):
     from monitor import auto_speed
 
     monkeypatch.setattr(auto_speed, "STATE_FILE", base / "auto_speed.json")
+    # Nenhum teste consulta ou altera o Agendador de Tarefas / crontab reais.
+    monkeypatch.setattr(auto_speed, "is_background_enabled", lambda: False)
+    monkeypatch.setattr(
+        auto_speed, "set_background_enabled", lambda enabled: (True, "stub")
+    )
 
     # Nenhum teste sonda a rede real da máquina (netsh/ip/termux-*). Quem testa
     # a detecção usa ``REAL_DETECT_ACTIVE_NETWORK`` com ``_run`` mockado.

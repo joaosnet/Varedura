@@ -265,12 +265,73 @@ def set_cron_enabled(enabled: bool) -> tuple[bool, str]:
     return True, "cron enabled" if enabled else "cron disabled"
 
 
+def _windows_task_run() -> str:
+    """Linha de comando da tarefa: ``pythonw`` para não piscar uma janela."""
+    pythonw = Path(sys.executable).with_name("pythonw.exe")
+    runner = pythonw if pythonw.exists() else Path(sys.executable)
+    return f'"{runner}" -m monitor.auto_speed --scheduled'
+
+
+def _schtasks(*args: str) -> tuple[bool, str]:
+    exe = shutil.which("schtasks")
+    if not exe:
+        return False, "schtasks not found"
+    try:
+        proc = subprocess.run(
+            [exe, *args],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=20,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return False, str(exc)
+    return proc.returncode == 0, (proc.stderr or proc.stdout or "").strip()
+
+
 def windows_task_command() -> str:
-    """Comando para criar a tarefa agendada no Windows (o usuário é quem roda)."""
+    """Equivalente em linha de comando do interruptor da TUI (referência)."""
     return (
         f'schtasks /Create /F /SC MINUTE /MO 15 /TN "{WINDOWS_TASK_NAME}" '
-        f'/TR "{_command()} --scheduled"'
+        f"/TR '{_windows_task_run()}'"
     )
+
+
+def is_background_enabled() -> bool:
+    """Há agendamento em segundo plano? (tarefa no Windows, cron nos demais)."""
+    if os.name == "nt":
+        return _schtasks("/Query", "/TN", WINDOWS_TASK_NAME)[0]
+    return is_cron_enabled()
+
+
+def set_background_enabled(enabled: bool) -> tuple[bool, str]:
+    """Liga/desliga o teste com o app fechado, do jeito de cada sistema.
+
+    Windows: tarefa do usuário atual no Agendador (sem elevação), a cada
+    15 min.  Termux/Linux/macOS: entrada no crontab.  Em ambos o comando só
+    mede quando o intervalo configurado venceu.
+    """
+    if os.name != "nt":
+        return set_cron_enabled(enabled)
+    if enabled:
+        return _schtasks(
+            "/Create", "/F", "/SC", "MINUTE", "/MO", "15",
+            "/TN", WINDOWS_TASK_NAME, "/TR", _windows_task_run(),
+        )
+    if not is_background_enabled():
+        return True, "already disabled"
+    return _schtasks("/Delete", "/F", "/TN", WINDOWS_TASK_NAME)
+
+
+def describe_status() -> dict:
+    """Resumo para a TUI: última execução e se o segundo plano está ligado."""
+    stamp = last_run()
+    return {
+        "last_run": datetime.datetime.fromtimestamp(stamp) if stamp else None,
+        "background": is_background_enabled(),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
