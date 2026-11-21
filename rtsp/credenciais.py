@@ -9,19 +9,32 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
+from urllib.parse import urlsplit
 
 from rtsp import DATA_DIR as _DIR
 from rtsp.log import obter_logger
-from rtsp.video import InfoStream, descobrir_stream, validar_stream
+from rtsp.video import (
+    ERRO_AUTH,
+    ERRO_BLOQUEIO,
+    ERRO_FERRAMENTA,
+    ERRO_REDE,
+    InfoStream,
+    descobrir_stream,
+    validar_stream,
+)
 
 _log = obter_logger("credenciais")
 
 ARQUIVO_VAULT = _DIR / "credenciais.json"
 ARQUIVO_CONHECIDOS = _DIR / "ips_conhecidos.json"
+DEFAULT_MAX_FALHAS_AUTH = 4
+DEFAULT_INTERVALO_AUTH = 0.5
 
 
 @dataclass
@@ -179,10 +192,15 @@ def esquecer_ip(mapa: dict[str, CredencialIP], ip: str) -> None:
 # --------------------------------------------------------------------------
 
 def _so_path(url: str) -> str:
-    from urllib.parse import urlsplit
-
     p = urlsplit(url)
     return (p.path + (f"?{p.query}" if p.query else "")) or "/"
+
+
+def _promover_caminho(candidatos: list[str], caminho: str | None) -> None:
+    """Move um caminho conhecido para o início da lista de tentativas."""
+    if caminho and caminho in candidatos:
+        candidatos.remove(caminho)
+        candidatos.insert(0, caminho)
 
 
 def resolver_ip(
@@ -194,16 +212,35 @@ def resolver_ip(
     *,
     ao_tentar: Callable[[str, str, str], None] | None = None,
     timeout: float = 6.0,
+    max_falhas_auth: int = DEFAULT_MAX_FALHAS_AUTH,
+    intervalo_auth: float = DEFAULT_INTERVALO_AUTH,
+    diagnostico: dict[str, Any] | None = None,
 ) -> tuple[InfoStream, Par, str] | None:
-    """Resolve (InfoStream, Par, caminho) para um IP, com ordenação eficiente.
+    """Resolve (InfoStream, Par, caminho) para um IP com proteção anti-bloqueio.
 
     1. Lembrado primeiro: se ip está em conhecidos, testa exatamente aquele
-       par+caminho (1 ffprobe). Sucesso -> retorna sem força bruta.
-    2. Força bruta no cofre: para cada Par, usa descobrir_stream sobre os caminhos.
-    3. Fallback sem auth: tenta uma passada com par vazio (câmeras sem senha).
-
-    No primeiro sucesso, persiste no mapa de conhecidos e retorna.
+       par+caminho. Sucesso -> retorna sem força bruta.
+    2. Se o lembrado falhar por caminho (ex.: 404), tenta os demais caminhos
+       com a credencial já conhecida antes de abrir o cofre.
+    3. Se falhar por autenticação (401/403), descarta o par que falhou, promove
+       o caminho conhecido ao topo e interrompe ao atingir ``max_falhas_auth``
+       falhas com pausa ``intervalo_auth`` entre tentativas, evitando lockout.
     """
+    tentativas = 0
+    falhas_auth = 0
+    limite_atingido = False
+    ultimo_erro: InfoStream | None = None
+    pares_descartados: set[tuple[str, str]] = set()
+    candidatos_ordenados = list(dict.fromkeys(candidatos))
+
+    def _registrar_diag(*, sucesso: bool = False) -> None:
+        if diagnostico is None:
+            return
+        diagnostico["erro_tipo"] = None if sucesso else (ultimo_erro.erro_tipo if ultimo_erro else None)
+        diagnostico["mensagem"] = "" if sucesso else (ultimo_erro.mensagem if ultimo_erro else "")
+        diagnostico["tentativas"] = tentativas
+        diagnostico["falhas_auth"] = falhas_auth
+        diagnostico["limite_atingido"] = False if sucesso else limite_atingido
 
     def _sucesso(info: InfoStream, par: Par) -> tuple[InfoStream, Par, str]:
         caminho = _so_path(info.url)
@@ -217,35 +254,137 @@ def resolver_ip(
         )
         lembrar_ip(conhecidos, ip, cred)
         _log.info("IP %s resolvido: usuario=%s caminho=%s", ip, par.usuario, caminho)
+        _registrar_diag(sucesso=True)
         return (info, par, caminho)
+
+    def _tratar_falha_step(par: Par, diag_step: dict[str, Any]) -> bool:
+        """Atualiza estado pós-descobrir_stream; retorna True se deve abortar."""
+        nonlocal falhas_auth, limite_atingido, ultimo_erro
+        step_erro = diag_step.get("ultimo_erro")
+        if step_erro is None:
+            return False
+        ultimo_erro = step_erro
+        if step_erro.erro_tipo in (ERRO_FERRAMENTA, ERRO_BLOQUEIO, ERRO_REDE):
+            return True
+        if step_erro.erro_tipo == ERRO_AUTH:
+            pares_descartados.add(par.chave())
+            usa_cred = bool(par.usuario or par.senha)
+            if usa_cred:
+                falhas_auth += 1
+            _promover_caminho(candidatos_ordenados, diag_step.get("caminho_auth"))
+            if usa_cred and falhas_auth >= max_falhas_auth:
+                limite_atingido = True
+                _log.warning(
+                    "IP %s: limite de %d falhas de autenticação atingido; interrompendo redescoberta",
+                    ip,
+                    max_falhas_auth,
+                )
+                return True
+        return False
 
     # 1. Lembrado primeiro
     lembrado = conhecidos.get(ip)
     if lembrado:
+        url_montada = monta_url(ip, lembrado.caminho, lembrado.usuario, lembrado.senha)
+        porta_lembrada = urlsplit(lembrado.url).port or 554
+        porta_alvo = urlsplit(url_montada).port or 554
+        url_lembrado = lembrado.url if porta_lembrada == porta_alvo else url_montada
+
         if ao_tentar:
             ao_tentar(ip, lembrado.caminho, f"{lembrado.usuario or '(sem auth)'} ★")
-        info = validar_stream(lembrado.url, timeout=timeout)
+        info = validar_stream(url_lembrado, timeout=timeout)
+        tentativas += 1
         if info.funciona:
             return _sucesso(info, Par(lembrado.usuario, lembrado.senha))
-        _log.info("IP %s: lembrado falhou, re-descobrindo", ip)
 
-    # 2. Força bruta no cofre + 3. fallback sem auth
-    tentativas = list(vault)
-    if not any(p.usuario == "" and p.senha == "" for p in tentativas):
-        tentativas.append(Par("", ""))
+        ultimo_erro = info
+        par_lembrado = Par(lembrado.usuario, lembrado.senha)
+        _log.info("IP %s: lembrado falhou (%s)", ip, info.erro_tipo or "desconhecido")
 
-    for par in tentativas:
+        if info.erro_tipo in (ERRO_FERRAMENTA, ERRO_BLOQUEIO, ERRO_REDE):
+            _registrar_diag()
+            return None
+
+        if info.erro_tipo == ERRO_AUTH:
+            pares_descartados.add(par_lembrado.chave())
+            if par_lembrado.usuario or par_lembrado.senha:
+                falhas_auth += 1
+            _promover_caminho(candidatos_ordenados, lembrado.caminho)
+            if falhas_auth >= max_falhas_auth:
+                limite_atingido = True
+                _log.warning(
+                    "IP %s: limite de %d falhas de autenticação atingido; interrompendo redescoberta",
+                    ip,
+                    max_falhas_auth,
+                )
+                _registrar_diag()
+                return None
+        else:
+            outros_caminhos = [c for c in candidatos_ordenados if c != lembrado.caminho]
+            if outros_caminhos:
+                diag_step: dict[str, Any] = {}
+                info_ok = descobrir_stream(
+                    lambda c, _p=par_lembrado: monta_url(ip, c, _p.usuario, _p.senha),
+                    outros_caminhos,
+                    timeout=timeout,
+                    ao_tentar=(
+                        (lambda c, _p=par_lembrado: ao_tentar(ip, c, _p.rotulo()))
+                        if ao_tentar
+                        else None
+                    ),
+                    diagnostico=diag_step,
+                )
+                tentativas += diag_step.get("tentativas", 0)
+                if info_ok and info_ok.funciona:
+                    return _sucesso(info_ok, par_lembrado)
+                if _tratar_falha_step(par_lembrado, diag_step):
+                    _registrar_diag()
+                    return None
+            pares_descartados.add(par_lembrado.chave())
+
+    # 2. Cofre com limite anti-bloqueio + 3. fallback sem auth
+    tentativas_pares: list[Par] = []
+    vistos: set[tuple[str, str]] = set(pares_descartados)
+    for p in vault:
+        ch = p.chave()
+        if ch not in vistos:
+            vistos.add(ch)
+            tentativas_pares.append(p)
+    if ("", "") not in vistos:
+        tentativas_pares.append(Par("", ""))
+
+    for par in tentativas_pares:
+        usa_cred = bool(par.usuario or par.senha)
+        if usa_cred and falhas_auth >= max_falhas_auth:
+            limite_atingido = True
+            _log.warning(
+                "IP %s: limite de %d falhas de autenticação atingido; interrompendo redescoberta",
+                ip,
+                max_falhas_auth,
+            )
+            break
+        if not usa_cred and limite_atingido:
+            break
+        if usa_cred and falhas_auth > 0 and intervalo_auth > 0:
+            time.sleep(intervalo_auth)
+
+        diag_step = {}
         info = descobrir_stream(
             lambda c, _p=par: monta_url(ip, c, _p.usuario, _p.senha),
-            candidatos,
+            candidatos_ordenados,
             timeout=timeout,
             ao_tentar=(
                 (lambda c, _p=par: ao_tentar(ip, c, _p.rotulo()))
                 if ao_tentar
                 else None
             ),
+            diagnostico=diag_step,
         )
+        tentativas += diag_step.get("tentativas", 0)
         if info and info.funciona:
             return _sucesso(info, par)
+        if _tratar_falha_step(par, diag_step):
+            break
 
+    _registrar_diag()
     return None

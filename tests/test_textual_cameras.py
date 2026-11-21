@@ -7,7 +7,15 @@ import pytest
 from cli import ui_shared
 from cli.textual_app import VareduraTextualApp
 from i18n import init as i18n_init
-from textual.widgets import DataTable, TabbedContent
+from textual.widgets import (
+    Button,
+    DataTable,
+    Input,
+    Label,
+    RadioSet,
+    Static,
+    TabbedContent,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -56,7 +64,15 @@ async def wait_until(predicate, pilot, attempts: int = 100) -> None:
 
 async def open_cameras(app, pilot) -> None:
     app.query_one("#main-tabs", TabbedContent).active = "cameras"
-    await wait_until(lambda: bool(list(app.query("#cameras-subtabs"))), pilot)
+    await wait_until(
+        lambda: (
+            app._cameras_rendered
+            and bool(list(app.query("#cameras-subtabs")))
+            and bool(list(app.query("#--content-tab-tab-cred")))
+        ),
+        pilot,
+        attempts=200,
+    )
 
 
 @pytest.mark.asyncio
@@ -189,13 +205,16 @@ async def test_saved_camera_opens_on_single_click(monkeypatch):
 
     app = VareduraTextualApp()
     opened = {}
+    launches: list[str] = []
     async with app.run_test(size=(120, 50)) as pilot:
         await pilot.pause()
         await open_cameras(app, pilot)
         await pilot.pause()
         # Não abre um player de verdade no teste.
         monkeypatch.setattr(
-            app, "_lancar_player", lambda url, ip=None: opened.update(url=url, ip=ip)
+            app,
+            "_lancar_player",
+            lambda url, ip=None: (launches.append(ip), opened.update(url=url, ip=ip)),
         )
         # Simula uma câmera salva na tabela de resultados.
         app._urls_rede["192.168.1.50"] = "rtsp://192.168.1.50:554/stream"
@@ -207,6 +226,17 @@ async def test_saved_camera_opens_on_single_click(monkeypatch):
         # (offset y=2: linha 0 = borda, linha 1 = cabeçalho, linha 2 = 1ª linha)
         await pilot.click("#rede-tabela", offset=(4, 2))
         await wait_until(lambda: opened.get("ip") == "192.168.1.50", pilot)
+        # ... e abrir UMA vez só: antes o clique disparava dois players.
+        for _ in range(5):
+            await pilot.pause()
+        assert launches == ["192.168.1.50"]
+
+        # Mesmo com duplo-clique por hábito (chain=2), abre só uma vez.
+        launches.clear()
+        await pilot.click("#rede-tabela", offset=(4, 2), times=2)
+        for _ in range(5):
+            await pilot.pause()
+        assert launches == ["192.168.1.50"]
 
 
 @pytest.mark.asyncio
@@ -375,3 +405,199 @@ async def test_cameras_action_cam_log_non_windows(monkeypatch, tmp_path):
 
         app.action_cam_log()
         assert opened == [str(fake_log)]
+
+
+@pytest.mark.asyncio
+async def test_cameras_401_limit_preserves_saved_url_and_opens_on_click(monkeypatch):
+    from rtsp import credenciais, video
+
+    monkeypatch.setattr("cli.textual_cameras.detectar_redes", lambda: [])
+    monkeypatch.setattr("cli.textual_cameras.geolocalizar", lambda *a, **k: None)
+    monkeypatch.setattr(
+        "cli.textual_cameras.escanear_rede",
+        lambda base, ao_progresso=None: ["192.168.1.50"],
+    )
+
+    def fake_resolver(ip, candidatos, vault, conhecidos, monta_url, **kwargs):
+        diag = kwargs.get("diagnostico")
+        if diag is not None:
+            diag.update(
+                {
+                    "erro_tipo": video.ERRO_AUTH,
+                    "mensagem": "401 Unauthorized",
+                    "tentativas": 4,
+                    "falhas_auth": 4,
+                    "limite_atingido": True,
+                }
+            )
+        return None
+
+    monkeypatch.setattr("cli.textual_cameras.resolver_ip", fake_resolver)
+
+    saved_url = "rtsp://admin:savedpass@192.168.1.50:554/stream1"
+    app = VareduraTextualApp()
+    launches: list[tuple[str, str | None]] = []
+    async with app.run_test(size=(120, 55)) as pilot:
+        await pilot.pause()
+        await open_cameras(app, pilot)
+        await pilot.pause()
+        app._conhecidos["192.168.1.50"] = credenciais.CredencialIP(
+            usuario="admin",
+            senha="savedpass",
+            caminho="/stream1",
+            url=saved_url,
+        )
+        monkeypatch.setattr(
+            app,
+            "_lancar_player",
+            lambda url, ip=None: launches.append((url, ip)),
+        )
+
+        app._scan_faixa("192.168.1")
+        await wait_until(
+            lambda: app.query_one("#rede-tabela", DataTable).row_count == 1
+            and "192.168.1.50" in app._falhas_rede,
+            pilot,
+        )
+        assert app._urls_rede["192.168.1.50"] == saved_url
+        assert "4" in app._falhas_rede["192.168.1.50"]
+
+        tabela = app.query_one("#rede-tabela", DataTable)
+        tabela.scroll_visible(animate=False)
+        await pilot.pause()
+        await pilot.click("#rede-tabela", offset=(4, 2))
+        await wait_until(lambda: len(launches) == 1, pilot)
+        assert launches == [(saved_url, "192.168.1.50")]
+
+
+def _widget_visible(widget) -> bool:
+    cur = widget
+    while cur is not None:
+        if not cur.display:
+            return False
+        cur = cur.parent
+    return True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("width", "height"),
+    [(48, 28), (64, 30), (88, 32), (120, 38), (160, 44)],
+)
+async def test_cameras_responsive_no_clipping_across_viewports(
+    monkeypatch, width, height
+):
+    from rtsp import credenciais, rede, regioes
+
+    regioes.salvar_regioes(
+        [
+            regioes.Regiao(
+                "Casa da Praia - Portão Principal",
+                regioes.TIPO_CAMERA,
+                "cam.exemplo.ddns.net",
+                554,
+            ),
+            regioes.Regiao(
+                "Escritório Centro", regioes.TIPO_REDE, "10.0.0.0/22", 554
+            ),
+        ]
+    )
+    credenciais.salvar_vault([credenciais.Par("admin", "123456")])
+    credenciais.salvar_conhecidos(
+        {
+            "192.168.18.82": credenciais.CredencialIP(
+                "admin",
+                "x",
+                "/stream1",
+                "rtsp://admin:x@192.168.18.82:554/stream1",
+                "h264",
+                "1920x1080",
+            )
+        }
+    )
+    monkeypatch.setattr(
+        "cli.textual_cameras.detectar_redes",
+        lambda: [
+            rede.RedeLocal(
+                base="192.168.18", ip_local="192.168.18.15", primaria=True
+            ),
+            rede.RedeLocal(
+                base="172.25.0", ip_local="172.25.0.1", primaria=False
+            ),
+        ],
+    )
+    monkeypatch.setattr("cli.textual_cameras.geolocalizar", lambda *a, **k: None)
+
+    app = VareduraTextualApp()
+    app._after_first_refresh = lambda: None
+    async with app.run_test(size=(width, height)) as pilot:
+        await pilot.pause()
+        await open_cameras(app, pilot)
+        await wait_until(lambda: bool(list(app.query("#card-regiao-0"))), pilot)
+        await pilot.pause()
+
+        rede_tbl = app.query_one("#rede-tabela", DataTable)
+        rede_tbl.add_row(
+            "192.168.18.82",
+            "ok",
+            "admin",
+            "/stream1",
+            "1920x1080",
+            "h264",
+            key="192.168.18.82",
+        )
+        portas_tbl = app.query_one("#portas-tabela", DataTable)
+        portas_tbl.add_row("554", "ABERTA")
+        await pilot.pause()
+
+        if (width, height) == (120, 38):
+            assert rede_tbl.region.y < height
+
+        if (width, height) == (48, 28):
+            card0 = app.query_one("#card-regiao-0", Button)
+            del0 = app.query_one("#del-regiao-0", Button)
+            assert del0.region.height == 1
+            assert card0.region.height >= 2
+            assert card0.region.right <= card0.parent.content_region.right
+
+        subtabs = app.query_one("#cameras-subtabs", TabbedContent)
+        for subtab_id in ("tab-rede", "tab-rtsp", "tab-portas", "tab-cred"):
+            subtabs.active = subtab_id
+            await pilot.pause()
+            await pilot.pause()
+            if subtab_id == "tab-rede":
+                for col in app.query("#tab-rede Collapsible"):
+                    if col.id not in ("col-mapa", "col-outras"):
+                        col.collapsed = False
+                await pilot.pause()
+                await pilot.pause()
+
+            if subtab_id == "tab-cred":
+                forms = app.query_one("#cred-forms")
+                tables = app.query_one("#cred-tables")
+                if width < 112:
+                    assert tables.region.y >= forms.region.bottom
+                else:
+                    assert tables.region.x >= forms.region.right
+
+            pane = app.query_one(f"#{subtab_id}")
+            for wid in pane.query("*"):
+                if not _widget_visible(wid):
+                    continue
+                r = wid.region
+                pr = wid.parent.content_region if wid.parent else r
+                if isinstance(wid, (Button, Input, Label, Static, RadioSet)):
+                    assert r.width > 0 and r.height > 0, f"{subtab_id} {wid} zero size"
+                    if pr.width > 0:
+                        assert r.right <= pr.right, (
+                            f"{width}x{height} {subtab_id} {wid} clipped: {r} > {pr}"
+                        )
+                if isinstance(wid, Input):
+                    min_w = 10 if wid.id == "regiao-porta" else 18
+                    assert r.width >= min_w, (
+                        f"{width}x{height} {subtab_id} #{wid.id} narrow: w={r.width}"
+                    )
+                if isinstance(wid, DataTable):
+                    assert r.height >= 6, (
+                        f"{width}x{height} {subtab_id} #{wid.id} short: h={r.height}"
+                    )

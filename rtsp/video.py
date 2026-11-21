@@ -3,16 +3,25 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
-from rtsp.log import obter_logger
+from rtsp.log import obter_logger, redact_sensitive
 from varedura.termux_env import is_android, open_file_or_url
 
 _log = obter_logger("video")
+
+ERRO_AUTH = "auth"
+ERRO_BLOQUEIO = "bloqueio"
+ERRO_CAMINHO = "caminho"
+ERRO_REDE = "rede"
+ERRO_FERRAMENTA = "ferramenta"
+ERRO_OUTRO = "outro"
 
 
 # --------------------------------------------------------------------------
@@ -123,6 +132,7 @@ class InfoStream:
     largura: int | None = None
     altura: int | None = None
     mensagem: str = ""
+    erro_tipo: str | None = None
 
     @property
     def resolucao(self) -> str:
@@ -139,6 +149,174 @@ def _ffplay_disponivel() -> bool:
     return shutil.which("ffplay") is not None
 
 
+_FFMPEG_VIDEO = re.compile(
+    r"Stream #\d+:\d+[^\n]*?: Video: (?P<codec>[A-Za-z0-9_]+)[^\n]*?"
+    r"\b(?P<w>\d{2,5})x(?P<h>\d{2,5})\b"
+)
+
+_RE_BLOQUEIO = (
+    re.compile(r"\b429\s+too\s+many\b"),
+    re.compile(r"(?:returned|failed:?)\s+429\b"),
+    re.compile(r"\b503\s+service\s+unavailable\b"),
+    re.compile(r"(?:returned|failed:?)\s+503\b"),
+)
+_TOKENS_BLOQUEIO = (
+    "too many requests",
+    "too many connections",
+    "max connections",
+    "account locked",
+    "user locked",
+    "ip locked",
+    "locked out",
+    "temporarily blocked",
+    "try again later",
+)
+_RE_AUTH = (
+    re.compile(r"\b401\s+unauthorized\b"),
+    re.compile(r"(?:returned|failed:?)\s+401\b"),
+    re.compile(r"\b403\s+forbidden\b"),
+    re.compile(r"(?:returned|failed:?)\s+403\b"),
+)
+_TOKENS_AUTH = (
+    "unauthorized",
+    "authorization failed",
+    "authentication failed",
+    "forbidden",
+)
+_RE_CAMINHO = (
+    re.compile(r"\b404\s+(?:stream\s+)?not\s+found\b"),
+    re.compile(r"(?:returned|failed:?)\s+404\b"),
+    re.compile(r"\b400\s+bad\s+request\b"),
+    re.compile(r"(?:returned|failed:?)\s+400\b"),
+    re.compile(r"\b454\s+session\s+not\s+found\b"),
+    re.compile(r"(?:returned|failed:?)\s+454\b"),
+)
+_TOKENS_CAMINHO = (
+    "stream not found",
+    "not found",
+)
+_TOKENS_REDE = (
+    "connection refused",
+    "connection timed out",
+    "timed out",
+    "timeout",
+    "no route to host",
+    "network is unreachable",
+    "host is down",
+    "could not connect",
+    "failed to resolve",
+    "error number -10061",
+    "error number -10060",
+    "error number -138",
+)
+_TOKENS_REDE_FATAL = (
+    "connection refused",
+    "no route to host",
+    "network is unreachable",
+    "host is down",
+    "could not connect",
+    "failed to resolve",
+    "error number -10061",
+)
+_TOKENS_RESUMO = (
+    "server returned",
+    "method describe failed",
+    "401",
+    "403",
+    "404",
+    "429",
+    "503",
+    "connection refused",
+    "timed out",
+    "no route",
+)
+
+
+def classificar_erro_rtsp(texto: str) -> str:
+    """Classifica o motivo de falha do ffprobe/ffmpeg analisando todo o stderr."""
+    baixo = (texto or "").lower()
+    if any(r.search(baixo) for r in _RE_BLOQUEIO) or any(t in baixo for t in _TOKENS_BLOQUEIO):
+        return ERRO_BLOQUEIO
+    if any(r.search(baixo) for r in _RE_AUTH) or any(t in baixo for t in _TOKENS_AUTH):
+        return ERRO_AUTH
+    if any(r.search(baixo) for r in _RE_CAMINHO) or any(t in baixo for t in _TOKENS_CAMINHO):
+        return ERRO_CAMINHO
+    if any(t in baixo for t in _TOKENS_REDE):
+        return ERRO_REDE
+    return ERRO_OUTRO
+
+
+def _eh_erro_rede_fatal(texto: str) -> bool:
+    baixo = (texto or "").lower()
+    return any(t in baixo for t in _TOKENS_REDE_FATAL)
+
+
+def _resumir_erro_stderr(stderr: str, fallback: str) -> str:
+    linhas = [linha.strip() for linha in (stderr or "").splitlines() if linha.strip()]
+    if not linhas:
+        return redact_sensitive(fallback)
+    for linha in reversed(linhas):
+        baixo = linha.lower()
+        if any(tok in baixo for tok in _TOKENS_RESUMO):
+            return redact_sensitive(linha)
+    return redact_sensitive(linhas[-1])
+
+
+def _validar_stream_ffmpeg(url: str, timeout: float) -> InfoStream:
+    """Mesma checagem do ffprobe usando só o ffmpeg: lê 1 quadro do vídeo."""
+    cmd = [
+        "ffmpeg",
+        "-hide_banner",
+        "-nostdin",
+        "-rtsp_transport", "tcp",
+        "-timeout", str(int(timeout * 1_000_000)),  # microssegundos
+        "-i", url,
+        "-map", "0:v:0",
+        "-frames:v", "1",
+        "-f", "null",
+        "-",
+    ]
+    _log.debug("ffmpeg (sem ffprobe): %s", url)
+    try:
+        proc = subprocess.run(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=timeout + 5,
+        )
+    except subprocess.TimeoutExpired:
+        _log.warning("ffmpeg timeout: %s", url)
+        return InfoStream(
+            url, False, mensagem="Timeout ao ler o stream", erro_tipo=ERRO_REDE
+        )
+    except OSError as exc:
+        _log.error("ffmpeg erro ao executar (%s): %s", url, exc)
+        return InfoStream(
+            url, False, mensagem=f"Erro ao executar ffmpeg: {exc}", erro_tipo=ERRO_FERRAMENTA
+        )
+
+    stderr = proc.stderr or ""
+    achado = _FFMPEG_VIDEO.search(stderr)
+    if proc.returncode != 0 or achado is None:
+        erro_tipo = ERRO_OUTRO if proc.returncode == 0 else classificar_erro_rtsp(stderr)
+        detalhe = _resumir_erro_stderr(stderr, "ffmpeg falhou")
+        _log.info("ffmpeg falhou (%s) [%s]: %s", url, erro_tipo, detalhe)
+        return InfoStream(url, False, mensagem=detalhe, erro_tipo=erro_tipo)
+
+    largura, altura = int(achado.group("w")), int(achado.group("h"))
+    _log.info("ffmpeg OK (%s): %s %sx%s", url, achado.group("codec"), largura, altura)
+    return InfoStream(
+        url=url,
+        funciona=True,
+        codec=achado.group("codec"),
+        largura=largura,
+        altura=altura,
+        mensagem="OK",
+    )
+
+
 def validar_stream(url: str, timeout: float = 10.0) -> InfoStream:
     """Confirma que a URL entrega vídeo decodificável, lendo o stream de vídeo.
 
@@ -146,7 +324,16 @@ def validar_stream(url: str, timeout: float = 10.0) -> InfoStream:
     está realmente funcionando (não só com a porta aberta).
     """
     if not _ffprobe_disponivel():
-        return InfoStream(url, False, mensagem="ffprobe não encontrado no PATH")
+        # Instalações só com o ffmpeg (sem o ffprobe ao lado) são comuns: antes
+        # isso reprovava toda credencial, e a câmera "nunca funcionava".
+        if shutil.which("ffmpeg") is not None:
+            return _validar_stream_ffmpeg(url, timeout)
+        return InfoStream(
+            url,
+            False,
+            mensagem="ffprobe/ffmpeg não encontrados no PATH",
+            erro_tipo=ERRO_FERRAMENTA,
+        )
 
     cmd = [
         "ffprobe",
@@ -162,22 +349,29 @@ def validar_stream(url: str, timeout: float = 10.0) -> InfoStream:
     try:
         proc = subprocess.run(
             cmd,
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=timeout + 5,
         )
     except subprocess.TimeoutExpired:
         _log.warning("ffprobe timeout: %s", url)
-        return InfoStream(url, False, mensagem="Timeout ao ler o stream")
+        return InfoStream(
+            url, False, mensagem="Timeout ao ler o stream", erro_tipo=ERRO_REDE
+        )
     except OSError as exc:
         _log.error("ffprobe erro ao executar (%s): %s", url, exc)
-        return InfoStream(url, False, mensagem=f"Erro ao executar ffprobe: {exc}")
+        return InfoStream(
+            url, False, mensagem=f"Erro ao executar ffprobe: {exc}", erro_tipo=ERRO_FERRAMENTA
+        )
 
     if proc.returncode != 0:
-        msg = proc.stderr.strip().splitlines()
-        detalhe = msg[-1] if msg else "ffprobe falhou"
-        _log.info("ffprobe falhou (%s): %s", url, detalhe)
-        return InfoStream(url, False, mensagem=detalhe)
+        stderr = proc.stderr or ""
+        erro_tipo = classificar_erro_rtsp(stderr)
+        detalhe = _resumir_erro_stderr(stderr, "ffprobe falhou")
+        _log.info("ffprobe falhou (%s) [%s]: %s", url, erro_tipo, detalhe)
+        return InfoStream(url, False, mensagem=detalhe, erro_tipo=erro_tipo)
 
     try:
         dados = json.loads(proc.stdout or "{}")
@@ -186,7 +380,12 @@ def validar_stream(url: str, timeout: float = 10.0) -> InfoStream:
         streams = []
 
     if not streams:
-        return InfoStream(url, False, mensagem="Nenhum stream de vídeo encontrado")
+        return InfoStream(
+            url,
+            False,
+            mensagem="Nenhum stream de vídeo encontrado",
+            erro_tipo=ERRO_OUTRO,
+        )
 
     s = streams[0]
     _log.info(
@@ -208,19 +407,67 @@ def descobrir_stream(
     candidatos: list[str],
     timeout: float = 6.0,
     ao_tentar: Callable[[str], None] | None = None,
+    *,
+    max_timeouts: int = 2,
+    diagnostico: dict[str, Any] | None = None,
 ) -> InfoStream | None:
     """Testa vários caminhos e retorna o primeiro que entrega vídeo.
 
     monta_url(caminho) -> URL completa (com host/porta/credenciais).
     ao_tentar(caminho) é chamado antes de cada teste (para feedback de progresso).
+    Interrompe imediatamente ao receber erro de autenticação/bloqueio/ferramenta
+    ou falha de rede definitiva, evitando tempestades de login na câmera.
     Retorna o InfoStream do caminho que funcionou, ou None se nenhum funcionar.
     """
+    tentativas = 0
+    timeouts_seguidos = 0
+    viu_erro_caminho = False
+    ultimo_erro: InfoStream | None = None
+    caminho_auth: str | None = None
+
     for caminho in candidatos:
         if ao_tentar:
             ao_tentar(caminho)
         info = validar_stream(monta_url(caminho), timeout=timeout)
+        tentativas += 1
         if info.funciona:
+            if diagnostico is not None:
+                diagnostico.update(
+                    {
+                        "tentativas": tentativas,
+                        "ultimo_erro": None,
+                        "erro_tipo": None,
+                        "mensagem": "",
+                        "caminho_auth": None,
+                    }
+                )
             return info
+
+        ultimo_erro = info
+        if info.erro_tipo == ERRO_AUTH:
+            if viu_erro_caminho:
+                caminho_auth = caminho
+            break
+        if info.erro_tipo in (ERRO_BLOQUEIO, ERRO_FERRAMENTA):
+            break
+        if info.erro_tipo == ERRO_REDE:
+            if _eh_erro_rede_fatal(info.mensagem):
+                break
+            timeouts_seguidos += 1
+            if timeouts_seguidos >= max_timeouts:
+                break
+        elif info.erro_tipo == ERRO_CAMINHO:
+            viu_erro_caminho = True
+            timeouts_seguidos = 0
+        else:
+            timeouts_seguidos = 0
+
+    if diagnostico is not None:
+        diagnostico["tentativas"] = tentativas
+        diagnostico["ultimo_erro"] = ultimo_erro
+        diagnostico["erro_tipo"] = ultimo_erro.erro_tipo if ultimo_erro else None
+        diagnostico["mensagem"] = ultimo_erro.mensagem if ultimo_erro else ""
+        diagnostico["caminho_auth"] = caminho_auth
     return None
 
 

@@ -22,6 +22,7 @@ GRID_COLUMNS: dict[str, tuple[int, int, int]] = {
     "repair-actions": (1, 2, 3),
     "step-grid": (1, 2, 3),
     "termux-tools": (1, 2, 3),
+    "camera-cards": (1, 1, 2),
 }
 
 

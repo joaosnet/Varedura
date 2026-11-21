@@ -80,6 +80,10 @@ descobrir_stream = _UNLOADED
 detectar_player = _UNLOADED
 erro_se_morreu = _UNLOADED
 validar_stream = _UNLOADED
+ERRO_AUTH = _UNLOADED
+ERRO_BLOQUEIO = _UNLOADED
+ERRO_FERRAMENTA = _UNLOADED
+ERRO_REDE = _UNLOADED
 comando_mpv_terminal = _UNLOADED
 capturar_e_abrir_snapshot = _UNLOADED
 copy_to_clipboard = _UNLOADED
@@ -130,6 +134,10 @@ def _load_camera_backend() -> None:
         "detectar_player": video.detectar_player,
         "erro_se_morreu": video.erro_se_morreu,
         "validar_stream": video.validar_stream,
+        "ERRO_AUTH": video.ERRO_AUTH,
+        "ERRO_BLOQUEIO": video.ERRO_BLOQUEIO,
+        "ERRO_FERRAMENTA": video.ERRO_FERRAMENTA,
+        "ERRO_REDE": video.ERRO_REDE,
         "comando_mpv_terminal": video.comando_mpv_terminal,
         "capturar_e_abrir_snapshot": video.capturar_e_abrir_snapshot,
         "copy_to_clipboard": termux_env.copy_to_clipboard,
@@ -148,95 +156,296 @@ _GRUPO = "cameras"
 
 _RADAR_FRAMES = ["◜ ", " ◝", " ◞", "◟ "]
 
-# CSS específico da aba. Os seletores de TIPO genéricos (DataTable, Input) são
-# escopados sob `#cameras` para não afetar o resto da TUI; classes/ids são únicos.
+# CSS específico da aba. Os seletores de TIPO genéricos (DataTable, Input,
+# Button) são escopados sob `#cameras` para não afetar o resto da TUI.
 CAMERAS_CSS = """
+#cameras { padding: 0; }
+#cameras TabPane { padding: 0 1; }
+Screen.bp-narrow #cameras TabPane { padding: 0; }
+
+#cameras .aba-scroll,
+#cameras .aba-pane {
+    height: 1fr;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
+}
+
 #cameras .painel {
     background: $panel;
     border: round $primary;
     padding: 1 2;
-    margin: 1 1 0 1;
+    margin: 1 0 0 0;
     height: auto;
 }
-#cameras .painel-titulo { text-style: bold; color: $accent; margin-bottom: 1; }
-#cameras .campo { height: auto; width: 1fr; margin-right: 2; }
+Screen.bp-narrow #cameras .painel {
+    padding: 0 1;
+    margin: 0 0 1 0;
+}
+#cameras .painel-titulo {
+    width: 100%;
+    height: auto;
+    text-style: bold;
+    color: $accent;
+    margin-bottom: 1;
+}
+Screen.bp-narrow #cameras .painel-titulo { margin-bottom: 0; }
+
+#cameras .rotulo {
+    width: 100%;
+    height: auto;
+    color: $text-muted;
+    text-style: bold;
+    padding-left: 1;
+}
+Screen.bp-narrow #cameras .rotulo { padding-left: 0; }
+
+#cameras .dica {
+    width: 100%;
+    height: auto;
+    color: $text-muted;
+    margin: 1 0 0 1;
+}
+Screen.bp-narrow #cameras .dica { margin: 0 0 0 1; }
+
+#cameras .campo {
+    height: auto;
+    width: 1fr;
+    min-width: 0;
+    margin-right: 2;
+}
+#cameras .campo-curto {
+    width: 14;
+    min-width: 10;
+}
 #cameras .campo:last-of-type { margin-right: 0; }
-#cameras .rotulo { color: $text-muted; text-style: bold; padding-left: 1; }
-#cameras Input { margin-top: 0; }
-#cameras .linha { height: auto; }
-#cameras .acoes { height: auto; margin-top: 1; align-horizontal: left; }
-#cameras .acoes Button { margin-right: 2; }
-#cameras .dica { color: $text-muted; margin: 1 1 0 2; }
+#cameras Input { width: 100%; margin-top: 0; }
+
+#cameras .linha {
+    height: auto;
+    width: 100%;
+    margin-bottom: 1;
+}
+Screen.bp-narrow #cameras .linha {
+    layout: vertical;
+    height: auto;
+    margin-bottom: 0;
+}
+Screen.bp-narrow #cameras .campo,
+Screen.bp-narrow #cameras .campo-curto {
+    width: 100%;
+    min-width: 0;
+    margin-right: 0;
+    margin-bottom: 1;
+}
+
+#cameras Button {
+    min-width: 0;
+    height: auto;
+    min-height: 3;
+}
+Screen.mobile-narrow #cameras Button {
+    min-height: 1;
+    height: auto;
+    border: none;
+    padding: 0 1;
+}
+
+#cameras .acoes { height: auto; margin-top: 1; width: 100%; }
+#cameras .acoes Button { margin-right: 1; }
+#cameras .acoes-1 { height: auto; margin-top: 1; width: 100%; }
+#cameras .acoes-1 Button { width: 100%; margin-right: 0; }
+#cameras .acoes-compact { margin-top: 0; margin-bottom: 1; }
+#cameras .acoes-2 {
+    layout: grid;
+    grid-size: 2;
+    grid-columns: 1fr;
+    grid-gutter: 0 1;
+    height: auto;
+    margin-top: 1;
+    width: 100%;
+}
+#cameras .acoes-2 Button { width: 100%; margin-right: 0; }
+#cameras .acoes-3 {
+    layout: grid;
+    grid-size: 3;
+    grid-columns: 1fr;
+    grid-gutter: 0 1;
+    height: auto;
+    margin-top: 1;
+    width: 100%;
+}
+#cameras .acoes-3 Button { width: 100%; margin-right: 0; }
+Screen.bp-narrow #cameras .acoes-3 { grid-size: 1; grid-gutter: 1 0; }
+Screen.mobile-narrow #cameras .acoes { layout: vertical; height: auto; }
+Screen.mobile-narrow #cameras .acoes Button { width: 100%; margin-right: 0; margin-bottom: 1; }
+
+#cameras Collapsible { margin: 1 0 0 0; padding-bottom: 0; height: auto; }
+Screen.bp-narrow #cameras Collapsible { margin: 0 0 1 0; }
+#cameras RadioSet { height: auto; width: 100%; margin-bottom: 1; }
+
 #cameras DataTable {
     height: 1fr;
-    margin: 1 1 1 1;
+    width: 100%;
+    margin: 1 0 1 0;
     border: round $primary-darken-2;
 }
+Screen.bp-narrow #cameras DataTable { margin: 0 0 1 0; }
 #cameras DataTable > .datatable--header { text-style: bold; background: $primary-darken-2; }
 #cameras DataTable > .datatable--cursor { background: $accent 40%; }
+#rede-tabela { height: 12; min-height: 7; }
+Screen.bp-narrow #rede-tabela { height: 10; min-height: 6; }
+#portas-tabela { height: 1fr; min-height: 8; }
+
 #rtsp-saida {
     background: $panel;
     border: round $primary-darken-2;
-    margin: 1 1 1 1;
+    margin: 1 0;
     padding: 1 2;
+    width: 100%;
     height: auto;
-    min-height: 5;
+    min-height: 4;
 }
-#cameras .aba-scroll { height: 1fr; }
+Screen.bp-narrow #rtsp-saida { padding: 0 1; }
+
 #cameras .mapa {
+    width: 100%;
     height: auto;
     border: round $primary-darken-2;
     padding: 0 1;
     margin: 0 0 1 0;
     color: $primary-darken-2;
 }
-#cameras .cards-rede { height: auto; }
+
+#cameras .cards-rede {
+    layout: vertical;
+    height: auto;
+    width: 100%;
+}
+#cameras .cards-rede.cols-2,
+Screen.bp-wide #cameras .cards-rede {
+    layout: grid;
+    grid-size: 2;
+    grid-columns: 1fr;
+    grid-gutter: 1;
+    height: auto;
+}
 #cameras .card-rede {
-    width: 1fr;
-    height: 3;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 3;
     margin: 0 0 1 0;
     content-align: left middle;
     border: tall $primary;
 }
-#cameras .card-row { height: 3; margin: 0 0 1 0; }
+#cameras .card-row {
+    height: auto;
+    min-height: 3;
+    margin: 0 0 1 0;
+    align-vertical: middle;
+}
 #cameras .card-row .card-regiao {
     width: 1fr;
-    height: 3;
+    min-width: 0;
+    height: auto;
+    min-height: 3;
     margin: 0;
     content-align: left middle;
     border: tall $secondary;
 }
-#cameras .card-del { width: 5; min-width: 5; height: 3; margin: 0 0 0 1; border: tall $error; }
-#cameras .oculto { display: none; }
-#rede-tabela { height: 16; min-height: 6; }
+#cameras .card-del {
+    width: 5;
+    min-width: 5;
+    height: 3;
+    min-height: 3;
+    margin: 0 0 0 1;
+    border: tall $error;
+}
+#cameras .cards-rede.cols-2 .card-rede,
+#cameras .cards-rede.cols-2 .card-row,
+Screen.bp-wide #cameras .cards-rede .card-rede,
+Screen.bp-wide #cameras .cards-rede .card-row {
+    margin: 0;
+}
+Screen.mobile-narrow #cameras .card-rede,
+Screen.mobile-narrow #cameras .card-row .card-regiao {
+    height: auto;
+    min-height: 1;
+    border: none;
+    padding: 0 1;
+}
+Screen.mobile-narrow #cameras .card-row {
+    height: auto;
+    min-height: 1;
+    margin: 0 0 1 0;
+}
+Screen.mobile-narrow #cameras .card-del {
+    width: 3;
+    min-width: 3;
+    height: 1;
+    min-height: 1;
+    border: none;
+    padding: 0;
+    margin: 0 0 0 1;
+}
 
-/* Aba credenciais: 2 colunas responsivas (formulários | tabelas). */
-#cred-layout { height: 1fr; }
-#cred-forms { width: 40%; }
-#cred-tables { width: 1fr; padding: 0 1; }
-#cred-tabela, #cred-ips-tabela { height: 1fr; min-height: 3; }
-/* Tela estreita: empilha em coluna única (classe alternada via on_resize). */
-#cred-layout.cred-narrow { layout: vertical; }
-#cred-layout.cred-narrow #cred-forms { width: 1fr; height: 45%; }
-#cred-layout.cred-narrow #cred-tables { width: 1fr; height: 1fr; }
+#cameras .oculto { display: none; }
+
+/* Aba credenciais: mobile-first em coluna única; 2 colunas em bp-wide (>= 112). */
+#cred-layout {
+    layout: vertical;
+    height: 1fr;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+#cred-forms { width: 100%; height: auto; }
+#cred-tables { width: 100%; height: auto; }
+#cameras .cred-table-panel { height: auto; }
+#cred-tabela, #cred-ips-tabela { height: 9; min-height: 6; margin: 1 0 0 0; }
+Screen.bp-wide #cred-layout {
+    layout: horizontal;
+    overflow-y: hidden;
+}
+Screen.bp-wide #cred-forms {
+    width: 44%;
+    min-width: 46;
+    max-width: 60;
+    height: 1fr;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 1;
+}
+Screen.bp-wide #cred-tables {
+    width: 1fr;
+    height: 1fr;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+Screen.bp-wide #cameras .cred-table-panel { height: 1fr; min-height: 12; }
+Screen.bp-wide #cred-tabela,
+Screen.bp-wide #cred-ips-tabela { height: 1fr; min-height: 6; }
+
 #cameras .scan-feedback {
     height: auto;
     background: $panel;
     border: round $accent;
     padding: 1 2;
-    margin: 1 1 0 1;
+    margin: 1 0 0 0;
 }
-#radar { color: $accent; text-style: bold; height: 1; }
-#rede-progress { margin: 1 0; }
-#rede-contador { color: $success; text-style: bold; }
-Screen.mobile-narrow #cameras .acoes { layout: vertical; height: auto; }
-Screen.mobile-narrow #cameras .acoes Button { width: 100%; margin-right: 0; margin-bottom: 1; }
+Screen.bp-narrow #cameras .scan-feedback {
+    padding: 0 1;
+    margin: 0 0 1 0;
+}
+#radar { color: $accent; text-style: bold; width: 100%; height: auto; }
+#rede-progress { width: 100%; margin: 1 0; }
+#rede-contador { color: $success; text-style: bold; width: 100%; height: auto; }
 """
 
 
-def _campo(rotulo: str, **input_kwargs) -> Vertical:
+def _campo(rotulo: str, *, classes: str = "campo", **input_kwargs) -> Vertical:
     """Um campo de formulário: rótulo em cima, input embaixo."""
-    with Vertical(classes="campo") as wrap:
+    with Vertical(classes=classes) as wrap:
         yield Label(rotulo, classes="rotulo")
         yield Input(**input_kwargs)
     return wrap
@@ -303,10 +512,18 @@ class ClickOpenDataTable(DataTable):
                 and row is not None
                 and row >= 0
             ):
+                if getattr(event, "chain", 1) > 1:
+                    event.stop()
+                    event.prevent_default()
+                    return
                 self.cursor_coordinate = Coordinate(row, meta["column"])
                 self._post_selected_message()
                 self._scroll_cursor_into_view()
                 event.stop()
+                # Sem isto o _on_click do DataTable base também roda: como o
+                # cursor já está na linha, ele dispara um 2º RowSelected e o
+                # vídeo abria duas vezes (dois players na mesma câmera).
+                event.prevent_default()
                 return
         except Exception:
             pass
@@ -344,7 +561,7 @@ class CamerasMixin:
                 with VerticalScroll(classes="aba-scroll"):
                     with Container(classes="painel"):
                         yield Static(t("rtsp.rede_titulo"), classes="painel-titulo")
-                        yield Vertical(id="cards-rede", classes="cards-rede")
+                        yield Container(id="cards-rede", classes="cards-rede")
                         with Collapsible(
                             title=t("rtsp.mapa_titulo"), collapsed=True, id="col-mapa"
                         ):
@@ -355,8 +572,8 @@ class CamerasMixin:
                             id="col-outras",
                             classes="oculto",
                         ):
-                            yield Vertical(id="outras-redes")
-                        with Horizontal(classes="acoes"):
+                            yield Container(id="outras-redes", classes="cards-rede")
+                        with Container(classes="acoes-2"):
                             yield Button(t("rtsp.btn_atualizar"), id="btn-rede-refresh")
                             yield Button(t("rtsp.btn_log"), id="btn-cam-log")
                         with Vertical(id="rede-manual", classes="oculto"):
@@ -365,9 +582,10 @@ class CamerasMixin:
                                 placeholder=t("rtsp.ph_rede_manual"),
                                 id="rede-base",
                             )
-                            yield Button(
-                                t("rtsp.btn_varrer"), variant="primary", id="btn-rede"
-                            )
+                            with Container(classes="acoes-1"):
+                                yield Button(
+                                    t("rtsp.btn_varrer"), variant="primary", id="btn-rede"
+                                )
 
                     with Vertical(id="scan-feedback", classes="scan-feedback oculto"):
                         yield Static("", id="radar")
@@ -378,7 +596,7 @@ class CamerasMixin:
                     yield ClickOpenDataTable(
                         id="rede-tabela", cursor_type="row", zebra_stripes=True
                     )
-                    with Horizontal(classes="acoes", id="rede-acoes-cam"):
+                    with Container(classes="acoes-3", id="rede-acoes-cam"):
                         yield Button(t("rtsp.btn_snapshot"), id="btn-rede-snap")
                         yield Button(t("rtsp.btn_mpv_terminal"), id="btn-rede-mpv")
                         yield Button(t("rtsp.btn_copy_url"), id="btn-rede-copy")
@@ -397,6 +615,7 @@ class CamerasMixin:
                             )
                             yield from _campo(
                                 t("rtsp.campo_porta"),
+                                classes="campo campo-curto",
                                 placeholder=t("rtsp.ph_porta"),
                                 id="regiao-porta",
                             )
@@ -408,7 +627,7 @@ class CamerasMixin:
                                 yield RadioButton(
                                     t("rtsp.tipo_camera"), id="tipo-camera"
                                 )
-                        with Horizontal(classes="acoes"):
+                        with Container(classes="acoes-1"):
                             yield Button(
                                 t("rtsp.add_regiao"),
                                 variant="primary",
@@ -461,7 +680,7 @@ class CamerasMixin:
                                 password=True,
                                 id="rtsp-pass",
                             )
-                        with Horizontal(classes="acoes"):
+                        with Container(classes="acoes-2"):
                             yield Button(
                                 t("rtsp.btn_testar"), variant="primary", id="btn-rtsp"
                             )
@@ -470,7 +689,7 @@ class CamerasMixin:
                                 variant="success",
                                 id="btn-rtsp-abrir",
                             )
-                        with Horizontal(classes="acoes"):
+                        with Container(classes="acoes-3"):
                             yield Button(t("rtsp.btn_snapshot"), id="btn-rtsp-snap")
                             yield Button(t("rtsp.btn_mpv_terminal"), id="btn-rtsp-mpv")
                             yield Button(t("rtsp.btn_copy_url"), id="btn-rtsp-copy")
@@ -478,24 +697,24 @@ class CamerasMixin:
 
             # ---------- Aba: portas ----------
             with TabPane(t("rtsp.tab_portas"), id="tab-portas"):
-                with Container(classes="painel"):
-                    yield Static(t("rtsp.portas_titulo"), classes="painel-titulo")
-                    yield from _campo(
-                        t("rtsp.campo_host"),
-                        placeholder=t("rtsp.ph_host"),
-                        id="portas-host",
-                    )
-                    with Horizontal(classes="acoes"):
-                        yield Button(
-                            t("rtsp.btn_portas"), variant="primary", id="btn-portas"
+                with Vertical(classes="aba-pane"):
+                    with Container(classes="painel"):
+                        yield Static(t("rtsp.portas_titulo"), classes="painel-titulo")
+                        yield from _campo(
+                            t("rtsp.campo_host"),
+                            placeholder=t("rtsp.ph_host"),
+                            id="portas-host",
                         )
-                yield DataTable(id="portas-tabela", zebra_stripes=True)
+                        with Container(classes="acoes-1"):
+                            yield Button(
+                                t("rtsp.btn_portas"), variant="primary", id="btn-portas"
+                            )
+                    yield DataTable(id="portas-tabela", zebra_stripes=True)
 
-            # ---------- Aba: credenciais (2 colunas, responsivo) ----------
+            # ---------- Aba: credenciais (responsiva: 1 col <112, 2 cols >=112) ----------
             with TabPane(t("rtsp.tab_cred"), id="tab-cred"):
-                with Horizontal(id="cred-layout"):
-                    # Coluna esquerda: formulários (rola se faltar altura).
-                    with VerticalScroll(id="cred-forms"):
+                with Container(id="cred-layout"):
+                    with Container(id="cred-forms"):
                         with Container(classes="painel"):
                             yield Static(t("rtsp.cred_titulo"), classes="painel-titulo")
                             with Horizontal(classes="linha"):
@@ -510,61 +729,63 @@ class CamerasMixin:
                                     password=True,
                                     id="cred-pass",
                                 )
-                            with Horizontal(classes="acoes"):
+                            with Container(classes="acoes-1"):
                                 yield Button(
                                     t("rtsp.btn_add"),
                                     variant="primary",
                                     id="btn-cred-add",
                                 )
-                                yield Button(
-                                    t("rtsp.btn_remover_sel"),
-                                    variant="error",
-                                    id="btn-cred-del",
-                                )
                         with Container(classes="painel"):
                             yield Static(t("rtsp.imp_titulo"), classes="painel-titulo")
-                            with Horizontal(classes="linha"):
-                                yield from _campo(
-                                    t("rtsp.imp_users"),
-                                    placeholder=t("rtsp.ph_imp"),
-                                    id="imp-users",
-                                )
-                                yield from _campo(
-                                    t("rtsp.imp_pass"),
-                                    placeholder=t("rtsp.ph_imp"),
-                                    id="imp-pass",
-                                )
-                            with Horizontal(classes="acoes"):
+                            yield from _campo(
+                                t("rtsp.imp_users"),
+                                placeholder=t("rtsp.ph_imp"),
+                                id="imp-users",
+                            )
+                            with Container(classes="acoes-1 acoes-compact"):
                                 yield Button(
                                     t("rtsp.btn_browse_users"), id="btn-browse-users"
                                 )
+                            yield from _campo(
+                                t("rtsp.imp_pass"),
+                                placeholder=t("rtsp.ph_imp"),
+                                id="imp-pass",
+                            )
+                            with Container(classes="acoes-1 acoes-compact"):
                                 yield Button(
                                     t("rtsp.btn_browse_pass"), id="btn-browse-pass"
                                 )
-                            with Horizontal(classes="acoes"):
+                            with Container(classes="acoes-1"):
                                 yield Button(
                                     t("rtsp.btn_import"),
                                     variant="primary",
                                     id="btn-cred-import",
                                 )
-                    # Coluna direita: tabelas que preenchem a altura disponível.
                     with Vertical(id="cred-tables"):
-                        yield Static(
-                            t("rtsp.cred_vault_titulo"), classes="painel-titulo"
-                        )
-                        yield DataTable(
-                            id="cred-tabela", cursor_type="row", zebra_stripes=True
-                        )
-                        yield Static(t("rtsp.ips_titulo"), classes="painel-titulo")
-                        with Horizontal(classes="acoes"):
-                            yield Button(
-                                t("rtsp.btn_esquecer_ip"),
-                                variant="warning",
-                                id="btn-ip-forget",
+                        with Container(classes="painel cred-table-panel"):
+                            yield Static(
+                                t("rtsp.cred_vault_titulo"), classes="painel-titulo"
                             )
-                        yield DataTable(
-                            id="cred-ips-tabela", cursor_type="row", zebra_stripes=True
-                        )
+                            with Container(classes="acoes-1 acoes-compact"):
+                                yield Button(
+                                    t("rtsp.btn_remover_sel"),
+                                    variant="error",
+                                    id="btn-cred-del",
+                                )
+                            yield DataTable(
+                                id="cred-tabela", cursor_type="row", zebra_stripes=True
+                            )
+                        with Container(classes="painel cred-table-panel"):
+                            yield Static(t("rtsp.ips_titulo"), classes="painel-titulo")
+                            with Container(classes="acoes-1 acoes-compact"):
+                                yield Button(
+                                    t("rtsp.btn_esquecer_ip"),
+                                    variant="warning",
+                                    id="btn-ip-forget",
+                                )
+                            yield DataTable(
+                                id="cred-ips-tabela", cursor_type="row", zebra_stripes=True
+                            )
 
     def _cameras_on_mount(self) -> None:
         _load_camera_backend()
@@ -593,6 +814,7 @@ class CamerasMixin:
         self._conhecidos = carregar_conhecidos()
         self._refresh_cred_tabela()
         self._refresh_ips_tabela()
+        self._cameras_on_resize(self.size.width)
 
     def _maybe_render_cameras(self) -> None:
         """Detecta redes/regiões e geolocaliza ao abrir a aba pela 1ª vez."""
@@ -685,14 +907,13 @@ class CamerasMixin:
             self._regiao_focada = int(wid.id.rsplit("-", 1)[1])
 
     def _cameras_on_resize(self, width: int) -> None:
-        """Reflow responsivo da aba credenciais: 2 colunas (largo) ou
-        empilhado em coluna única (estreito)."""
+        """Sincroniza grade de cartões da aba Câmeras com a régua de largura."""
         try:
-            from cli.layout import NARROW, layout_tier
+            from cli.layout import columns_for
 
-            self.query_one("#cred-layout").set_class(
-                layout_tier(width) == NARROW, "cred-narrow"
-            )
+            cols = columns_for("camera-cards", width)
+            for grid_id in ("#cards-rede", "#outras-redes"):
+                self.query_one(grid_id, Container).set_class(cols == 2, "cols-2")
         except Exception:
             pass
 
@@ -925,7 +1146,7 @@ class CamerasMixin:
                     "grupo": "main",
                     "icone": icone,
                     "card_id": f"card-regiao-{i}",
-                    "rotulo": reg.descricao(),
+                    "rotulo": reg.descricao().removeprefix("📍 "),
                     "host": geo_host,
                     "geo": None,
                 }
@@ -963,8 +1184,8 @@ class CamerasMixin:
                 classes="card-row",
             )
 
-        cont = self.query_one("#cards-rede", Vertical)
-        cont_outras = self.query_one("#outras-redes", Vertical)
+        cont = self.query_one("#cards-rede", Container)
+        cont_outras = self.query_one("#outras-redes", Container)
         await cont.remove_children()
         await cont_outras.remove_children()
 
@@ -1148,6 +1369,90 @@ class CamerasMixin:
             group=_GRUPO,
         )
 
+    def _url_fallback_camera(
+        self, ip: str, porta: int, caminho_padrao: str, user, pwd
+    ) -> tuple[str, object | None]:
+        if not user and (lembrado := self._conhecidos.get(ip)):
+            if (urlsplit(lembrado.url).port or 554) == porta:
+                return (lembrado.url, lembrado)
+        return (self._monta_url(ip, caminho_padrao, user, pwd, porta=porta), None)
+
+    def _motivo_falha_scan(
+        self, diag: dict, *, manual: bool, generico: str = ""
+    ) -> str:
+        if diag.get("limite_atingido"):
+            return t("rtsp.falha_auth_limite", n=diag.get("falhas_auth", 0))
+        erro_tipo = diag.get("erro_tipo")
+        if erro_tipo == ERRO_BLOQUEIO:
+            return t("rtsp.falha_bloqueio")
+        if erro_tipo == ERRO_AUTH:
+            return t("rtsp.falha_auth")
+        if erro_tipo == ERRO_FERRAMENTA:
+            return diag.get("mensagem") or t("rtsp.falha_ferramenta")
+        if erro_tipo == ERRO_REDE:
+            return t("rtsp.falha_rede")
+        if generico:
+            return generico
+        return (
+            t("rtsp.falha_cred_informada")
+            if manual
+            else t("rtsp.falha_nenhuma_cred")
+        )
+
+    def _badge_falha_scan(self, diag: dict) -> str:
+        if diag.get("limite_atingido") or diag.get("erro_tipo") == ERRO_BLOQUEIO:
+            return t("rtsp.video_bloqueado")
+        if diag.get("erro_tipo") == ERRO_AUTH:
+            return t("rtsp.video_auth")
+        return t("rtsp.video_aberto")
+
+    def _registrar_falha_scan(
+        self,
+        chave: str,
+        ip: str,
+        porta: int,
+        caminho_padrao: str,
+        user,
+        pwd,
+        diag: dict,
+        generico: str = "",
+    ) -> None:
+        url_fb, lembrado_fb = self._url_fallback_camera(
+            ip, porta, caminho_padrao, user, pwd
+        )
+        self._urls_rede[chave] = url_fb
+        self._falhas_rede[chave] = self._motivo_falha_scan(
+            diag, manual=bool(user), generico=generico
+        )
+        cred_col = (
+            (lembrado_fb.usuario or t("rtsp.sem_auth"))
+            if lembrado_fb is not None
+            else "—"
+        )
+        path_col = lembrado_fb.caminho if lembrado_fb is not None else "—"
+        self.call_from_thread(
+            self.query_one("#rede-tabela", DataTable).add_row,
+            chave,
+            self._badge_falha_scan(diag),
+            cred_col,
+            path_col,
+            "—",
+            "—",
+            key=chave,
+        )
+        if diag.get("limite_atingido"):
+            self.call_from_thread(
+                self.notify,
+                t("rtsp.nf_auth_limite", ip=chave, n=diag.get("falhas_auth", 0)),
+                severity="warning",
+            )
+        elif diag.get("erro_tipo") == ERRO_BLOQUEIO:
+            self.call_from_thread(
+                self.notify,
+                f"{chave}: {t('rtsp.falha_bloqueio')}",
+                severity="warning",
+            )
+
     def _worker_externa(self, ip, path, marca, user, pwd) -> None:
         portas = escanear_portas_camera(ip)
         abertas = [p for p, ok in portas.items() if ok]
@@ -1168,6 +1473,7 @@ class CamerasMixin:
             def monta(h, c, u, p, _pt=porta):
                 return self._monta_url(h, c, u, p, porta=_pt)
 
+            diag: dict = {}
             if user:
                 info = descobrir_stream(
                     lambda c, _pt=porta: self._monta_url(ip, c, user, pwd, porta=_pt),
@@ -1175,6 +1481,7 @@ class CamerasMixin:
                     ao_tentar=lambda c, _pt=porta: self.call_from_thread(
                         self._status_tentativa_cred, f"{ip}:{_pt}", c, user
                     ),
+                    diagnostico=diag,
                 )
                 par_usado = Par(user, pwd or "") if info and info.funciona else None
             else:
@@ -1187,6 +1494,7 @@ class CamerasMixin:
                     ao_tentar=lambda _h, c, rot, _pt=porta: self.call_from_thread(
                         self._status_tentativa_cred, f"{ip}:{_pt}", c, rot
                     ),
+                    diagnostico=diag,
                 )
                 info, par_usado = (
                     (resultado[0], resultado[1]) if resultado else (None, None)
@@ -1207,19 +1515,15 @@ class CamerasMixin:
                 )
             else:
                 # Porta aberta mas sem stream validado -> salva mesmo assim.
-                self._urls_rede[chave] = self._monta_url(
-                    ip, candidatos[0], user, pwd, porta=porta
-                )
-                self._falhas_rede[chave] = t("rtsp.falha_sem_video")
-                self.call_from_thread(
-                    self.query_one("#rede-tabela", DataTable).add_row,
+                self._registrar_falha_scan(
                     chave,
-                    t("rtsp.video_aberto"),
-                    "—",
-                    "—",
-                    "—",
-                    "—",
-                    key=chave,
+                    ip,
+                    porta,
+                    candidatos[0],
+                    user,
+                    pwd,
+                    diag,
+                    generico=t("rtsp.falha_sem_video"),
                 )
             self.call_from_thread(self._incrementar_cameras)
             self.call_from_thread(self._passo_validacao, idx)
@@ -1250,6 +1554,7 @@ class CamerasMixin:
         )
         self.call_from_thread(self._iniciar_fase_validacao, len(ips))
         for idx, ip in enumerate(ips, 1):
+            diag: dict = {}
             if user:
                 info = descobrir_stream(
                     lambda c, _ip=ip: self._monta_url(_ip, c, user, pwd),
@@ -1257,6 +1562,7 @@ class CamerasMixin:
                     ao_tentar=lambda c, _ip=ip: self.call_from_thread(
                         self._status_tentativa_cred, _ip, c, user
                     ),
+                    diagnostico=diag,
                 )
                 par_usado = Par(user, pwd or "") if info and info.funciona else None
             else:
@@ -1269,6 +1575,7 @@ class CamerasMixin:
                     ao_tentar=lambda _ip, c, rot: self.call_from_thread(
                         self._status_tentativa_cred, _ip, c, rot
                     ),
+                    diagnostico=diag,
                 )
                 info, par_usado = (
                     (resultado[0], resultado[1]) if resultado else (None, None)
@@ -1290,21 +1597,20 @@ class CamerasMixin:
                 self.call_from_thread(self._incrementar_cameras)
             else:
                 # Porta 554 aberta mas sem credencial válida -> salva mesmo assim.
-                self._urls_rede[ip] = self._monta_url(ip, candidatos[0], user, pwd)
-                self._falhas_rede[ip] = (
+                generico = (
                     t("rtsp.falha_nenhuma_cred")
                     if not user
                     else t("rtsp.falha_cred_informada")
                 )
-                self.call_from_thread(
-                    self.query_one("#rede-tabela", DataTable).add_row,
+                self._registrar_falha_scan(
                     ip,
-                    t("rtsp.video_aberto"),
-                    "—",
-                    "—",
-                    "—",
-                    "—",
-                    key=ip,
+                    ip,
+                    554,
+                    candidatos[0],
+                    user,
+                    pwd,
+                    diag,
+                    generico=generico,
                 )
                 self.call_from_thread(self._incrementar_cameras)
             self.call_from_thread(self._passo_validacao, idx)
@@ -1326,6 +1632,7 @@ class CamerasMixin:
         def monta(h, c, u, p):
             return self._monta_url(h, c, u, p, porta=porta)
 
+        diag: dict = {}
         if user:
             info = descobrir_stream(
                 lambda c: monta(host, c, user, pwd),
@@ -1333,6 +1640,7 @@ class CamerasMixin:
                 ao_tentar=lambda c: self.call_from_thread(
                     self._status_tentativa_cred, host, c, user
                 ),
+                diagnostico=diag,
             )
             par_usado = Par(user, pwd or "") if info and info.funciona else None
         else:
@@ -1345,6 +1653,7 @@ class CamerasMixin:
                 ao_tentar=lambda _h, c, rot: self.call_from_thread(
                     self._status_tentativa_cred, _h, c, rot
                 ),
+                diagnostico=diag,
             )
             info, par_usado = (
                 (resultado[0], resultado[1]) if resultado else (None, None)
@@ -1367,21 +1676,17 @@ class CamerasMixin:
             self.call_from_thread(self._incrementar_cameras)
         else:
             # Porta aberta (testar_porta passou) mas sem stream -> salva mesmo assim.
-            self._urls_rede[host] = self._monta_url(
-                host, candidatos[0], user, pwd, porta=porta
-            )
-            self._falhas_rede[host] = t("rtsp.falha_sem_video")
-            self.call_from_thread(self._incrementar_cameras)
-            self.call_from_thread(
-                self.query_one("#rede-tabela", DataTable).add_row,
+            self._registrar_falha_scan(
                 host,
-                t("rtsp.video_aberto"),
-                "—",
-                "—",
-                "—",
-                "—",
-                key=host,
+                host,
+                porta,
+                candidatos[0],
+                user,
+                pwd,
+                diag,
+                generico=t("rtsp.falha_sem_video"),
             )
+            self.call_from_thread(self._incrementar_cameras)
         self.call_from_thread(self._refresh_ips_tabela)
         self.call_from_thread(self._finalizar_scan)
 

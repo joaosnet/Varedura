@@ -22,6 +22,7 @@ def test_layout_tiers_and_columns():
     assert [columns_for("network-cards", w) for w in (54, 90, 140)] == [1, 2, 3]
     assert [columns_for("network-controls", w) for w in (54, 90, 140)] == [2, 3, 4]
     assert [columns_for("termux-tools", w) for w in (54, 90, 140)] == [1, 2, 3]
+    assert [columns_for("camera-cards", w) for w in (54, 90, 140)] == [1, 1, 2]
 
 
 @pytest.fixture
