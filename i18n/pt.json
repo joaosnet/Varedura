@@ -714,6 +714,8 @@
     "network.export_failed": "Falha ao exportar o relatório: {error}",
     "network.export_finished": "Relatórios gerados: {csv} e {pdf}",
     "network.export_csv_finished": "CSV de ping gerado: {csv}",
+    "network.export_published": "{count} arquivo(s) copiado(s) para {folder}",
+    "network.export_storage_hint": "Para salvar em Documentos/Varedura, permita o acesso a arquivos na janela do Android e exporte de novo. O PDF será aberto mesmo assim.",
     "plans.section_title": "Planos de internet",
     "plans.active_label": "Plano em uso",
     "plans.active_auto": "Automático (pela rede)",

@@ -49,9 +49,9 @@
     "semantic_hash": "36a35df2f5610534830644d9cea45d50"
   },
   "cli/textual_app.py": {
-    "mtime": 1795293714.598513,
-    "seen": 1795293910.9690635,
-    "ast_hash": "daa4aea6d30af69f23fc2971a3a088b8",
+    "mtime": 1795294567.2148767,
+    "seen": 1795294756.235019,
+    "ast_hash": "42d06c4cea800281669b27d4119c76b0",
     "semantic_hash": ""
   },
   "cli/textual_cameras.py": {
@@ -85,15 +85,15 @@
     "semantic_hash": "25b054c22dfe1bc046b5ef9ce3a7f5ae"
   },
   "i18n/en.json": {
-    "mtime": 1795291071.8916605,
-    "seen": 1795291411.3337352,
-    "ast_hash": "3716a831c7b92607bf4d9e4fb175a3a9",
+    "mtime": 1795294567.2194128,
+    "seen": 1795294756.2350497,
+    "ast_hash": "d18db296cbbbcc581c013bf3af0bdede",
     "semantic_hash": ""
   },
   "i18n/pt.json": {
-    "mtime": 1795291230.398404,
-    "seen": 1795291411.3337371,
-    "ast_hash": "8efb01920a5cf7ec22b1f86abd54d3f8",
+    "mtime": 1795294567.2148767,
+    "seen": 1795294756.2350523,
+    "ast_hash": "94ec2325377aa45144ab26d73991458c",
     "semantic_hash": ""
   },
   "install.ps1": {
@@ -529,15 +529,15 @@
     "semantic_hash": ""
   },
   "tests/test_termux_env.py": {
-    "mtime": 1795292767.2874453,
-    "seen": 1795293096.637265,
-    "ast_hash": "c8bacb3cf7459c949516278ff7ed894f",
+    "mtime": 1795294567.275506,
+    "seen": 1795294756.235242,
+    "ast_hash": "a17215103e167140fe8ce269e0eaa68e",
     "semantic_hash": ""
   },
   "tests/test_textual_termux.py": {
-    "mtime": 1795293522.7856328,
-    "seen": 1795293910.9691725,
-    "ast_hash": "2f8d0228336e8e74fd17b693a8309726",
+    "mtime": 1795293989.2645848,
+    "seen": 1795294756.235249,
+    "ast_hash": "2d84429f4b4e4b18115fe0642fc8f48e",
     "semantic_hash": ""
   },
   "tests/test_updater.py": {
@@ -547,9 +547,9 @@
     "semantic_hash": ""
   },
   "varedura/termux_env.py": {
-    "mtime": 1795292740.0116138,
-    "seen": 1795293096.637293,
-    "ast_hash": "01d0fc0383887daf8085a177b5589d08",
+    "mtime": 1795294556.0716798,
+    "seen": 1795294756.2352715,
+    "ast_hash": "f0aa86b051f849e62593ee612da8124f",
     "semantic_hash": ""
   },
   "varedura/updater.py": {
@@ -631,9 +631,9 @@
     "semantic_hash": ""
   },
   "docs/termux.md": {
-    "mtime": 1795293522.7856328,
-    "seen": 1795293910.9692023,
-    "ast_hash": "04ca66e0083591cb9c591e7803c0384b",
+    "mtime": 1795294620.3207514,
+    "seen": 1795294756.2353044,
+    "ast_hash": "13c0c3853e126846b4a3331e382fecdd",
     "semantic_hash": ""
   },
   "tests/test_android_adaptations.py": {

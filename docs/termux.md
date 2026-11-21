@@ -185,6 +185,10 @@ As primitivas em `varedura/termux_env.py` conectam a TUI aos recursos nativos do
 
 ---
 
+## 6.1 Relatórios visíveis no Android
+
+A home do Termux é privada: o gerenciador de arquivos do Android não enxerga `exports/`. Ao concluir uma exportação na aba Rede, `_publish_exports()` (em `cli/textual_app.py`) copia o PDF e os CSVs para **Documentos/Varedura** via `publish_export()` e abre o PDF com `termux-open`. Sem a permissão de armazenamento (`~/storage` ausente), o app dispara `termux-setup-storage` uma vez por sessão, avisa o usuário e ainda assim abre o PDF pelo visualizador do Android. Os originais continuam em `exports/`.
+
 ## 7. Teclado, teclas extras e digitação no Termux
 
 Toda TUI com mouse ativo tem três atritos no Termux; o `TermuxKeysMixin` ([`cli/textual_termux_keys.py`](../cli/textual_termux_keys.py)) trata os três:

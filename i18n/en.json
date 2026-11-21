@@ -714,6 +714,8 @@
     "network.export_failed": "Report export failed: {error}",
     "network.export_finished": "Reports generated: {csv} and {pdf}",
     "network.export_csv_finished": "Ping CSV generated: {csv}",
+    "network.export_published": "{count} file(s) copied to {folder}",
+    "network.export_storage_hint": "To save into Documents/Varedura, allow file access in the Android prompt and export again. The PDF will open anyway.",
     "plans.section_title": "Internet plans",
     "plans.active_label": "Plan in use",
     "plans.active_auto": "Automatic (by network)",

@@ -1113,6 +1113,63 @@ def native_text_dialog(
     return str(payload.get("text") or "")
 
 
+# ---------------------------------------------------------------------------
+# Exports visíveis no Android (armazenamento compartilhado)
+# ---------------------------------------------------------------------------
+# A home do Termux é privada: o gerenciador de arquivos do Android não a vê.
+# Com a permissão de armazenamento, relatórios são copiados para Documentos.
+PUBLIC_EXPORT_FOLDER = "Varedura"
+
+
+def shared_documents_dir() -> Path | None:
+    """Pasta Documentos do Android, se o Termux tiver permissão de escrita."""
+    candidates = (
+        Path.home() / "storage" / "shared" / "Documents",
+        Path("/storage/emulated/0/Documents"),
+    )
+    for candidate in candidates:
+        try:
+            if candidate.is_dir() and os.access(candidate, os.W_OK):
+                return candidate
+        except OSError:
+            continue
+    return None
+
+
+def publish_export(path: Path | str) -> Path | None:
+    """Copia um relatório para ``Documentos/Varedura``; None se indisponível."""
+    source = Path(path)
+    base = shared_documents_dir()
+    if base is None or not source.is_file():
+        return None
+    try:
+        target_dir = base / PUBLIC_EXPORT_FOLDER
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target = target_dir / source.name
+        shutil.copyfile(source, target)
+        return target
+    except OSError:
+        return None
+
+
+def request_storage_access() -> bool:
+    """Dispara o pedido de permissão de armazenamento do Android (Termux)."""
+    exe = shutil.which("termux-setup-storage")
+    if not exe:
+        return False
+    try:
+        subprocess.Popen(
+            [exe],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        return True
+    except OSError:
+        return False
+
+
 def toggle_keyboard_page() -> tuple[bool, str]:
     """Run ~/.claro_suite/termux_page_switcher.py when present."""
     script = Path.home() / ".claro_suite" / "termux_page_switcher.py"
@@ -1152,6 +1209,9 @@ __all__ = [
     "share_file",
     "should_show_docker_tab",
     "toggle_keyboard_page",
+    "shared_documents_dir",
+    "publish_export",
+    "request_storage_access",
     "extra_key_macros",
     "set_keyboard_key",
     "has_native_dialog",

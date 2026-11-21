@@ -707,6 +707,7 @@ class VareduraTextualApp(
         self._last_screenshot_path: Path | None = None
         self._last_export_path: Path | None = None
         self._export_poll_timer = None
+        self._storage_access_requested = False
         self._primary_fail_streak: int = 0
         self._outage_notified: bool = False
         self._last_outage_notif_ts: float = 0.0
@@ -3065,6 +3066,7 @@ class VareduraTextualApp(
             self._last_export_path = Path(pdf_path or csv_path)
         if pdf_path is None:
             self._network_log(f"[green]{t('network.export_csv_finished', csv=str(csv_path))}[/]")
+            self._publish_exports([Path(csv_path)])
             return
         message = t("network.export_finished", csv=str(csv_path), pdf=str(pdf_path))
         self._network_log(f"[green]{message}[/]")
@@ -3098,6 +3100,32 @@ class VareduraTextualApp(
             self._last_export_path = Path(pdf_path)
         self._network_log(status)
         self.notify(status)
+        if pdf_path:
+            # Os CSVs do laudo saem com o mesmo carimbo de tempo do PDF.
+            stamp = Path(pdf_path).stem.removeprefix("relatorio_formal_")
+            extras = sorted(Path(pdf_path).parent.glob(f"*_history_{stamp}.csv"))
+            self._publish_exports([Path(pdf_path), *extras], open_first=True)
+
+    @work(thread=True, exclusive=False, group="export-publish")
+    def _publish_exports(self, paths: list[Path], open_first: bool = False) -> None:
+        """Android: copia os relatórios para Documentos/Varedura e abre o PDF."""
+        if not termux_env.is_android():
+            return
+        published = [termux_env.publish_export(path) for path in paths]
+        done = [item for item in published if item is not None]
+        if done:
+            message = t("network.export_published", count=len(done), folder=str(done[0].parent))
+            self.call_from_thread(self._network_log, f"[green]{message}[/]")
+            self.call_from_thread(self.notify, message)
+        elif not self._storage_access_requested:
+            self._storage_access_requested = True
+            termux_env.request_storage_access()
+            self.call_from_thread(
+                self.notify, t("network.export_storage_hint"), severity="warning", timeout=12
+            )
+        if open_first and paths:
+            target = published[0] or paths[0]
+            termux_env.open_file_or_url(str(target))
 
     def _network_log(self, message) -> None:
         self.query_one("#network-log", RichLog).write(message)

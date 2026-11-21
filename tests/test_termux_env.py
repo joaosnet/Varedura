@@ -487,3 +487,23 @@ def test_native_text_dialog_parses_ok_and_cancel(monkeypatch):
     assert te.native_text_dialog("Nome") is None
     fake_run.out = "lixo"
     assert te.native_text_dialog("Nome") is None
+
+
+def test_publish_export_copies_to_shared_documents(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    report = tmp_path / "exports" / "relatorio_formal_x.pdf"
+    report.parent.mkdir(parents=True)
+    report.write_bytes(b"%PDF-1.4 teste")
+    monkeypatch.setattr(te.Path, "home", classmethod(lambda cls: home))
+    monkeypatch.setattr(te.os, "access", lambda path, mode: str(path).startswith(str(home)))
+
+    # Sem permissão de armazenamento: nada é copiado.
+    assert te.shared_documents_dir() is None
+    assert te.publish_export(report) is None
+
+    documents = home / "storage" / "shared" / "Documents"
+    documents.mkdir(parents=True)
+    published = te.publish_export(report)
+    assert published == documents / "Varedura" / "relatorio_formal_x.pdf"
+    assert published.read_bytes() == report.read_bytes()
+    assert te.publish_export(tmp_path / "nao_existe.pdf") is None
