@@ -49,21 +49,21 @@
     "semantic_hash": "36a35df2f5610534830644d9cea45d50"
   },
   "cli/textual_app.py": {
-    "mtime": 1795290381.9108357,
-    "seen": 1795290869.9036407,
-    "ast_hash": "ed93e7074c291bfa8407cb0aec5827d8",
+    "mtime": 1795291071.6977813,
+    "seen": 1795291411.3337107,
+    "ast_hash": "c0e01b14656558818b52bb4ae1d72943",
     "semantic_hash": ""
   },
   "cli/textual_cameras.py": {
-    "mtime": 1795290381.9342198,
-    "seen": 1795290869.9036434,
-    "ast_hash": "4016c282e39f06db30634d5c14a909a1",
+    "mtime": 1795291071.7026105,
+    "seen": 1795291411.3337142,
+    "ast_hash": "81f67dccd4ae63a2a753935401441783",
     "semantic_hash": ""
   },
   "cli/ui_shared.py": {
-    "mtime": 1795290476.3372555,
-    "seen": 1795290869.9036515,
-    "ast_hash": "5bb37dfe793c65bee7bfc74eb8bf517d",
+    "mtime": 1795291171.0846634,
+    "seen": 1795291411.333726,
+    "ast_hash": "48b40f7300bcfbc33ad9a8951bfee55c",
     "semantic_hash": ""
   },
   "docker_cleaner/__init__.py": {
@@ -85,15 +85,15 @@
     "semantic_hash": "25b054c22dfe1bc046b5ef9ce3a7f5ae"
   },
   "i18n/en.json": {
-    "mtime": 1795289313.606188,
-    "seen": 1795290148.6644137,
-    "ast_hash": "1ddfb43dbfe733a8a884370a2ffd566a",
+    "mtime": 1795291071.8916605,
+    "seen": 1795291411.3337352,
+    "ast_hash": "3716a831c7b92607bf4d9e4fb175a3a9",
     "semantic_hash": ""
   },
   "i18n/pt.json": {
-    "mtime": 1795289313.5877445,
-    "seen": 1795290148.6644158,
-    "ast_hash": "64e2a66cd6ff4b431239ef303c2a9b2c",
+    "mtime": 1795291230.398404,
+    "seen": 1795291411.3337371,
+    "ast_hash": "8efb01920a5cf7ec22b1f86abd54d3f8",
     "semantic_hash": ""
   },
   "install.ps1": {
@@ -565,9 +565,9 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1795290757.0669763,
-    "seen": 1795290869.9038417,
-    "ast_hash": "5ca91163de5608d36412eacfd2f7cd83",
+    "mtime": 1795291230.3994064,
+    "seen": 1795291411.3339198,
+    "ast_hash": "f0bdfcfbb786744db05e8297c4ae061a",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -685,9 +685,15 @@
     "semantic_hash": ""
   },
   "tests/test_layout.py": {
-    "mtime": 1795290632.476506,
-    "seen": 1795290869.9037771,
-    "ast_hash": "71069b0ec3732a8684f1222c0a5c201c",
+    "mtime": 1795291230.451231,
+    "seen": 1795291411.3338473,
+    "ast_hash": "f50b042de702b495f6beebb239425bce",
+    "semantic_hash": ""
+  },
+  "cli/theme.py": {
+    "mtime": 1795291070.682865,
+    "seen": 1795291411.3337235,
+    "ast_hash": "0e6c1cda156340c9e3ade4c4cae3b55c",
     "semantic_hash": ""
   }
 }

@@ -101,6 +101,18 @@ def save_git_autoupdate_pref(enabled: bool) -> None:
     save_prefs(data)
 
 
+def load_dark_theme_pref(default: bool = True) -> bool:
+    """Tema escuro (padrão) ou claro, conforme a última escolha do usuário."""
+    value = load_prefs().get("dark_theme")
+    return default if value is None else bool(value)
+
+
+def save_dark_theme_pref(dark: bool) -> None:
+    data = load_prefs()
+    data["dark_theme"] = bool(dark)
+    save_prefs(data)
+
+
 def load_git_last_check() -> float:
     """Load timestamp of the last Git update check from disk."""
     raw = load_prefs().get("git_last_check", 0.0)
@@ -453,7 +465,7 @@ def build_cleanup_steps_table(steps: dict[str, bool] | None = None) -> Table:
     table = Table(box=box.ROUNDED, expand=True, show_header=False)
     table.add_column("#", style="bold yellow", width=4)
     table.add_column("", width=8)
-    table.add_column("Step", style="white")
+    table.add_column("Step")
 
     for index, (key, label_key, _default) in enumerate(CLEANUP_STEPS, 1):
         enabled = current.get(key, False)
@@ -511,7 +523,7 @@ def build_settings_status_table(
     )
     table = Table(box=box.SIMPLE, show_header=True, expand=True)
     table.add_column(t("settings.current_status"), style="bold cyan")
-    table.add_column("", style="white")
+    table.add_column("")
     _add_common_status_rows(
         table, current_language, git_autoupdate=resolved_autoupdate
     )
@@ -546,7 +558,7 @@ def _fmt_memory(percent: float, used_gb: float, total_gb: float) -> Text:
 
 def _fmt_traffic(sent_mb: float, recv_mb: float) -> Text:
     """Format cumulative network traffic (sent/received since boot)."""
-    return Text(f"↑ {_fmt_data_mb(sent_mb)}   ↓ {_fmt_data_mb(recv_mb)}", style="white")
+    return Text(f"↑ {_fmt_data_mb(sent_mb)}   ↓ {_fmt_data_mb(recv_mb)}")
 
 
 def _fmt_android_battery(android_telemetry) -> Text:
@@ -587,7 +599,7 @@ def build_dashboard_status(
     # valor numa coluna de poucas letras.
     table = Table(box=box.SIMPLE, show_header=False, expand=True, padding=(0, 1))
     table.add_column(style="bold cyan", ratio=2)
-    table.add_column(style="white", ratio=3)
+    table.add_column(ratio=3)
 
     table.add_row(
         t("dashboard.network"),

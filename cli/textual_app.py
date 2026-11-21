@@ -41,6 +41,7 @@ from cli.richlog import DailyLogWriter
 from cli.textual_cameras import CAMERAS_CSS, CamerasMixin
 from cli.layout import NARROW, columns_for, layout_tier
 from cli.textual_plans import PLANS_CSS, PlansMixin
+from cli.theme import THEMES, theme_name
 from cli.textual_termux import TERMUX_CSS, TermuxMixin
 from cli.ui_shared import (
     CLEANUP_GROUPS,
@@ -60,6 +61,8 @@ from cli.ui_shared import (
     load_network_config,
     run_cleanup_steps,
     save_cleanup_steps,
+    load_dark_theme_pref,
+    save_dark_theme_pref,
     save_git_autoupdate_pref,
     save_network_config,
     selected_cleanup_keys,
@@ -303,6 +306,16 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         height: 1fr;
         border: solid $primary;
         padding: 0 1;
+    }
+
+    /* Textos de apoio quebram linha em vez de serem cortados. */
+    .hint-text,
+    #git-token-status,
+    #mcp-status,
+    #net-target-summary {
+        width: 1fr;
+        height: auto;
+        color: $text-muted;
     }
 
     .section-title {
@@ -692,11 +705,24 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
         # Estado da aba Termux e aba Câmeras (RTSP), fundidas via mixins.
         self._init_termux_state()
         self._init_plans_state()
+        for theme in THEMES:
+            self.register_theme(theme)
+        self.theme = theme_name(load_dark_theme_pref())
         self._init_cameras_state()
         self._shutting_down = False
         self._shutdown_screen = None
         self._hydrated_tabs = {"dashboard"}
         self._onboarding_open = False
+
+    def action_toggle_dark(self) -> None:
+        """Alterna entre o tema escuro e o claro do Varedura e lembra a escolha."""
+        dark = not self.current_theme.dark
+        self.theme = theme_name(dark)
+        save_dark_theme_pref(dark)
+
+    def _default_sub_title(self) -> str:
+        # Em tela estreita o subtítulo só seria cortado ("Monitor de Sistema & Fer…").
+        return "" if layout_tier(self.size.width) == NARROW else t("menu.subtitle")
 
     def compose(self) -> ComposeResult:
         self.title = "Varedura"
@@ -987,7 +1013,7 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
                 yield Label(t("updater.autoupdate_label"))
                 yield Switch(value=git_auto, id="git-autoupdate-switch")
             yield Label(self._format_git_token_status(), id="git-token-status")
-            yield Label(t("updater.token_hint"), classes="card-stats")
+            yield Label(t("updater.token_hint"), classes="hint-text")
             with Horizontal(classes="button-row"):
                 yield Button(t("updater.btn_update_now"), id="git-update-now")
                 yield Button(t("screenshot.btn_capture"), id="settings-screenshot")
@@ -1047,6 +1073,14 @@ class VareduraTextualApp(PlansMixin, TermuxMixin, CamerasMixin, App[str | None])
     def _apply_mobile_layout(self, width: int) -> None:
         tier = layout_tier(width)
         narrow = tier == NARROW
+        if self.sub_title in ("", t("menu.subtitle")):
+            self.sub_title = "" if narrow else t("menu.subtitle")
+        try:
+            footer = self.query_one(Footer)
+            footer.compact = narrow
+            footer.show_command_palette = not narrow
+        except Exception:
+            pass
         try:
             # ``mobile-narrow`` liga o modo compacto; ``bp-*`` expõe a faixa ao CSS.
             self.screen.set_class(narrow, "mobile-narrow")

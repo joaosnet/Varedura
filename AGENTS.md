@@ -39,6 +39,7 @@ varedura/updater.py (git auth + cooldown 6h + cron) ────────┘
 | `cli/textual_app.py` *(índice em `docs/docker-e-cli.md`)* | App Textual principal (abas: `dashboard`, `docker` condicional, `network`, `cameras`, `termux`, `settings` + captura SVG nativa) | `VareduraTextualApp`, `TargetPingCard`, `ShutdownScreen`, `run_textual_app` |
 | `cli/textual_cameras.py` *(índice em `docs/docker-e-cli.md`)* | Aba Câmeras (4 sub-abas), workers, radar, snapshot JPEG e `mpv --vo=tct` | `CamerasMixin`, `ClickOpenDataTable` |
 | `cli/layout.py` | Régua única de breakpoints da TUI (estreito < 76, médio, largo ≥ 112 colunas) e colunas de cada grade; a faixa estreita liga o modo compacto (`Screen.mobile-narrow`: botões de 1 linha, cards de ping em 2 linhas) | `layout_tier`, `columns_for`, `GRID_COLUMNS` |
+| `cli/theme.py` | Tema próprio (`varedura-dark`/`varedura-light`); a tecla `d` alterna e a escolha fica em `dark_theme` nas prefs. Não use cores fixas (`white`, hex) em renderables: herde do tema | `THEMES`, `theme_name` |
 | `cli/network_ui.py` | Modais lazy de seleção de alvos e confirmação de reparos | `TargetPickerScreen`, `RepairConfirmationScreen`, `merge_visible_selection` |
 | `cli/ui_shared.py` / `cli/richlog.py` | Prefs (`~/.varedura_prefs.json`), presets de limpeza, logs diários e painéis Rich | `CLEANUP_STEPS`, `load_network_config`, `DailyLogWriter`, `format_duration` |
 | `cli/quick_cleanup.py` / `cli/main_cleaner.py` / `cli/admin_tasks.py` | CLIs headless e executor elevado (`compact_vhdx`, `configure_sparse`) | `quick_cleanup`, `parse_args`, `main` |

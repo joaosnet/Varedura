@@ -1448,7 +1448,7 @@ class CamerasMixin:
         pb = self.query_one("#rede-progress", ProgressBar)
         pb.update(progress=pb.total or 0)
         self.query_one("#scan-feedback", Vertical).add_class("oculto")
-        self.sub_title = t("menu.subtitle")
+        self.sub_title = self._default_sub_title()
         self.notify(t("rtsp.nf_varredura_concluida", n=self._cameras_encontradas))
 
     # ---- Aba Credenciais ----

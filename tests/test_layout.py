@@ -70,3 +70,30 @@ async def test_compact_mode_only_on_narrow_screens(_prefs, width, compact):
             assert button.outer_size.height == 3
             assert card.outer_size.height == 12
             assert digits.display and not value.display
+
+
+@pytest.mark.asyncio
+async def test_theme_toggle_persists_and_narrow_header_has_no_subtitle(_prefs):
+    from cli.theme import DARK, LIGHT
+    from textual.widgets import Footer
+
+    app = VareduraTextualApp()
+    app._after_first_refresh = lambda: None
+    async with app.run_test(size=(54, 40)) as pilot:
+        await pilot.pause()
+        assert app.theme == DARK
+        assert app.sub_title == ""  # subtítulo seria cortado em tela estreita
+        footer = app.query_one(Footer)
+        assert footer.compact and not footer.show_command_palette
+
+        await pilot.press("d")
+        await pilot.pause()
+        assert app.theme == LIGHT
+        assert ui_shared.load_dark_theme_pref() is False
+
+    wide = VareduraTextualApp()
+    wide._after_first_refresh = lambda: None
+    async with wide.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        assert wide.theme == LIGHT  # escolha lembrada entre execuções
+        assert wide.sub_title != ""
